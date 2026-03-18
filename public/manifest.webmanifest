@@ -1,0 +1,28 @@
+{
+  "name": "Moto Levins",
+  "short_name": "Moto Levins",
+  "description": "Элитарный прокат мотоциклов на Черноморском побережье.",
+  "start_url": "/?source=pwa",
+  "display": "standalone",
+  "background_color": "#0c0c0e",
+  "theme_color": "#0c0c0e",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/images/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/images/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/images/icons/icon-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

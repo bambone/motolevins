@@ -1,99 +1,94 @@
 <x-app-layout>
-    <div x-data="globalSearchState()">
-        <!-- Hero Section -->
-        <section class="relative pt-32 pb-20 lg:pt-48 lg:pb-32 overflow-hidden">
-            <div class="absolute inset-0 z-0">
-                <!-- Simulated background texture -->
-                <div class="absolute inset-0 bg-gradient-to-b from-black via-transparent to-black opacity-90 z-10"></div>
-                <!-- If real hero image existed, it'd be here: <img src="..." class="w-full h-full object-cover opacity-40"> -->
-                <div class="w-full h-full bg-[#111]"></div> 
-            </div>
+    <!-- Alpine App State -->
+    <div x-data="globalBookingState()">
+        
+        <!-- Extracted Hero Component -->
+        <x-hero />
 
-            <div class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-                <h1 class="text-4xl md:text-6xl font-extrabold tracking-tight text-white mb-6">
-                    Ваш идеальный мотоцикл <br>
-                    <span class="text-accent-gradient">на побережье</span>
-                </h1>
-                <p class="mt-4 text-xl text-gray-300 max-w-3xl mx-auto mb-10">
-                    Аренда свежих мотоциклов в Геленджике, Анапе и Новороссийске. Прозрачные цены, полное обслуживание, моментальная бронь.
-                </p>
-
-                <!-- Advanced Search/Filter Bar -->
-                <form @submit.prevent="applySearch" class="max-w-5xl mx-auto glass rounded-2xl p-4 flex flex-col lg:flex-row gap-4 items-end shadow-2xl relative z-20">
-                    <div class="flex-1 w-full text-left">
-                        <label class="block text-xs font-semibold text-gray-400 mb-1.5 ml-1 uppercase tracking-wider">Локация</label>
-                        <select x-model="filters.location" class="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3.5 text-white text-sm focus:ring-1 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all appearance-none cursor-pointer">
-                            <option>Геленджик</option>
-                            <option>Анапа</option>
-                            <option>Новороссийск</option>
-                        </select>
-                    </div>
-                    <div class="flex-1 w-full text-left">
-                        <label class="block text-xs font-semibold text-gray-400 mb-1.5 ml-1 uppercase tracking-wider">Дата выдачи</label>
-                        <input type="date" x-model="filters.start_date" required min="{{ date('Y-m-d') }}" class="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:ring-1 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all">
-                    </div>
-                    <div class="flex-1 w-full text-left">
-                        <label class="block text-xs font-semibold text-gray-400 mb-1.5 ml-1 uppercase tracking-wider">Дата возврата</label>
-                        <input type="date" x-model="filters.end_date" required min="{{ date('Y-m-d') }}" class="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:ring-1 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all">
-                    </div>
-                    <div class="w-full lg:w-auto">
-                        <button type="submit" class="w-full bg-accent-gradient hover:opacity-90 text-white px-8 py-3.5 rounded-xl font-bold transition-all shadow-lg shadow-orange-500/25 flex items-center justify-center gap-2 h-[50px] whitespace-nowrap">
-                            Найти байк
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
-                        </button>
-                    </div>
-                </form>
-
-                <!-- Trust Block -->
-                <div class="mt-10 flex flex-wrap justify-center gap-4 text-gray-300 text-sm font-medium z-20 relative">
-                    <div class="flex items-center gap-2 px-5 py-2.5 glass-card rounded-full"><span class="text-orange-500">✔</span> 2000+ аренд</div>
-                    <div class="flex items-center gap-2 px-5 py-2.5 glass-card rounded-full"><span class="text-orange-500 text-lg">★</span> 4.9 рейтинг</div>
-                    <div class="flex items-center gap-2 px-5 py-2.5 glass-card rounded-full"><span class="text-orange-500">🏆</span> 7 лет на рынке</div>
-                    <div class="flex items-center gap-2 px-5 py-2.5 glass-card rounded-full"><span class="text-orange-500">🛡️</span> Полная страховка</div>
-                </div>
-            </div>
-        </section>
+        <x-experience-block />
 
         <!-- Catalog Section -->
-        <section id="catalog" class="py-20 relative z-10">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="flex justify-between items-end mb-12 border-b border-white/10 pb-6">
+        <section id="catalog" class="py-20 lg:py-28 relative z-10 bg-[#0c0c0e] border-t border-white/[0.02]">
+            <div class="max-w-7xl mx-auto px-4 md:px-8">
+                
+                <div class="flex flex-col md:flex-row justify-between md:items-end mb-12 border-b border-white/5 pb-6 gap-4">
                     <div>
-                        <h2 class="text-3xl font-bold text-white mb-2">Наш автопарк</h2>
-                        <p class="text-gray-400">Выберите подходящий мотоцикл для вашего путешествия</p>
+                        <h2 class="text-3xl md:text-4xl font-bold text-white mb-3">Наш автопарк</h2>
+                        <p class="text-silver/80 text-lg max-w-2xl">Премиальная техника для любого стиля путешествий. Все мотоциклы регулярно проходят детальное ТО.</p>
                     </div>
                 </div>
 
+                <!-- Empty State -->
+                <template x-if="filteredBikes.length === 0">
+                    <div class="w-full bg-carbon rounded-2xl border border-white/10 p-12 text-center flex flex-col items-center justify-center min-h-[400px]">
+                        <svg class="w-16 h-16 text-silver/30 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <h3 class="text-xl font-bold text-white mb-2">Нет свободных байков</h3>
+                        <p class="text-silver mb-8 max-w-md">На выбранные вами даты вся техника уже забронирована. Попробуйте изменить даты или локацию.</p>
+                        <button @click="resetFilters" class="px-6 py-3 bg-white/5 border border-white/10 text-white rounded-xl hover:bg-white/10 transition-colors active:scale-[0.98]">
+                            Сбросить фильтры
+                        </button>
+                    </div>
+                </template>
+
                 <!-- Bikes Grid -->
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 lg:gap-8" x-show="filteredBikes.length > 0">
                     @foreach($bikes as $bike)
-                        <x-bike-card :bike="$bike" />
+                        <div x-show="isBikeVisible({{ $bike->id }})">
+                            <x-bike-card :bike="$bike" />
+                        </div>
                     @endforeach
                 </div>
             </div>
         </section>
 
-        <!-- Inject Modal Component using Alpine.js -->
+        <x-why-us />
+
+        <x-how-it-works />
+
+        <x-social-proof />
+
+        <x-faq-block />
+
+        <x-final-cta />
+
         <x-booking-modal />
     </div>
 
     <script>
     document.addEventListener('alpine:init', () => {
-        Alpine.data('globalSearchState', () => ({
-            filters: { start_date: '', end_date: '', location: 'Геленджик' },
-            
+        Alpine.data('globalBookingState', () => ({
+            filters: { start_date: '', end_date: '', location: '' },
+            isSearching: false,
+            // Example logic binding
+            allBikes: @json($bikes->pluck('id')),
+            filteredBikes: @json($bikes->pluck('id')),
+
             applySearch() {
                 if (!this.filters.start_date || !this.filters.end_date) {
-                    alert('Пожалуйста, выберите даты аренды');
+                    const el = document.getElementById('start_date');
+                    if (el) el.focus();
                     return;
                 }
-                const start = new Date(this.filters.start_date);
-                const end = new Date(this.filters.end_date);
-                if (end < start) {
-                    alert('Дата возврата не может быть раньше даты выдачи');
-                    return;
-                }
-                document.getElementById('catalog').scrollIntoView({behavior: 'smooth'});
+                
+                this.isSearching = true;
+                
+                // Simulate network filtering
+                setTimeout(() => {
+                    document.getElementById('catalog').scrollIntoView({behavior: 'smooth'});
+                    this.isSearching = false;
+                }, 400);
+            },
+
+            resetFilters() {
+                this.filters.start_date = '';
+                this.filters.end_date = '';
+                this.filteredBikes = this.allBikes;
+            },
+
+            isBikeVisible(id) {
+                return this.filteredBikes.includes(id);
             },
 
             formatDate(dateStr) {

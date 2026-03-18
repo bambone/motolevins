@@ -1,60 +1,73 @@
 @props(['bike'])
 
-<div class="glass-card rounded-2xl overflow-hidden flex flex-col group relative transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(255,107,0,0.15)] hover:border-orange-500/30 cursor-pointer"
+<div class="bg-carbon rounded-2xl overflow-hidden flex flex-col h-full group relative transition-all duration-400 hover:scale-[1.02] hover:-translate-y-1.5 border border-white/5 hover:border-white/10 shadow-xl shadow-black/40 hover:shadow-2xl hover:shadow-moto-amber/5 cursor-pointer"
      @click="$dispatch('open-booking-modal', { id: {{ $bike->id }}, name: '{{ $bike->name }}', price: {{ $bike->price_per_day }}, start: filters.start_date, end: filters.end_date })">
-    <!-- Image -->
-    <div class="relative h-64 bg-[#1a1a1a] overflow-hidden border-b border-white/5 shrink-0">
+    
+    <!-- Restrained Background Amber Glow -->
+    <div class="absolute inset-0 bg-moto-amber/10 blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none -z-10 rounded-2xl"></div>
+
+    <!-- Image Zone (Fixed h-64 target 60%) -->
+    <div class="relative h-64 bg-[#0a0a0c] overflow-hidden shrink-0 border-b border-white/[0.03]">
         @if($bike->image)
-            <img src="/images/{{ $bike->image }}" alt="{{ $bike->name }}" class="block w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden')">
+            <img src="/images/{{ $bike->image }}" alt="{{ $bike->name }}" class="block w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden')">
         @endif
-        <div class="absolute inset-0 flex items-center justify-center text-gray-600 text-sm img-fallback {{ $bike->image ? 'hidden' : '' }}">
-            [Фото {{ $bike->name }}]
+        <div class="absolute inset-0 flex items-center justify-center text-silver text-sm img-fallback {{ $bike->image ? 'hidden' : '' }}">
+            <svg class="w-12 h-12 text-white/5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
         </div>
         
-        <!-- Badge -->
-        <div class="absolute top-4 right-4 bg-black/60 backdrop-blur-md px-3 py-1 rounded-full border border-white/10 z-10">
-            <span class="text-xs font-semibold text-orange-400 uppercase tracking-wider">{{ $bike->type }}</span>
+        <!-- UI Treatment Overlays to unify media presentation -->
+        <!-- Subtle dark wash to tone down blown-out photos -->
+        <div class="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors duration-500"></div>
+        <!-- Bottom integration gradient tying image to carbon background -->
+        <div class="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-carbon to-transparent"></div>
+
+        <!-- Category Badge -->
+        <div class="absolute top-4 left-4 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 z-10 shadow-lg">
+            <span class="text-[10px] font-bold text-moto-amber uppercase tracking-widest">{{ $bike->type }}</span>
         </div>
-        
-        <!-- Hover Gradient Overlay -->
-        <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
     </div>
 
-    <!-- Content -->
-    <div class="p-6 flex flex-col flex-1 relative z-10">
-        <div class="flex justify-between items-start mb-2">
-            <div>
-                <h3 class="text-xl font-bold text-white mb-1 leading-tight group-hover:text-orange-400 transition-colors">{{ $bike->name }}</h3>
-                <p class="text-sm text-gray-400 flex items-center gap-1.5 font-medium">
-                    <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-                    {{ $bike->engine }} cc
-                </p>
+    <!-- Content Zone (Internal layering depth) -->
+    <div class="px-6 pb-6 pt-2 flex flex-col flex-1 relative z-10 bg-carbon">
+        <h3 class="text-[22px] font-bold text-white mt-1 mb-1.5 leading-tight group-hover:text-moto-amber transition-colors line-clamp-1 drop-shadow-sm" title="{{ $bike->name }}">{{ $bike->name }}</h3>
+        
+        <!-- Vibe (helpful format) -->
+        <p class="text-sm text-silver/90 leading-relaxed mb-5 h-10 line-clamp-2" title="{{ $bike->description ?? 'Идеальный выбор для комфортных путешествий и поездок по городу.' }}">
+            {{ $bike->description ?? 'Идеальный выбор для комфортных путешествий и поездок по городу.' }}
+        </p>
+
+        <!-- Specs Row (Soft depth separator) -->
+        <div class="flex items-center gap-4 text-[13px] text-silver font-medium mt-auto mb-5 py-3 border-y border-white/[0.03] bg-white/[0.01] -mx-6 px-6">
+            <div class="flex items-center gap-2 flex-shrink-0">
+                <svg class="w-4 h-4 text-silver/50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                {{ $bike->engine }} cc
             </div>
+            @if($bike->license_category)
+            <div class="flex items-center gap-2 flex-shrink-0">
+                <svg class="w-4 h-4 text-silver/50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2"></path></svg>
+                Кат. {{ $bike->license_category }}
+            </div>
+            @endif
         </div>
 
-        <!-- Default Price -->
-        <div class="mt-auto pt-4 flex items-center justify-between" x-show="!filters.start_date || !filters.end_date">
-            <div>
-                <span class="text-xs text-gray-400 uppercase tracking-wider block mb-0.5">От</span>
-                <span class="text-2xl font-bold text-white">{{ number_format($bike->price_per_day, 0, ',', ' ') }} ₽<span class="text-sm text-gray-400 font-normal">/сутки</span></span>
+        <!-- Price Area & Secondary CTA Row -->
+        <div class="flex items-center justify-between mt-auto">
+            <!-- Price Display -->
+            <div x-show="!filters.start_date || !filters.end_date" class="flex-1">
+                <span class="text-[11px] text-silver/80 uppercase tracking-widest font-semibold block mb-0.5">Сутки аренды</span>
+                <span class="text-2xl font-extrabold text-white tracking-tight">{{ number_format($bike->price_per_day, 0, ',', ' ') }} ₽</span>
             </div>
-        </div>
+            <div class="flex-1" x-show="filters.start_date && filters.end_date" x-cloak>
+                <span class="text-[11px] text-moto-amber uppercase tracking-widest font-bold block mb-0.5" x-text="`${Math.floor((Date.UTC(new Date(filters.end_date).getFullYear(), new Date(filters.end_date).getMonth(), new Date(filters.end_date).getDate()) - Date.UTC(new Date(filters.start_date).getFullYear(), new Date(filters.start_date).getMonth(), new Date(filters.start_date).getDate())) / (1000 * 60 * 60 * 24)) + 1} дней аренды`"></span>
+                <span class="text-2xl font-extrabold text-white tracking-tight leading-none block"><span x-text="formatPrice(calculateCardTotalPrice({{ $bike->price_per_day }}))"></span> ₽</span>
+            </div>
 
-        <!-- Inline Dates Killer Feature (Alpine dynamic) -->
-        <div class="mt-4 p-3.5 bg-white/5 rounded-xl border border-white/10 transition-all transform origin-bottom" x-show="filters.start_date && filters.end_date" x-cloak>
-            <div class="flex flex-col text-sm border-b border-orange-500/20 pb-2 mb-2">
-                <span class="text-gray-400 flex items-center gap-1.5"><svg class="w-4 h-4 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg> <span x-text="formatDate(filters.start_date)"></span> &nbsp;&rarr;&nbsp; <span x-text="formatDate(filters.end_date)"></span></span>
-            </div>
-            <div class="flex justify-between items-end">
-                <span class="text-white font-bold text-xl"><span x-text="formatPrice(calculateCardTotalPrice({{ $bike->price_per_day }}))"></span> ₽</span>
-                <span class="text-xs text-gray-400 uppercase">ЗА ВЕСЬ ПЕРИОД</span>
-            </div>
+            <!-- Secondary Conversion Button -->
+            <!-- Read as an action without competing with Hero CTA -->
+            <button class="w-auto px-5 bg-white/5 text-silver hover:text-white group-hover:bg-moto-amber font-semibold h-11 rounded-xl transition-all flex justify-center items-center gap-2 border border-white/10 group-hover:border-moto-amber active:scale-[0.96]">
+                Бронь
+                <svg class="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+            </button>
         </div>
-
-        <!-- Big CTA Button -->
-        <button class="w-full mt-5 bg-white/10 text-white group-hover:bg-accent-gradient font-bold py-3.5 rounded-xl transition-all shadow-lg flex justify-center items-center gap-2 border border-white/10 group-hover:border-transparent group-hover:shadow-orange-500/25">
-            Забронировать
-            <svg class="w-5 h-5 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
-        </button>
     </div>
 </div>

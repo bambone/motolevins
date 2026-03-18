@@ -1,0 +1,238 @@
+name: Deploy motolevins
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch: {}
+
+concurrency:
+  group: deploy-motolevins
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: false
+
+      - name: Setup SSH
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.SSH_PRIVATE_KEY }}" | tr -d '\r' > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -p "${{ vars.SSH_PORT }}" -H "${{ vars.SSH_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          tools: composer:v2
+
+      - name: Get Composer cache dir
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+
+      - name: Cache Composer
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-composer-
+
+      - name: Install Composer deps
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Build assets
+        run: |
+          npm ci
+          npm run build
+
+      - name: Build deploy archive
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          rm -rf /tmp/deploy-src
+          mkdir -p /tmp/deploy-src
+
+          git archive --format=tar HEAD | tar -x -C /tmp/deploy-src
+
+          rm -f /tmp/deploy-src/.env || true
+          rm -f /tmp/deploy-src/.env.* || true
+          rm -f /tmp/deploy-src/error_log || true
+          rm -f /tmp/deploy-src/.ftpquota || true
+
+          rm -rf /tmp/deploy-src/storage || true
+          rm -rf /tmp/deploy-src/bootstrap/cache || true
+
+          rm -rf /tmp/deploy-src/public/storage || true
+          rm -rf /tmp/deploy-src/public/uploads || true
+          rm -rf /tmp/deploy-src/uploads || true
+          rm -rf /tmp/deploy-src/public/.well-known || true
+
+          mkdir -p /tmp/deploy-src/public/build
+          cp -r public/build/. /tmp/deploy-src/public/build/
+
+          rm -rf /tmp/deploy-src/public/hot || true
+
+          rm -rf /tmp/deploy-src/node_modules || true
+          rm -rf /tmp/deploy-src/tests || true
+          rm -f /tmp/deploy-src/phpunit.xml || true
+          rm -f /tmp/deploy-src/vite.config.js || true
+          rm -f /tmp/deploy-src/package.json || true
+          rm -f /tmp/deploy-src/package-lock.json || true
+          rm -f /tmp/deploy-src/yarn.lock || true
+          rm -f /tmp/deploy-src/pnpm-lock.yaml || true
+
+          tar -C /tmp/deploy-src -czf deploy.tgz .
+
+      - name: Upload + deploy on server
+        shell: bash
+        env:
+          SSH_PORT: "${{ vars.SSH_PORT }}"
+          SSH_USER: "${{ vars.SSH_USER }}"
+          SSH_HOST: "${{ vars.SSH_HOST }}"
+          DEPLOY_TMP: "${{ vars.DEPLOY_TMP }}"
+          DEPLOY_PATH: "${{ vars.DEPLOY_PATH }}"
+        run: |
+          set -euo pipefail
+
+          REMOTE="${SSH_USER}@${SSH_HOST}"
+          TMP="${DEPLOY_TMP}"
+          DEST="${DEPLOY_PATH}"
+
+          ssh -p "$SSH_PORT" "$REMOTE" "set -e; mkdir -p '$TMP' '$DEST'; rm -rf '$TMP/release' '$TMP/preserve'; mkdir -p '$TMP/release' '$TMP/preserve'"
+          scp -P "$SSH_PORT" deploy.tgz "$REMOTE:$TMP/deploy.tgz"
+
+          ssh -p "$SSH_PORT" "$REMOTE" "DEPLOY_TMP='$TMP' DEPLOY_PATH='$DEST' sh -se" <<'EOF'
+          set -eu
+          (set -o pipefail) 2>/dev/null && set -o pipefail || true
+
+          TMP="${DEPLOY_TMP}"
+          DEST="${DEPLOY_PATH}"
+          REL="$TMP/release"
+          PRES="$TMP/preserve"
+
+          tar -xzf "$TMP/deploy.tgz" -C "$REL"
+          rm -f "$TMP/deploy.tgz"
+
+          preserve_move () {
+            p="$1"
+            if [ -e "$DEST/$p" ]; then
+              mkdir -p "$PRES/$(dirname "$p" 2>/dev/null || echo .)"
+              mv "$DEST/$p" "$PRES/$p"
+            fi
+          }
+
+          restore_back () {
+            p="$1"
+            if [ -e "$PRES/$p" ]; then
+              rm -rf "$DEST/$p" 2>/dev/null || true
+              mkdir -p "$DEST/$(dirname "$p" 2>/dev/null || echo .)"
+              mv "$PRES/$p" "$DEST/$p"
+            fi
+          }
+
+          preserve_move ".env"
+          preserve_move ".env.production"
+          preserve_move "error_log"
+          preserve_move ".ftpquota"
+
+          preserve_move "storage"
+          preserve_move "bootstrap/cache"
+
+          preserve_move "public/storage"
+          preserve_move "public/uploads"
+          preserve_move "uploads"
+          preserve_move "public/.well-known"
+
+          preserve_move ".htaccess"
+          preserve_move "public/.htaccess"
+
+          if [ -f "$DEST/composer.lock" ]; then
+            cp -f "$DEST/composer.lock" "$PRES/composer.lock" || true
+          fi
+
+          preserve_move "vendor"
+
+          find "$DEST" -mindepth 1 -maxdepth 1 -exec rm -rf {} \;
+
+          cp -R "$REL"/. "$DEST"/
+
+          restore_back ".env"
+          restore_back ".env.production"
+          restore_back "error_log"
+          restore_back ".ftpquota"
+
+          restore_back "storage"
+          restore_back "bootstrap/cache"
+
+          restore_back "public/storage"
+          restore_back "public/uploads"
+          restore_back "uploads"
+          restore_back "public/.well-known"
+
+          restore_back ".htaccess"
+          restore_back "public/.htaccess"
+
+          restore_back "vendor"
+
+          if [ -f "$PRES/composer.lock" ] && [ -f "$DEST/composer.lock" ]; then
+            if ! diff -q "$PRES/composer.lock" "$DEST/composer.lock" >/dev/null 2>&1; then
+              echo "composer.lock changed -> removing preserved vendor"
+              rm -rf "$DEST/vendor" || true
+            fi
+          fi
+
+          mkdir -p "$DEST/storage/framework/cache/data"
+          mkdir -p "$DEST/storage/framework/sessions"
+          mkdir -p "$DEST/storage/framework/views"
+          mkdir -p "$DEST/storage/logs"
+          mkdir -p "$DEST/bootstrap/cache"
+
+          chmod -R 775 "$DEST/storage" 2>/dev/null || true
+          chmod -R 775 "$DEST/bootstrap/cache" 2>/dev/null || true
+
+          echo "=== Running composer install ==="
+          cd "$DEST"
+          export COMPOSER_MEMORY_LIMIT=-1
+
+          if [ -f "$DEST/composer" ]; then
+            php "$DEST/composer" install --no-dev --optimize-autoloader --no-interaction
+          elif [ -f "$DEST/composer.phar" ]; then
+            php "$DEST/composer.phar" install --no-dev --optimize-autoloader --no-interaction
+          elif command -v composer >/dev/null 2>&1; then
+            composer install --no-dev --optimize-autoloader --no-interaction
+          else
+            echo "ERROR: composer not found"
+            exit 1
+          fi
+
+          if [ -f artisan ]; then
+            php artisan storage:link || true
+            php artisan config:clear || true
+            php artisan route:clear || true
+            php artisan view:clear || true
+            php artisan optimize:clear || true
+            php artisan config:cache || true
+            php artisan route:cache || true
+            php artisan view:cache || true
+            php artisan migrate --force || true
+          fi
+
+          echo "=== Deployment complete ==="
+          rm -rf "$REL" "$PRES" 2>/dev/null || true
+          EOF

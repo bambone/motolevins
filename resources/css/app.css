@@ -6,6 +6,19 @@
 @source '../**/*.js';
 
 @theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
-        'Segoe UI Symbol', 'Noto Color Emoji';
+    /* Custom brand colors */
+    --color-obsidian: #0A0A0C;
+    --color-carbon: #141417;
+    --color-silver: #A1A1A6;
+    --color-moto-amber: #E85D04;
+
+    /* Custom fonts */
+    --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+}
+
+/* Base resets & utilities */
+@layer base {
+    body {
+        @apply bg-obsidian text-silver antialiased;
+    }
 }
