@@ -2,7 +2,7 @@
     <!-- Background Treatment -->
     <div class="absolute inset-0 z-0">
         <!-- Base image with fallback -->
-        <img src="/images/hero-bg.png" alt="Motorcycle background" class="w-full h-full object-cover transition-transform duration-[20s] ease-out group-hover:scale-105" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden')">
+        <img src="{{ asset('images/hero-bg.png') }}" alt="Motorcycle background" class="w-full h-full object-cover transition-transform duration-[20s] ease-out group-hover:scale-105" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden')">
         
         <!-- Premium Fallback Texture if image fails -->
         <div class="w-full h-full bg-gradient-to-br from-carbon to-obsidian hidden img-fallback relative overflow-hidden">

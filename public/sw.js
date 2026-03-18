@@ -1,5 +1,5 @@
 const CACHE_VERSION = 'moto-levins-v1';
-const OFFLINE_URL = '/offline';
+const OFFLINE_URL = 'offline';
 
 const CACHES = {
   static: `${CACHE_VERSION}-static`,

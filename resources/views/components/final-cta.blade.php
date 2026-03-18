@@ -1,7 +1,7 @@
 <section class="py-32 lg:py-40 relative z-10 border-t border-white/[0.02] overflow-hidden">
     <!-- Atmospheric Background Image with heavy darkening -->
     <div class="absolute inset-0 z-0">
-        <img src="/images/experience-touring.png" alt="Road" class="w-full h-full object-cover opacity-30" onerror="this.style.display='none'">
+        <img src="{{ asset('images/experience-touring.png') }}" alt="Road" class="w-full h-full object-cover opacity-30" onerror="this.style.display='none'">
         <div class="absolute inset-0 bg-gradient-to-b from-obsidian via-obsidian/90 to-[#08080a]"></div>
     </div>
     

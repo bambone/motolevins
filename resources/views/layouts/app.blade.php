@@ -6,9 +6,9 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     
     <!-- PWA Settings -->
-    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="manifest" href="{{ asset('manifest.webmanifest') }}">
     <meta name="theme-color" content="#0c0c0e">
-    <link rel="apple-touch-icon" href="/images/icons/icon-192.png">
+    <link rel="apple-touch-icon" href="{{ asset('images/icons/icon-192.png') }}">
 
     <title>{{ config('app.name', 'Moto Levins') }}</title>
 
@@ -58,7 +58,7 @@
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js').catch(err => {
+                navigator.serviceWorker.register("{{ asset('sw.js') }}").catch(err => {
                     console.log('SW registration failed: ', err);
                 });
             });

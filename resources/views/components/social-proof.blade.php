@@ -19,7 +19,7 @@
                     <p class="text-white/95 text-[15px] sm:text-base leading-relaxed mb-8 font-medium">«Огонь вообще! Взяли мотик покатать по серпантинам. Выдали за 10 минут, шлемы новые, респект. Закат на побережье — разрыв.»</p>
                 </div>
                 <div class="border-t border-white/5 pt-5 flex items-center gap-4">
-                    <img src="/images/avatar-1.png" alt="Avatar" class="w-12 h-12 rounded-full object-cover border-2 border-white/10 shrink-0 shadow-lg" onerror="this.style.display='none'">
+                    <img src="{{ asset('images/avatar-1.png') }}" alt="Avatar" class="w-12 h-12 rounded-full object-cover border-2 border-white/10 shrink-0 shadow-lg" onerror="this.style.display='none'">
                     <div>
                         <span class="block text-white font-bold text-sm">Алексей М.</span>
                         <span class="block text-silver text-xs mt-0.5">Геленджик</span>
@@ -40,7 +40,7 @@
                     <p class="text-white/95 text-[15px] sm:text-base leading-relaxed mb-8 font-medium">«Первый раз брал в Анапе. Никаких левых доплат по факту. Мот едет бодро, тормоза цепкие. Кайфанул от души, следующий раз возьму на неделю.»</p>
                 </div>
                 <div class="border-t border-white/5 pt-5 flex items-center gap-4">
-                    <img src="/images/avatar-2.png" alt="Avatar" class="w-12 h-12 rounded-full object-cover border-2 border-white/10 shrink-0 shadow-lg" onerror="this.style.display='none'">
+                    <img src="{{ asset('images/avatar-2.png') }}" alt="Avatar" class="w-12 h-12 rounded-full object-cover border-2 border-white/10 shrink-0 shadow-lg" onerror="this.style.display='none'">
                     <div>
                         <span class="block text-white font-bold text-sm">Игорь С.</span>
                         <span class="block text-silver text-xs mt-0.5">Анапа</span>
@@ -61,7 +61,7 @@
                     <p class="text-white/95 text-[15px] sm:text-base leading-relaxed mb-8 font-medium">«Пригнали байк прямо к отелю, сдали там же. Мотик ухоженный, рулится идеально. Абрау-Дюрсо на закате — это просто нечто.»</p>
                 </div>
                 <div class="border-t border-white/5 pt-5 flex items-center gap-4">
-                    <img src="/images/avatar-3.png" alt="Avatar" class="w-12 h-12 rounded-full object-cover border-2 border-white/10 shrink-0 shadow-lg" onerror="this.style.display='none'">
+                    <img src="{{ asset('images/avatar-3.png') }}" alt="Avatar" class="w-12 h-12 rounded-full object-cover border-2 border-white/10 shrink-0 shadow-lg" onerror="this.style.display='none'">
                     <div>
                         <span class="block text-white font-bold text-sm">Анна В.</span>
                         <span class="block text-silver text-xs mt-0.5">Новороссийск</span>
