@@ -2,7 +2,7 @@ name: Deploy motolevins
 
 on:
   push:
-    branches: ["main"]
+    branches: ["master"]
   workflow_dispatch: {}
 
 concurrency:
