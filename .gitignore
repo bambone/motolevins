@@ -4,11 +4,13 @@
 .env.backup
 .env.production
 .env.local
+.env.testing
 .env.*.local
 /auth.json
 /node_modules
 /public/build
 /public/hot
+/public/images
 /public/storage
 /storage/*.key
 /storage/pail
@@ -24,8 +26,11 @@ composer.phar
 .phpunit.result.cache
 .phpunit.cache
 *.phpunit.result.cache
+.php-cs-fixer.cache
+/coverage
 
 # IDE & Editors
+/.cursor
 /.fleet
 /.idea
 /.nova
