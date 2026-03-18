@@ -1,7 +1,7 @@
 <header x-data="{ scrolled: false }" 
         @scroll.window="scrolled = (window.pageYOffset > 50)" 
-        :class="scrolled ? 'bg-obsidian/70 backdrop-blur-2xl border-white/10 shadow-2xl' : 'bg-gradient-to-b from-black/60 to-transparent border-transparent'"
-        class="fixed top-0 w-full z-50 border-b transition-all duration-300 h-16 lg:h-20 flex items-center">
+        :class="scrolled ? 'bg-obsidian/70 backdrop-blur-2xl border-b border-white/10 shadow-2xl' : 'bg-gradient-to-b from-black/60 to-transparent'"
+        class="fixed top-0 w-full z-50 transition-all duration-300 h-16 lg:h-20 flex items-center">
     <div class="w-full max-w-7xl mx-auto px-4 md:px-8 flex justify-between items-center">
         <!-- Logo -->
         <div class="flex-shrink-0 flex items-center gap-2">
