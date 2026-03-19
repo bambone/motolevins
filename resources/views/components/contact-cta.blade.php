@@ -1,5 +1,9 @@
-<!-- Floating CTAs -->
-<div class="fixed bottom-6 right-6 z-50 flex flex-col gap-3">
+<!-- Floating CTAs: приглушаются во время hero-video -->
+<div x-data="{ videoPlaying: false }"
+     @hero-video-playing.window="videoPlaying = true"
+     @hero-video-stopped.window="videoPlaying = false"
+     :class="videoPlaying ? 'opacity-50 translate-y-4' : 'opacity-100 translate-y-0'"
+     class="fixed bottom-6 right-6 z-50 flex flex-col gap-3 transition-all duration-500 ease-out">
     <!-- WhatsApp -->
     <a href="https://wa.me/79130608689" target="_blank"
        class="flex items-center justify-center w-14 h-14 rounded-full bg-[#25D366] text-white shadow-lg hover:scale-110 hover:shadow-[#25D366]/30 transition-all duration-300">

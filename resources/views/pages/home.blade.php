@@ -1,6 +1,9 @@
+@php
+    $bikeIdsJson = $bikes->pluck('id')->toJson();
+@endphp
 <x-app-layout>
     <!-- Alpine App State -->
-    <div x-data="globalBookingState()">
+    <div x-data="globalBookingState()" data-bike-ids="{{ $bikeIdsJson }}">
         
         <!-- Extracted Hero Component -->
         <x-hero />
@@ -14,7 +17,7 @@
                 <div class="flex flex-col md:flex-row justify-between md:items-end mb-12 border-b border-white/5 pb-6 gap-4">
                     <div>
                         <h2 class="text-3xl md:text-4xl font-bold text-white mb-3">Наш автопарк</h2>
-                        <p class="text-silver/80 text-lg max-w-2xl">Премиальная техника для любого стиля путешествий. Все мотоциклы регулярно проходят детальное ТО.</p>
+                        <p class="text-silver/80 text-lg max-w-2xl">Премиальная техника для любого стиля. <span class="text-moto-amber/90 font-medium">Ограниченное количество мотоциклов</span> — бронируйте заранее.</p>
                     </div>
                 </div>
 
@@ -34,9 +37,9 @@
 
                 <!-- Bikes Grid -->
                 <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 lg:gap-8" x-show="filteredBikes.length > 0">
-                    @foreach($bikes as $bike)
+                    @foreach($bikes as $index => $bike)
                         <div x-show="isBikeVisible({{ $bike->id }})">
-                            <x-bike-card :bike="$bike" />
+                            <x-bike-card :bike="$bike" :badge="$badges[$index] ?? null" />
                         </div>
                     @endforeach
                 </div>
@@ -46,6 +49,8 @@
         <x-why-us />
 
         <x-how-it-works />
+
+        <x-rental-conditions />
 
         <x-social-proof />
 
@@ -58,12 +63,14 @@
 
     <script>
     document.addEventListener('alpine:init', () => {
-        Alpine.data('globalBookingState', () => ({
-            filters: { start_date: '', end_date: '', location: '' },
-            isSearching: false,
-            // Example logic binding
-            allBikes: @json($bikes->pluck('id')),
-            filteredBikes: @json($bikes->pluck('id')),
+        Alpine.data('globalBookingState', () => {
+            const el = document.querySelector('[data-bike-ids]');
+            const bikeIds = el ? JSON.parse(el.getAttribute('data-bike-ids')) : [];
+            return {
+                filters: { start_date: '', end_date: '', location: '' },
+                isSearching: false,
+                allBikes: bikeIds,
+                filteredBikes: [...bikeIds],
 
             applySearch() {
                 if (!this.filters.start_date || !this.filters.end_date) {
@@ -114,7 +121,8 @@
                 const days = Math.floor((utc2 - utc1) / MS_PER_DAY) + 1;
                 return days * pricePerDay;
             }
-        }));
+        };
+        });
     });
     </script>
 </x-app-layout>

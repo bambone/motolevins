@@ -6,6 +6,45 @@
         </div>
 
         <div x-data="{ active: null }" class="space-y-4">
+            <!-- FAQ: Можно ли уехать в другой город -->
+            <div class="bg-carbon border border-white/5 rounded-2xl overflow-hidden transition-colors hover:border-white/10">
+                <button @click="active !== 0 ? active = 0 : active = null" class="w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                    <span class="font-bold text-white text-lg">Можно ли уехать в другой город?</span>
+                    <svg class="w-5 h-5 text-moto-amber transition-transform duration-300 shrink-0 ml-4" :class="{ 'rotate-180': active === 0 }" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                </button>
+                <div x-show="active === 0" x-collapse x-cloak>
+                    <div class="px-6 pb-6 pt-2 text-silver text-base leading-relaxed border-t border-white/5 mt-2">
+                        Да. Краснодарский край и Крым — без ограничений. Выезд в другие регионы согласовывается индивидуально. Суточный лимит — 300 км, перепробег оплачивается отдельно.
+                    </div>
+                </div>
+            </div>
+
+            <!-- FAQ: Что если сломается -->
+            <div class="bg-carbon border border-white/5 rounded-2xl overflow-hidden transition-colors hover:border-white/10">
+                <button @click="active !== 6 ? active = 6 : active = null" class="w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                    <span class="font-bold text-white text-lg">Что если сломается в дороге?</span>
+                    <svg class="w-5 h-5 text-moto-amber transition-transform duration-300 shrink-0 ml-4" :class="{ 'rotate-180': active === 6 }" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                </button>
+                <div x-show="active === 6" x-collapse x-cloak>
+                    <div class="px-6 pb-6 pt-2 text-silver text-base leading-relaxed border-t border-white/5 mt-2">
+                        Поддержка 24/7. Если поломка по нашей вине — заменим мотоцикл или вернём деньги за неиспользованные дни. Техника проходит ТО перед каждой выдачей, поломки редки.
+                    </div>
+                </div>
+            </div>
+
+            <!-- FAQ: Есть ли страховка -->
+            <div class="bg-carbon border border-white/5 rounded-2xl overflow-hidden transition-colors hover:border-white/10">
+                <button @click="active !== 7 ? active = 7 : active = null" class="w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                    <span class="font-bold text-white text-lg">Есть ли страховка?</span>
+                    <svg class="w-5 h-5 text-moto-amber transition-transform duration-300 shrink-0 ml-4" :class="{ 'rotate-180': active === 7 }" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                </button>
+                <div x-show="active === 7" x-collapse x-cloak>
+                    <div class="px-6 pb-6 pt-2 text-silver text-base leading-relaxed border-t border-white/5 mt-2">
+                        ОСАГО — на всех мотоциклах. КАСКО без франшизы — опция при бронировании. Защищает от финансовой ответственности при ДТП по чужой вине.
+                    </div>
+                </div>
+            </div>
+
             <!-- FAQ 1 -->
             <div class="bg-carbon border border-white/5 rounded-2xl overflow-hidden transition-colors hover:border-white/10">
                 <button @click="active !== 1 ? active = 1 : active = null" class="w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
@@ -14,7 +53,7 @@
                 </button>
                 <div x-show="active === 1" x-collapse x-cloak>
                     <div class="px-6 pb-6 pt-2 text-silver text-base leading-relaxed border-t border-white/5 mt-2">
-                        Вам потребуется паспорт (возраст от 25 лет) и водительское удостоверение категории «А» (стаж от 3 лет). Для оформления договора мы используем только оригиналы документов.
+                        Паспорт (возраст от 21 года) и права категории «А» (стаж от 2 лет). Только оригиналы документов.
                     </div>
                 </div>
             </div>

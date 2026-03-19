@@ -1,4 +1,4 @@
-@props(['bike'])
+@props(['bike', 'badge' => null])
 
 <div class="bg-carbon rounded-2xl overflow-hidden flex flex-col h-full group relative transition-all duration-400 hover:scale-[1.02] hover:-translate-y-1.5 border border-white/5 hover:border-white/10 shadow-xl shadow-black/40 hover:shadow-2xl hover:shadow-moto-amber/5 cursor-pointer"
      @click="$dispatch('open-booking-modal', { id: {{ $bike->id }}, name: '{{ $bike->name }}', price: {{ $bike->price_per_day }}, start: filters.start_date, end: filters.end_date })">
@@ -21,9 +21,12 @@
         <!-- Bottom integration gradient tying image to carbon background -->
         <div class="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-carbon to-transparent"></div>
 
-        <!-- Category Badge -->
-        <div class="absolute top-4 left-4 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 z-10 shadow-lg">
-            <span class="text-[10px] font-bold text-moto-amber uppercase tracking-widest">{{ $bike->type }}</span>
+        <!-- Badges -->
+        <div class="absolute top-4 left-4 right-4 flex flex-wrap gap-2 z-10">
+            @if($badge)
+                <span class="bg-moto-amber/90 text-white px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider shadow-lg">{{ $badge }}</span>
+            @endif
+            <span class="bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 text-[10px] font-bold text-moto-amber uppercase tracking-widest">{{ $bike->type }}</span>
         </div>
     </div>
 
@@ -31,9 +34,9 @@
     <div class="px-6 pb-6 pt-2 flex flex-col flex-1 relative z-10 bg-carbon">
         <h3 class="text-[22px] font-bold text-white mt-1 mb-1.5 leading-tight group-hover:text-moto-amber transition-colors line-clamp-1 drop-shadow-sm" title="{{ $bike->name }}">{{ $bike->name }}</h3>
         
-        <!-- Vibe (helpful format) -->
-        <p class="text-sm text-silver/90 leading-relaxed mb-5 h-10 line-clamp-2" title="{{ $bike->description ?? 'Идеальный выбор для комфортных путешествий и поездок по городу.' }}">
-            {{ $bike->description ?? 'Идеальный выбор для комфортных путешествий и поездок по городу.' }}
+        <!-- Advantage -->
+        <p class="text-sm text-silver/90 leading-relaxed mb-5 h-10 line-clamp-2" title="{{ $bike->description ?? 'Идеален для города и путешествий.' }}">
+            {{ $bike->description ?? 'Идеален для города и путешествий.' }}
         </p>
 
         <!-- Specs Row (Soft depth separator) -->
@@ -54,8 +57,9 @@
         <div class="flex items-center justify-between mt-auto">
             <!-- Price Display -->
             <div x-show="!filters.start_date || !filters.end_date" class="flex-1">
-                <span class="text-[11px] text-silver/80 uppercase tracking-widest font-semibold block mb-0.5">Сутки аренды</span>
+                <span class="text-[11px] text-silver/80 uppercase tracking-widest font-semibold block mb-0.5">от</span>
                 <span class="text-2xl font-extrabold text-white tracking-tight">{{ number_format($bike->price_per_day, 0, ',', ' ') }} ₽</span>
+                <span class="text-[11px] text-silver/60 uppercase tracking-wider">/ сутки</span>
             </div>
             <div class="flex-1" x-show="filters.start_date && filters.end_date" x-cloak>
                 <span class="text-[11px] text-moto-amber uppercase tracking-widest font-bold block mb-0.5" x-text="`${Math.floor((Date.UTC(new Date(filters.end_date).getFullYear(), new Date(filters.end_date).getMonth(), new Date(filters.end_date).getDate()) - Date.UTC(new Date(filters.start_date).getFullYear(), new Date(filters.start_date).getMonth(), new Date(filters.start_date).getDate())) / (1000 * 60 * 60 * 24)) + 1} дней аренды`"></span>
@@ -65,7 +69,7 @@
             <!-- Secondary Conversion Button -->
             <!-- Read as an action without competing with Hero CTA -->
             <button class="w-auto px-5 bg-white/5 text-silver hover:text-white group-hover:bg-moto-amber font-semibold h-11 rounded-xl transition-all flex justify-center items-center gap-2 border border-white/10 group-hover:border-moto-amber active:scale-[0.96]">
-                Бронь
+                Забронировать
                 <svg class="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
             </button>
         </div>

@@ -27,6 +27,9 @@
 
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #050505; color: #ffffff; }
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { animation-duration: 0.2s !important; transition-duration: 0.2s !important; }
+        }
         .premium-bg { background: radial-gradient(circle at 50% -20%, #1a1a1a 0%, #050505 70%); min-height: 100vh; }
         .glass { background: rgba(25, 25, 25, 0.6); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.08); }
         .glass-card { background: rgba(30, 30, 30, 0.4); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.05); transition: transform 0.3s ease, background 0.3s ease, border-color 0.3s ease; }

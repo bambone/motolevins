@@ -2,7 +2,7 @@
     <div class="max-w-7xl mx-auto px-4 md:px-8">
         <div class="mb-12 md:max-w-2xl">
             <h2 class="text-3xl md:text-4xl font-bold text-white mb-3">Отзывы райдеров</h2>
-            <p class="text-silver/80 text-lg">Без глянца и фальши. Только реальные эмоции с южных трасс.</p>
+            <p class="text-silver/80 text-lg">Реальные эмоции с южных трасс. Фото, имена, города.</p>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
@@ -16,10 +16,13 @@
                         <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z"/></svg>
                         <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z"/></svg>
                     </div>
-                    <p class="text-white/95 text-[15px] sm:text-base leading-relaxed mb-8 font-medium">«Огонь вообще! Взяли мотик покатать по серпантинам. Выдали за 10 минут, шлемы новые, респект. Закат на побережье — разрыв.»</p>
+                    <p class="text-white/95 text-[15px] sm:text-base leading-relaxed mb-8 font-medium">«Огонь! Выдали за 10 минут, шлемы новые. Закат на побережье — разрыв.»</p>
                 </div>
                 <div class="border-t border-white/5 pt-5 flex items-center gap-4">
-                    <img src="{{ asset('images/avatar-1.png') }}" alt="Avatar" class="w-12 h-12 rounded-full object-cover border-2 border-white/10 shrink-0 shadow-lg" onerror="this.style.display='none'">
+                    <div class="w-12 h-12 rounded-full overflow-hidden border-2 border-white/10 shrink-0 shadow-lg flex items-center justify-center bg-moto-amber/20">
+                        <img src="{{ asset('images/avatar-1.png') }}" alt="Алексей М." class="w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden')">
+                        <span class="text-moto-amber font-bold text-sm hidden">АМ</span>
+                    </div>
                     <div>
                         <span class="block text-white font-bold text-sm">Алексей М.</span>
                         <span class="block text-silver text-xs mt-0.5">Геленджик</span>
@@ -37,10 +40,13 @@
                         <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z"/></svg>
                         <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z"/></svg>
                     </div>
-                    <p class="text-white/95 text-[15px] sm:text-base leading-relaxed mb-8 font-medium">«Первый раз брал в Анапе. Никаких левых доплат по факту. Мот едет бодро, тормоза цепкие. Кайфанул от души, следующий раз возьму на неделю.»</p>
+                    <p class="text-white/95 text-[15px] sm:text-base leading-relaxed mb-8 font-medium">«Никаких доплат по факту. Мот бодрый, тормоза цепкие. Следующий раз — на неделю.»</p>
                 </div>
                 <div class="border-t border-white/5 pt-5 flex items-center gap-4">
-                    <img src="{{ asset('images/avatar-2.png') }}" alt="Avatar" class="w-12 h-12 rounded-full object-cover border-2 border-white/10 shrink-0 shadow-lg" onerror="this.style.display='none'">
+                    <div class="w-12 h-12 rounded-full overflow-hidden border-2 border-white/10 shrink-0 shadow-lg flex items-center justify-center bg-moto-amber/20">
+                        <img src="{{ asset('images/avatar-2.png') }}" alt="Игорь С." class="w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden')">
+                        <span class="text-moto-amber font-bold text-sm hidden">ИС</span>
+                    </div>
                     <div>
                         <span class="block text-white font-bold text-sm">Игорь С.</span>
                         <span class="block text-silver text-xs mt-0.5">Анапа</span>
@@ -58,10 +64,13 @@
                         <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z"/></svg>
                         <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z"/></svg>
                     </div>
-                    <p class="text-white/95 text-[15px] sm:text-base leading-relaxed mb-8 font-medium">«Пригнали байк прямо к отелю, сдали там же. Мотик ухоженный, рулится идеально. Абрау-Дюрсо на закате — это просто нечто.»</p>
+                    <p class="text-white/95 text-[15px] sm:text-base leading-relaxed mb-8 font-medium">«Пригнали к отелю, сдали там же. Мотик ухоженный. Абрау-Дюрсо на закате — нечто.»</p>
                 </div>
                 <div class="border-t border-white/5 pt-5 flex items-center gap-4">
-                    <img src="{{ asset('images/avatar-3.png') }}" alt="Avatar" class="w-12 h-12 rounded-full object-cover border-2 border-white/10 shrink-0 shadow-lg" onerror="this.style.display='none'">
+                    <div class="w-12 h-12 rounded-full overflow-hidden border-2 border-white/10 shrink-0 shadow-lg flex items-center justify-center bg-moto-amber/20">
+                        <img src="{{ asset('images/avatar-3.png') }}" alt="Анна В." class="w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden')">
+                        <span class="text-moto-amber font-bold text-sm hidden">АВ</span>
+                    </div>
                     <div>
                         <span class="block text-white font-bold text-sm">Анна В.</span>
                         <span class="block text-silver text-xs mt-0.5">Новороссийск</span>
