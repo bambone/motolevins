@@ -30,7 +30,7 @@
                 <label class="hidden lg:block text-xs mb-1.5 opacity-0 pointer-events-none" aria-hidden="true">&nbsp;</label>
                 <button type="submit"
                         :disabled="isSearching"
-                        :class="isSearching ? 'opacity-70 cursor-not-allowed' : 'hover:-translate-y-0.5 hover:shadow-xl hover:shadow-orange-500/30 active:scale-[0.97]'"
+                        :class="isSearching ? 'opacity-70 cursor-not-allowed' : 'hover:-translate-y-0.5 hover:shadow-xl hover:shadow-orange-500/40 active:scale-[0.97]'"
                         class="w-full lg:w-auto bg-gradient-to-r from-moto-amber to-orange-600 text-white px-8 py-3 rounded-xl font-bold text-base transition-all flex items-center justify-center gap-2 h-12 whitespace-nowrap shadow-lg shadow-orange-500/20">
                     <template x-if="!isSearching">
                         <span class="flex items-center gap-2">

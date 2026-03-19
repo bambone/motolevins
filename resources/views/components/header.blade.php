@@ -5,12 +5,13 @@
         :class="(videoPlaying || compact) ? 'bg-obsidian/85 backdrop-blur-md shadow-sm' : 'bg-gradient-to-b from-black/60 to-transparent'"
         class="fixed top-0 w-full z-50 h-16 md:h-20 flex items-center transition-colors duration-300">
     <div class="w-full max-w-7xl mx-auto px-6 flex justify-between items-center h-full">
-        <a href="{{ route('home') }}" class="flex items-center gap-3 shrink-0">
+        <a href="{{ route('home') }}" class="group relative flex items-center gap-3 lg:gap-5 shrink-0" style="text-shadow: 0 2px 10px rgba(0,0,0,0.6);">
+            <div class="absolute inset-0 rounded-xl bg-white/[0.03] opacity-0 group-hover:opacity-100 transition duration-300 pointer-events-none"></div>
             <img src="{{ asset('images/logo-round-dark.png') }}" alt="Moto Levins"
                  width="96" height="96"
                  loading="eager"
-                 class="w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 object-contain rounded-full shrink-0" />
-            <span class="text-lg md:text-xl lg:text-2xl font-bold tracking-tight text-white leading-none whitespace-nowrap">Moto Levins</span>
+                 class="relative w-16 h-16 lg:w-24 lg:h-24 object-contain rounded-full shrink-0 drop-shadow-[0_4px_12px_rgba(0,0,0,0.5)]" />
+            <span class="relative text-2xl lg:text-3xl font-bold tracking-tight text-white leading-none whitespace-nowrap">Moto Levins</span>
         </a>
 
         <nav class="hidden md:flex flex-1 items-center justify-center gap-10 xl:gap-12 px-8">
