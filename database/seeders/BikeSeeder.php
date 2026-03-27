@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Bike;
+use App\Models\Tenant;
 use Illuminate\Database\Seeder;
 
 class BikeSeeder extends Seeder
@@ -12,6 +13,13 @@ class BikeSeeder extends Seeder
      */
     public function run(): void
     {
+        $tenant = Tenant::where('slug', 'motolevins')->first();
+
+        if (! $tenant) {
+            $this->command?->warn('Tenant with slug motolevins not found. BikeSeeder skipped.');
+            return;
+        }
+
         $bikes = [
             ['name' => 'HONDA VFR 800F', 'type' => 'Спорт-турист', 'engine' => 800, 'price_per_day' => 9000, 'image' => 'bikes/honda_vfr_800f.jpg'],
             ['name' => 'HONDA CB 300R', 'type' => 'Нейкед', 'engine' => 300, 'price_per_day' => 4000, 'image' => 'bikes/honda_cb_300r.jpg'],
@@ -24,7 +32,15 @@ class BikeSeeder extends Seeder
         ];
 
         foreach ($bikes as $bike) {
-            Bike::create($bike);
+            Bike::updateOrCreate(
+                [
+                    'tenant_id' => $tenant->id,
+                    'name' => $bike['name'],
+                ],
+                array_merge($bike, [
+                    'tenant_id' => $tenant->id,
+                ])
+            );
         }
     }
 }

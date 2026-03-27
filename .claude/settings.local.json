@@ -9,7 +9,8 @@
       "Bash(php -r \"readfile\\('https://getcomposer.org/download.php'\\)\" | tee composer.phar && chmod +x composer.phar)",
       "Bash(powershell -Command \"Invoke-WebRequest -Uri 'https://getcomposer.org/download.php' -OutFile composer.phar\" && php composer.phar --version)",
       "Bash(powershell -Command \"Invoke-WebRequest -Uri 'https://getcomposer.org/installer' -OutFile composer.phar\" && php composer.phar --version)",
-      "Bash(powershell -Command \"Get-Command php\" && powershell -Command \"Get-Command composer\")"
+      "Bash(powershell -Command \"Get-Command php\" && powershell -Command \"Get-Command composer\")",
+      "mcp__ide__getDiagnostics"
     ]
   }
 }
