@@ -3,7 +3,8 @@
 namespace App\Http\Middleware;
 
 use App\Auth\AccessRoles;
-use App\Services\TenantResolver;
+use App\Models\TenantDomain;
+use App\Tenant\HostClassifier;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -11,14 +12,14 @@ use Symfony\Component\HttpFoundation\Response;
 class EnsurePlatformAccess
 {
     public function __construct(
-        protected TenantResolver $resolver
+        protected HostClassifier $hostClassifier
     ) {}
 
     public function handle(Request $request, Closure $next): Response
     {
-        $host = strtolower(explode(':', $request->getHost())[0]);
+        $host = TenantDomain::normalizeHost($request->getHost());
 
-        if (! $this->resolver->isPlatformHost($host)) {
+        if (! $this->hostClassifier->isPlatformPanelHost($host)) {
             abort(403, 'Platform Console доступна только с platform host.');
         }
 

@@ -1,0 +1,118 @@
+#!/usr/bin/env bash
+# Idempotent: ACME webroot challenge, certbot certonly, then full nginx 80+443 for Laravel.
+# Usage: rentbase-provision-domain.sh primary.example.com [www.example.com]
+set -euo pipefail
+
+PRIMARY_DOMAIN="${1:?primary domain is required}"
+WWW_DOMAIN="${2:-}"
+
+CONF_NAME="domain-${PRIMARY_DOMAIN}.conf"
+CONF_PATH="/etc/nginx/sites-available/${CONF_NAME}"
+LINK_PATH="/etc/nginx/sites-enabled/${CONF_NAME}"
+WEBROOT="/var/www/letsencrypt"
+APP_ROOT="/var/www/platform/public"
+PHP_SOCK="/run/php/php8.3-fpm.sock"
+EMAIL="${CERTBOT_EMAIL:-admin@rentbase.su}"
+
+SERVER_NAMES="${PRIMARY_DOMAIN}"
+if [ -n "${WWW_DOMAIN}" ]; then
+  SERVER_NAMES="${PRIMARY_DOMAIN} ${WWW_DOMAIN}"
+fi
+
+mkdir -p "${WEBROOT}"
+
+cat > "${CONF_PATH}" <<EOF
+server {
+    listen 80;
+    listen [::]:80;
+    server_name ${SERVER_NAMES};
+
+    location /.well-known/acme-challenge/ {
+        root ${WEBROOT};
+    }
+
+    location / {
+        return 301 https://\$host\$request_uri;
+    }
+}
+EOF
+
+ln -sfn "${CONF_PATH}" "${LINK_PATH}"
+
+nginx -t
+systemctl reload nginx
+
+CERTBOT_ARGS=(-d "${PRIMARY_DOMAIN}")
+if [ -n "${WWW_DOMAIN}" ]; then
+  CERTBOT_ARGS+=(-d "${WWW_DOMAIN}")
+fi
+
+certbot certonly \
+  --webroot \
+  -w "${WEBROOT}" \
+  "${CERTBOT_ARGS[@]}" \
+  --non-interactive \
+  --agree-tos \
+  -m "${EMAIL}"
+
+cat > "${CONF_PATH}" <<EOF
+server {
+    listen 80;
+    listen [::]:80;
+    server_name ${SERVER_NAMES};
+
+    location /.well-known/acme-challenge/ {
+        root ${WEBROOT};
+    }
+
+    location / {
+        return 301 https://\$host\$request_uri;
+    }
+}
+
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name ${SERVER_NAMES};
+
+    root ${APP_ROOT};
+    index index.php index.html;
+
+    ssl_certificate /etc/letsencrypt/live/${PRIMARY_DOMAIN}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/${PRIMARY_DOMAIN}/privkey.pem;
+
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+    access_log /var/log/nginx/${PRIMARY_DOMAIN}_access.log;
+    error_log /var/log/nginx/${PRIMARY_DOMAIN}_error.log;
+
+    location / {
+        try_files \$uri \$uri/ /index.php?\$query_string;
+    }
+
+    location = /favicon.ico {
+        access_log off;
+        log_not_found off;
+    }
+
+    location = /robots.txt {
+        access_log off;
+        log_not_found off;
+    }
+
+    location ~ \.php\$ {
+        include snippets/fastcgi-php.conf;
+        fastcgi_pass unix:${PHP_SOCK};
+        fastcgi_param SCRIPT_FILENAME \$realpath_root\$fastcgi_script_name;
+        include fastcgi_params;
+    }
+
+    location ~ /\.(?!well-known).* {
+        deny all;
+    }
+}
+EOF
+
+nginx -t
+systemctl reload nginx

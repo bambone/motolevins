@@ -23,15 +23,25 @@ class MotoLevinsTenantSeeder extends Seeder
         ]);
 
         foreach ($hosts as $index => $host) {
-            if (! TenantDomain::where('host', $host)->exists()) {
-                TenantDomain::create([
-                    'tenant_id' => $tenant->id,
-                    'host' => $host,
-                    'type' => 'subdomain',
-                    'is_primary' => $index === 0 && ! $tenant->domains()->exists(),
-                    'verification_status' => 'verified',
-                ]);
+            $normalized = TenantDomain::normalizeHost((string) $host);
+            if ($normalized === '') {
+                continue;
             }
+
+            if (TenantDomain::where('host', $normalized)->exists()) {
+                continue;
+            }
+
+            TenantDomain::query()->create([
+                'tenant_id' => $tenant->id,
+                'host' => $normalized,
+                'type' => TenantDomain::TYPE_SUBDOMAIN,
+                'is_primary' => $index === 0 && ! $tenant->domains()->exists(),
+                'status' => TenantDomain::STATUS_ACTIVE,
+                'ssl_status' => TenantDomain::SSL_NOT_REQUIRED,
+                'verified_at' => now(),
+                'activated_at' => now(),
+            ]);
         }
 
         $ownerId = $tenant->owner_user_id;

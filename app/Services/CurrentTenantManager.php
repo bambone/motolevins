@@ -3,7 +3,11 @@
 namespace App\Services;
 
 use App\Models\Tenant;
+use App\Tenant\CurrentTenant;
 
+/**
+ * @deprecated Prefer App\Tenant\CurrentTenant bound per request. Kept for queue/tests calling setTenant().
+ */
 class CurrentTenantManager
 {
     protected ?Tenant $tenant = null;
@@ -14,10 +18,15 @@ class CurrentTenantManager
     {
         $this->tenant = $tenant;
         $this->resolved = true;
+        app()->instance(CurrentTenant::class, new CurrentTenant($tenant, null, false, null));
     }
 
     public function getTenant(): ?Tenant
     {
+        if (app()->bound(CurrentTenant::class)) {
+            return app(CurrentTenant::class)->tenant;
+        }
+
         return $this->tenant;
     }
 
@@ -34,6 +43,6 @@ class CurrentTenantManager
 
     public function getId(): ?int
     {
-        return $this->tenant?->id;
+        return $this->getTenant()?->id;
     }
 }

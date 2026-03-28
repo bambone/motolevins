@@ -11,17 +11,40 @@ use App\Http\Controllers\SitemapController;
 use App\Http\Middleware\EnsureTenantContext;
 use Illuminate\Support\Facades\Route;
 
-$platformHost = config('app.platform_host');
-if (is_string($platformHost) && $platformHost !== '') {
-    Route::domain($platformHost)->group(function () {
-        Route::view('/', 'platform.home')->name('platform.home');
-        Route::view('/features', 'platform.features')->name('platform.features');
-        Route::view('/pricing', 'platform.pricing')->name('platform.pricing');
-        Route::view('/for-moto-rental', 'platform.for-moto-rental')->name('platform.for-moto-rental');
-        Route::view('/for-car-rental', 'platform.for-car-rental')->name('platform.for-car-rental');
-        Route::view('/faq', 'platform.faq')->name('platform.faq');
-        Route::view('/contact', 'platform.contact')->name('platform.contact');
-    });
+$marketingHosts = [];
+foreach (array_merge(
+    array_filter([(string) config('app.platform_host')]),
+    config('tenancy.central_domains', [])
+) as $h) {
+    if ($h !== '' && ! in_array($h, $marketingHosts, true)) {
+        $marketingHosts[] = $h;
+    }
+}
+
+if ($marketingHosts !== []) {
+    foreach ($marketingHosts as $index => $domain) {
+        Route::domain($domain)->group(function () use ($index) {
+            $named = $index === 0;
+
+            if ($named) {
+                Route::view('/', 'platform.home')->name('platform.home');
+                Route::view('/features', 'platform.features')->name('platform.features');
+                Route::view('/pricing', 'platform.pricing')->name('platform.pricing');
+                Route::view('/for-moto-rental', 'platform.for-moto-rental')->name('platform.for-moto-rental');
+                Route::view('/for-car-rental', 'platform.for-car-rental')->name('platform.for-car-rental');
+                Route::view('/faq', 'platform.faq')->name('platform.faq');
+                Route::view('/contact', 'platform.contact')->name('platform.contact');
+            } else {
+                Route::view('/', 'platform.home');
+                Route::view('/features', 'platform.features');
+                Route::view('/pricing', 'platform.pricing');
+                Route::view('/for-moto-rental', 'platform.for-moto-rental');
+                Route::view('/for-car-rental', 'platform.for-car-rental');
+                Route::view('/faq', 'platform.faq');
+                Route::view('/contact', 'platform.contact');
+            }
+        });
+    }
 }
 
 Route::middleware([EnsureTenantContext::class])->group(function () {

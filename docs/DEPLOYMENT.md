@@ -54,3 +54,18 @@ php artisan migrate --force
 ### Рекомендация по URL
 
 Желательно настроить **document root** виртуального хоста на каталог `public` приложения, чтобы сайт открывался как `https://gmtst2.ru/` без сегмента `/motolevins/public/` в пути.
+
+---
+
+## Кастомные домены (multi-tenant)
+
+**Кеш маршрутов и конфиг vs `TENANCY_*`:** список `TENANCY_CENTRAL_DOMAINS` и остальные переменные `TENANCY_*` должны быть **уже заданы в `.env` (или в окружении)** до выполнения `php artisan config:cache` и **`php artisan route:cache`**, потому что `routes/web.php` читает `config('tenancy.*')` в момент регистрации маршрутов. Если вы поменяли central domains после кеширования, выполните: `php artisan route:clear`, при необходимости `php artisan config:clear` (или заново `config:cache`), затем снова `route:cache`. Иначе маркетинговые `Route::domain(...)` останутся привязаны к старым хостам.
+
+1. В `.env` задайте `TENANCY_*` (см. `.env.example`): `TENANCY_CENTRAL_DOMAINS`, `TENANCY_ROOT_DOMAIN`, `TENANCY_SERVER_IP`, при необходимости `TENANCY_PROVISION_SCRIPT`, `TENANCY_LE_WEBROOT`, `TENANCY_PROVISION_USE_SUDO`.
+2. Скопируйте `scripts/rentbase-provision-domain.sh` на сервер в `/usr/local/bin/rentbase-provision-domain`, `chmod 750`, владелец `root`. Подставьте при необходимости `APP_ROOT`, `PHP_SOCK`, `CERTBOT_EMAIL`.
+3. Для очереди под пользователем `www-data` ограниченный sudo на один скрипт (пример):  
+   `www-data ALL=(root) NOPASSWD: /usr/local/bin/rentbase-provision-domain`  
+   и `TENANCY_PROVISION_USE_SUDO=true`.
+4. Выпуск сертификата и правка nginx выполняются **только** через `ProvisionTenantCustomDomainJob` (очередь), не из HTTP-запроса.
+5. Перед релизом: `php artisan tenancy:report-domains` — сводка по `status` / `ssl_status` в `tenant_domains`.
+6. **Backlog:** сценарий отключения кастомного домена (снять vhost, опционально revoke cert) — пока вручную; см. `scripts/rentbase-provision-domain.sh` как зеркало для скрипта отключения.

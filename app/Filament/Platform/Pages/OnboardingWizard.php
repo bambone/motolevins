@@ -7,9 +7,9 @@ use App\Filament\Platform\Resources\TenantResource;
 use App\Models\Plan;
 use App\Models\TemplatePreset;
 use App\Models\Tenant;
-use App\Models\TenantDomain;
 use App\Models\TenantSetting;
 use App\Services\TemplateCloningService;
+use App\Services\Tenancy\TenantDomainService;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Pages\Page;
@@ -186,14 +186,7 @@ class OnboardingWizard extends Page
             app(TemplateCloningService::class)->cloneToTenant($tenant, $preset);
         }
 
-        $host = $tenant->slug.'.'.parse_url(config('app.url'), PHP_URL_HOST) ?: $tenant->slug.'.localhost';
-        TenantDomain::create([
-            'tenant_id' => $tenant->id,
-            'host' => $host,
-            'type' => 'subdomain',
-            'is_primary' => true,
-            'verification_status' => 'verified',
-        ]);
+        app(TenantDomainService::class)->createDefaultSubdomain($tenant, $tenant->slug);
 
         if (! empty($data['logo_url'])) {
             TenantSetting::setForTenant($tenant->id, 'branding.logo', $data['logo_url']);

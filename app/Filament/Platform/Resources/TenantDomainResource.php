@@ -66,12 +66,13 @@ class TenantDomainResource extends Resource
                 Section::make('Проверка и сертификат')
                     ->description('Статусы обновляются при проверке DNS и выпуске SSL. Если что-то зависло — проверьте записи у регистратора и подождите распространения DNS.')
                     ->schema([
-                        Select::make('verification_status')
-                            ->label('Проверка владения доменом')
-                            ->options(TenantDomainStatusCopy::verificationOptions())
+                        Select::make('status')
+                            ->label('Статус домена')
+                            ->options(TenantDomainStatusCopy::statusOptions())
                             ->searchable(false)
                             ->native(false)
-                            ->helperText('Пока статус не «Подтверждён», добавьте DNS-записи у регистратора. Ниже в списке для каждой строки показана подсказка «что делать дальше».'),
+                            ->required()
+                            ->helperText('Только активный домен обслуживается публичным сайтом.'),
                         Select::make('ssl_status')
                             ->label('SSL-сертификат')
                             ->options(TenantDomainStatusCopy::sslOptions())
@@ -104,18 +105,18 @@ class TenantDomainResource extends Resource
                 IconColumn::make('is_primary')
                     ->label('Основной')
                     ->boolean(),
-                TextColumn::make('verification_status')
-                    ->label('Проверка')
+                TextColumn::make('status')
+                    ->label('Статус')
                     ->badge()
-                    ->formatStateUsing(fn (?string $state): string => TenantDomainStatusCopy::verificationLabel($state))
+                    ->formatStateUsing(fn (?string $state): string => TenantDomainStatusCopy::statusLabel($state))
                     ->color(fn (?string $state): string => match ($state) {
-                        'verified' => 'success',
-                        'failed' => 'danger',
-                        'pending', 'verifying' => 'warning',
+                        TenantDomain::STATUS_ACTIVE => 'success',
+                        TenantDomain::STATUS_FAILED => 'danger',
+                        TenantDomain::STATUS_PENDING, TenantDomain::STATUS_VERIFYING => 'warning',
                         default => 'gray',
                     })
-                    ->description(fn (TenantDomain $record): string => TenantDomainStatusCopy::verificationNextStep(
-                        $record->verification_status,
+                    ->description(fn (TenantDomain $record): string => TenantDomainStatusCopy::statusNextStep(
+                        $record->status,
                         $record->dns_target,
                         $record->host
                     )),
@@ -124,9 +125,9 @@ class TenantDomainResource extends Resource
                     ->badge()
                     ->formatStateUsing(fn (?string $state): string => TenantDomainStatusCopy::sslLabel($state))
                     ->color(fn (?string $state): string => match ($state) {
-                        'active' => 'success',
-                        'error' => 'danger',
-                        'issuing', 'pending' => 'warning',
+                        TenantDomain::SSL_ISSUED, TenantDomain::SSL_NOT_REQUIRED => 'success',
+                        TenantDomain::SSL_FAILED => 'danger',
+                        TenantDomain::SSL_PENDING => 'warning',
                         default => 'gray',
                     })
                     ->description(fn (TenantDomain $record): string => TenantDomainStatusCopy::sslNextStep($record->ssl_status)),

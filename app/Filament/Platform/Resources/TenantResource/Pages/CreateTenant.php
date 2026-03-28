@@ -4,8 +4,8 @@ namespace App\Filament\Platform\Resources\TenantResource\Pages;
 
 use App\Filament\Platform\Resources\TenantResource;
 use App\Models\TemplatePreset;
-use App\Models\TenantDomain;
 use App\Services\TemplateCloningService;
+use App\Services\Tenancy\TenantDomainService;
 use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Support\Str;
 
@@ -35,12 +35,6 @@ class CreateTenant extends CreateRecord
             }
         }
 
-        TenantDomain::create([
-            'tenant_id' => $this->record->id,
-            'host' => $this->record->slug.'.'.parse_url(config('app.url'), PHP_URL_HOST) ?: $this->record->slug.'.localhost',
-            'type' => 'subdomain',
-            'is_primary' => true,
-            'verification_status' => 'verified',
-        ]);
+        app(TenantDomainService::class)->createDefaultSubdomain($this->record, $this->record->slug);
     }
 }

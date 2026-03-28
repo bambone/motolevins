@@ -61,7 +61,7 @@ class AppServiceProvider extends ServiceProvider
         });
 
         View::composer('*', function ($view) {
-            $tenant = app(CurrentTenantManager::class)->getTenant();
+            $tenant = currentTenant();
             if ($tenant) {
                 $view->with('contacts', [
                     'phone' => TenantSetting::getForTenant($tenant->id, 'contacts.phone', '+7 (913) 060-86-89'),

@@ -14,6 +14,8 @@ class ExampleTest extends TestCase
      */
     public function test_the_application_returns_a_successful_response(): void
     {
+        config(['tenancy.central_domains' => ['localhost', '127.0.0.1']]);
+
         $response = $this->get('/');
 
         $response->assertStatus(200);
