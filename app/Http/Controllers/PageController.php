@@ -12,7 +12,7 @@ class PageController extends Controller
             ->where('status', 'published')
             ->firstOrFail();
 
-        return view('pages.page', [
+        return view('tenant.pages.page', [
             'page' => $page,
             'seoMeta' => $page->seoMeta,
         ]);

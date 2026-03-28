@@ -36,7 +36,7 @@ class HomeController extends Controller
             ->get();
         $reviews = $this->getHomeReviews($sections['reviews_block'] ?? []);
 
-        return view('pages.home', compact('bikes', 'badges', 'sections', 'faqs', 'reviews', 'seoMeta'));
+        return view('tenant.pages.home', compact('bikes', 'badges', 'sections', 'faqs', 'reviews', 'seoMeta'));
     }
 
     private function getHomeReviews(array $section): Collection

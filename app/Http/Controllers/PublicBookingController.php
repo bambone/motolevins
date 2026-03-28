@@ -33,7 +33,7 @@ class PublicBookingController extends Controller
             ->orderBy('sort_order')
             ->get();
 
-        return view('booking.index', compact('motorcycles'));
+        return view('tenant.booking.index', compact('motorcycles'));
     }
 
     /**
@@ -48,7 +48,7 @@ class PublicBookingController extends Controller
         $rentalUnits = $motorcycle->rentalUnits()->where('status', 'active')->get();
         $addons = Addon::where('is_active', true)->orderBy('sort_order')->get();
 
-        return view('booking.show', [
+        return view('tenant.booking.show', [
             'motorcycle' => $motorcycle,
             'rentalUnits' => $rentalUnits,
             'addons' => $addons,
@@ -132,7 +132,7 @@ class PublicBookingController extends Controller
             }
         }
 
-        return view('booking.checkout', [
+        return view('tenant.booking.checkout', [
             'motorcycle' => $motorcycle,
             'draft' => $session,
             'addons' => $addons,
@@ -219,7 +219,7 @@ class PublicBookingController extends Controller
             $bookingModel = Booking::where('booking_number', $booking)->first();
         }
 
-        return view('booking.thank-you', ['booking' => $bookingModel]);
+        return view('tenant.booking.thank-you', ['booking' => $bookingModel]);
     }
 
     /**

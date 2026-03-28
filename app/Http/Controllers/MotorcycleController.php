@@ -12,7 +12,7 @@ class MotorcycleController extends Controller
             ->where('show_in_catalog', true)
             ->firstOrFail();
 
-        return view('pages.motorcycle', [
+        return view('tenant.pages.motorcycle', [
             'motorcycle' => $motorcycle,
             'seoMeta' => $motorcycle->seoMeta,
         ]);

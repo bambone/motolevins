@@ -8,14 +8,9 @@
 
 Поддомен **`{slug}.{TENANCY_ROOT_DOMAIN}`** (например `motolevins.rentbase.su`) создаётся при создании тенанта в Platform Console и дополнительно досеивается для `motolevins` через `MotoLevinsTenantSeeder` / миграцию `2026_03_28_140000_ensure_motolevins_canonical_subdomain`. Без строки в `tenant_domains` с `status=active` сайт покажет «Домен не подключён».
 
-## Файлы по тенантам (структура репозитория)
+## Презентационный слой (views / темы / storage)
 
-Чтобы не смешивать всё в корне `public/`:
-
-- **`resources/tenants/{slug}/`** — опциональные оверрайды (шаблоны, статика под включение в сборку).
-- **`public/tenants/{slug}/`** — публичные файлы только этого тенанта (раздача с того же хоста или отдельный `location` в nginx).
-
-Пример для Moto Levins: каталоги `resources/tenants/motolevins/` и `public/tenants/motolevins/` (пока с `.gitkeep`).
+Именованные папки вида `resources/views/tenants/{slug}/` **не используются**: тенантские сайты — общий движок + темы (`resources/views/tenant/themes/*`) и данные в БД. Загрузки — в `storage/app/public/tenants/{tenant_id}/…`. Подробный план рефакторинга: [ARCHITECTURE_PRESENTATION.md](ARCHITECTURE_PRESENTATION.md).
 
 ## Две панели Filament
 

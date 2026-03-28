@@ -33,21 +33,21 @@ if ($marketingHosts !== []) {
             $named = $index === 0;
 
             if ($named) {
-                Route::view('/', 'platform.home')->name('platform.home');
-                Route::view('/features', 'platform.features')->name('platform.features');
-                Route::view('/pricing', 'platform.pricing')->name('platform.pricing');
-                Route::view('/for-moto-rental', 'platform.for-moto-rental')->name('platform.for-moto-rental');
-                Route::view('/for-car-rental', 'platform.for-car-rental')->name('platform.for-car-rental');
-                Route::view('/faq', 'platform.faq')->name('platform.faq');
-                Route::view('/contact', 'platform.contact')->name('platform.contact');
+                Route::view('/', 'platform.marketing.home')->name('platform.home');
+                Route::view('/features', 'platform.marketing.features')->name('platform.features');
+                Route::view('/pricing', 'platform.marketing.pricing')->name('platform.pricing');
+                Route::view('/for-moto-rental', 'platform.marketing.for-moto-rental')->name('platform.for-moto-rental');
+                Route::view('/for-car-rental', 'platform.marketing.for-car-rental')->name('platform.for-car-rental');
+                Route::view('/faq', 'platform.marketing.faq')->name('platform.faq');
+                Route::view('/contact', 'platform.marketing.contact')->name('platform.contact');
             } else {
-                Route::view('/', 'platform.home');
-                Route::view('/features', 'platform.features');
-                Route::view('/pricing', 'platform.pricing');
-                Route::view('/for-moto-rental', 'platform.for-moto-rental');
-                Route::view('/for-car-rental', 'platform.for-car-rental');
-                Route::view('/faq', 'platform.faq');
-                Route::view('/contact', 'platform.contact');
+                Route::view('/', 'platform.marketing.home');
+                Route::view('/features', 'platform.marketing.features');
+                Route::view('/pricing', 'platform.marketing.pricing');
+                Route::view('/for-moto-rental', 'platform.marketing.for-moto-rental');
+                Route::view('/for-car-rental', 'platform.marketing.for-car-rental');
+                Route::view('/faq', 'platform.marketing.faq');
+                Route::view('/contact', 'platform.marketing.contact');
             }
         });
     }
@@ -57,17 +57,17 @@ Route::middleware([EnsureTenantContext::class])->group(function () {
     Route::get('/robots.txt', RobotsController::class)->name('robots');
     Route::get('/sitemap.xml', SitemapController::class)->name('sitemap');
     Route::get('/', [HomeController::class, 'index'])->name('home');
-    Route::view('/offline', 'offline')->name('offline');
-    Route::view('/contacts', 'pages.contacts')->name('contacts');
-    Route::view('/usloviya-arenda', 'pages.terms')->name('terms');
-    Route::view('/motorcycles', 'pages.motorcycles.index')->name('motorcycles.index');
-    Route::view('/prices', 'pages.prices')->name('prices');
-    Route::view('/order', 'pages.order')->name('order');
-    Route::view('/reviews', 'pages.reviews')->name('reviews');
-    Route::view('/faq', 'pages.faq')->name('faq');
-    Route::view('/about', 'pages.about')->name('about');
-    Route::view('/delivery/anapa', 'pages.delivery.anapa')->name('delivery.anapa');
-    Route::view('/delivery/gelendzhik', 'pages.delivery.gelendzhik')->name('delivery.gelendzhik');
+    Route::view('/offline', 'tenant.pages.offline')->name('offline');
+    Route::view('/contacts', 'tenant.pages.contacts')->name('contacts');
+    Route::view('/usloviya-arenda', 'tenant.pages.terms')->name('terms');
+    Route::view('/motorcycles', 'tenant.pages.motorcycles.index')->name('motorcycles.index');
+    Route::view('/prices', 'tenant.pages.prices')->name('prices');
+    Route::view('/order', 'tenant.pages.order')->name('order');
+    Route::view('/reviews', 'tenant.pages.reviews')->name('reviews');
+    Route::view('/faq', 'tenant.pages.faq')->name('faq');
+    Route::view('/about', 'tenant.pages.about')->name('about');
+    Route::view('/delivery/anapa', 'tenant.pages.delivery.anapa')->name('delivery.anapa');
+    Route::view('/delivery/gelendzhik', 'tenant.pages.delivery.gelendzhik')->name('delivery.gelendzhik');
     Route::get('/moto/{slug}', [MotorcycleController::class, 'show'])->name('motorcycle.show');
 
     // Public booking flow
@@ -78,7 +78,7 @@ Route::middleware([EnsureTenantContext::class])->group(function () {
     Route::get('/checkout', [PublicBookingController::class, 'checkout'])->name('booking.checkout');
     Route::post('/checkout', [PublicBookingController::class, 'storeCheckout'])->name('booking.store-checkout');
     Route::get('/thank-you/{booking?}', [PublicBookingController::class, 'thankYou'])->name('booking.thank-you');
-    Route::view('/articles', 'pages.articles.index')->name('articles.index');
+    Route::view('/articles', 'tenant.pages.articles.index')->name('articles.index');
     Route::get('/{slug}', [PageController::class, 'show'])->where('slug', '[a-z0-9\-]+')->name('page.show');
     Route::post('/api/bookings', [BookingController::class, 'store'])->name('api.bookings.store');
     Route::post('/api/leads', [LeadController::class, 'store'])->name('api.leads.store');

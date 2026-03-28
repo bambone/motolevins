@@ -44,7 +44,7 @@ class SitemapController extends Controller
             ];
         }
 
-        $xml = view('sitemap', ['urls' => $urls])->render();
+        $xml = view('tenant.sitemap', ['urls' => $urls])->render();
 
         return response($xml, 200, [
             'Content-Type' => 'application/xml',
