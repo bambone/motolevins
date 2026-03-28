@@ -19,7 +19,7 @@ class EnsurePlatformAccess
     {
         $host = TenantDomain::normalizeHost($request->getHost());
 
-        if (! $this->hostClassifier->isPlatformPanelHost($host)) {
+        if (! $this->hostClassifier->isPlatformHost($host)) {
             abort(403, 'Platform Console доступна только с platform host.');
         }
 

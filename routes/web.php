@@ -9,16 +9,22 @@ use App\Http\Controllers\PublicBookingController;
 use App\Http\Controllers\RobotsController;
 use App\Http\Controllers\SitemapController;
 use App\Http\Middleware\EnsureTenantContext;
+use App\Models\TenantDomain;
 use Illuminate\Support\Facades\Route;
 
 $marketingHosts = [];
-foreach (array_merge(
-    array_filter([(string) config('app.platform_host')]),
-    config('tenancy.central_domains', [])
-) as $h) {
-    if ($h !== '' && ! in_array($h, $marketingHosts, true)) {
-        $marketingHosts[] = $h;
+foreach (config('tenancy.central_domains', []) as $h) {
+    $normalized = TenantDomain::normalizeHost((string) $h);
+    if ($normalized !== '' && ! in_array($normalized, $marketingHosts, true)) {
+        $marketingHosts[] = $normalized;
     }
+}
+
+$platformHost = TenantDomain::normalizeHost((string) config('app.platform_host', ''));
+if ($platformHost !== '') {
+    Route::domain($platformHost)->group(function (): void {
+        Route::redirect('/', '/platform', 302);
+    });
 }
 
 if ($marketingHosts !== []) {

@@ -1,4 +1,10 @@
-# Доступ к админкам (Platform + Tenant)
+﻿# Доступ к админкам (Platform + Tenant)
+
+## URL на production (Rentbase)
+
+- **Маркетинг (лендинг платформы):** https://rentbase.su и https://www.rentbase.su — хосты из `TENANCY_CENTRAL_DOMAINS`, отдельно от `PLATFORM_HOST`.
+- **Platform Console:** https://platform.rentbase.su/platform (хост из `PLATFORM_HOST` в `.env`).
+- **Tenant admin:** `https://<домен тенанта>/admin` (например https://motolevins.rentbase.su/admin или кастомный домен). Apex `https://rentbase.su/admin` **не** используется как клиентская админка.
 
 ## Две панели Filament
 

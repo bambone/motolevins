@@ -32,5 +32,8 @@
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
+        <env name="TENANCY_CENTRAL_DOMAINS" value="apex.test,www.apex.test"/>
+        <env name="PLATFORM_HOST" value="platform.apex.test"/>
+        <env name="TENANCY_ROOT_DOMAIN" value="apex.test"/>
     </php>
 </phpunit>
