@@ -4,6 +4,7 @@ namespace App\Filament\Tenant\Pages;
 
 use App\Models\Setting;
 use App\Models\TenantSetting;
+use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
@@ -14,6 +15,31 @@ use Illuminate\Support\Facades\Gate;
 
 class Settings extends Page
 {
+    /**
+     * Form state keys (underscore) → dotted keys passed to TenantSetting / Setting (must match getSettingsData()).
+     *
+     * @var array<string, string>
+     */
+    private const FORM_FIELD_TO_SETTING_KEY = [
+        'general_site_name' => 'general.site_name',
+        'general_domain' => 'general.domain',
+        'branding_logo' => 'branding.logo',
+        'branding_logo_path' => 'branding.logo_path',
+        'branding_primary_color' => 'branding.primary_color',
+        'branding_favicon' => 'branding.favicon',
+        'branding_favicon_path' => 'branding.favicon_path',
+        'branding_hero' => 'branding.hero',
+        'branding_hero_path' => 'branding.hero_path',
+        'contacts_phone' => 'contacts.phone',
+        'contacts_phone_alt' => 'contacts.phone_alt',
+        'contacts_email' => 'contacts.email',
+        'contacts_whatsapp' => 'contacts.whatsapp',
+        'contacts_telegram' => 'contacts.telegram',
+        'contacts_address' => 'contacts.address',
+        'contacts_hours' => 'contacts.hours',
+        'seo_robots_txt' => 'seo.robots_txt',
+    ];
+
     protected static ?string $navigationLabel = 'Настройки';
 
     protected static ?string $title = 'Настройки сайта';
@@ -41,8 +67,12 @@ class Settings extends Page
                 'general_site_name' => TenantSetting::getForTenant($tenant->id, 'general.site_name', config('app.name')),
                 'general_domain' => TenantSetting::getForTenant($tenant->id, 'general.domain', config('app.url')),
                 'branding_logo' => TenantSetting::getForTenant($tenant->id, 'branding.logo', ''),
+                'branding_logo_path' => TenantSetting::getForTenant($tenant->id, 'branding.logo_path', ''),
                 'branding_primary_color' => TenantSetting::getForTenant($tenant->id, 'branding.primary_color', '#f59e0b'),
                 'branding_favicon' => TenantSetting::getForTenant($tenant->id, 'branding.favicon', ''),
+                'branding_favicon_path' => TenantSetting::getForTenant($tenant->id, 'branding.favicon_path', ''),
+                'branding_hero' => TenantSetting::getForTenant($tenant->id, 'branding.hero', ''),
+                'branding_hero_path' => TenantSetting::getForTenant($tenant->id, 'branding.hero_path', ''),
                 'contacts_phone' => TenantSetting::getForTenant($tenant->id, 'contacts.phone', ''),
                 'contacts_phone_alt' => TenantSetting::getForTenant($tenant->id, 'contacts.phone_alt', ''),
                 'contacts_email' => TenantSetting::getForTenant($tenant->id, 'contacts.email', ''),
@@ -90,22 +120,65 @@ class Settings extends Page
                     ])->columns(2),
 
                 Section::make('Брендинг')
-                    ->description('Логотип и цвета влияют на оформление **сайта для посетителей**. Полноэкранный предпросмотр шапки можно добавить позже; сейчас проверяйте результат на опубликованном сайте.')
+                    ->description('Файлы сохраняются в storage (путь привязан к ID клиента). URL-поля — для внешних ссылок; если загружен файл, он имеет приоритет.')
                     ->schema([
+                        FileUpload::make('branding_logo_path')
+                            ->label('Логотип (файл)')
+                            ->disk('public')
+                            ->directory(function (): string {
+                                $t = \currentTenant();
+                                abort_if($t === null, 403);
+
+                                return 'tenants/'.$t->id.'/logo';
+                            })
+                            ->image()
+                            ->maxSize(2048)
+                            ->nullable()
+                            ->helperText('PNG, JPG, WebP. До 2 МБ.'),
                         TextInput::make('branding_logo')
-                            ->label('URL логотипа')
+                            ->label('URL логотипа (legacy)')
                             ->url()
                             ->placeholder('https://...')
-                            ->helperText('Прямая ссылка на файл изображения (PNG/SVG). Лучше горизонтальный логотип на прозрачном фоне.'),
+                            ->helperText('Используется, если файл не загружен.'),
                         TextInput::make('branding_primary_color')
                             ->label('Основной цвет')
                             ->type('color')
                             ->helperText('Акцентные кнопки и ссылки на сайте. Рядом — текущий выбранный цвет (стандартный виджет браузера).'),
+                        FileUpload::make('branding_favicon_path')
+                            ->label('Favicon (файл)')
+                            ->disk('public')
+                            ->directory(function (): string {
+                                $t = \currentTenant();
+                                abort_if($t === null, 403);
+
+                                return 'tenants/'.$t->id.'/favicon';
+                            })
+                            ->maxSize(512)
+                            ->nullable()
+                            ->helperText('PNG, ICO, JPG до 512 КБ.'),
                         TextInput::make('branding_favicon')
-                            ->label('URL иконки сайта (favicon)')
+                            ->label('URL favicon (legacy)')
                             ->url()
                             ->placeholder('https://...')
-                            ->helperText('Маленькая иконка во вкладке браузера; обычно 32×32 или .ico.'),
+                            ->helperText('Используется, если файл не загружен.'),
+                        FileUpload::make('branding_hero_path')
+                            ->label('Hero / OG-изображение (файл)')
+                            ->disk('public')
+                            ->directory(function (): string {
+                                $t = \currentTenant();
+                                abort_if($t === null, 403);
+
+                                return 'tenants/'.$t->id.'/hero';
+                            })
+                            ->image()
+                            ->maxSize(4096)
+                            ->nullable()
+                            ->helperText('Крупное изображение для шапки или соцсетей; вывод задаётся темой.'),
+                        TextInput::make('branding_hero')
+                            ->label('URL hero (legacy)')
+                            ->url()
+                            ->nullable()
+                            ->helperText('Внешняя ссылка, если файл не загружен.'),
                     ])->columns(2)->visible(fn () => \currentTenant() !== null),
 
                 Section::make('Контакты')
@@ -136,15 +209,22 @@ class Settings extends Page
         $data = $this->getSchema('form')->getState();
         $tenant = \currentTenant();
 
-        foreach ($data as $key => $value) {
-            $parts = explode('_', $key, 2);
-            $group = $parts[0] ?? 'general';
-            $k = str_replace('_', '.', $parts[1] ?? $key);
-            $settingKey = "{$group}.{$k}";
+        foreach ($data as $field => $value) {
+            if (! array_key_exists($field, self::FORM_FIELD_TO_SETTING_KEY)) {
+                continue;
+            }
+
+            if (is_array($value)) {
+                continue;
+            }
+
+            $settingKey = self::FORM_FIELD_TO_SETTING_KEY[$field];
+            $stored = $value === null ? '' : (string) $value;
+
             if ($tenant) {
-                TenantSetting::setForTenant($tenant->id, $settingKey, $value);
+                TenantSetting::setForTenant($tenant->id, $settingKey, $stored);
             } else {
-                Setting::set($settingKey, $value);
+                Setting::set($settingKey, $stored);
             }
         }
 
@@ -152,5 +232,13 @@ class Settings extends Page
             ->title('Настройки сохранены')
             ->success()
             ->send();
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public static function formFieldToSettingKeyMap(): array
+    {
+        return self::FORM_FIELD_TO_SETTING_KEY;
     }
 }

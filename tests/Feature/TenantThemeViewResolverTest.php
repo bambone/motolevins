@@ -136,4 +136,23 @@ class TenantThemeViewResolverTest extends TestCase
 
         $this->assertSame('/', route('home', [], false));
     }
+
+    public function test_moto_theme_contacts_faq_about_use_resolver_and_engine_fallback(): void
+    {
+        $this->createTenantSite('statictheme', ['theme_key' => 'moto']);
+
+        foreach (['/contacts', '/faq', '/about'] as $path) {
+            $this->getWithHost('statictheme.apex.test', $path)
+                ->assertOk()
+                ->assertDontSee('data-tenant-theme="moto"', false);
+        }
+    }
+
+    public function test_booking_index_renders_with_theme_resolver(): void
+    {
+        $this->createTenantSite('bookingidx', ['theme_key' => 'default']);
+
+        $this->getWithHost('bookingidx.apex.test', '/booking')
+            ->assertOk();
+    }
 }

@@ -5,6 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
+    @php($tenantFavicon = trim($branding['favicon'] ?? ''))
+    @if($tenantFavicon !== '')
+        <link rel="icon" href="{{ $tenantFavicon }}" type="image/png">
+    @endif
+
     <link rel="manifest" href="{{ asset('manifest.json') }}">
     <meta name="theme-color" content="#0c0c0e">
     <meta name="apple-mobile-web-app-capable" content="yes">

@@ -59,6 +59,16 @@ class TenantResource extends Resource
                             ->unique(ignoreRecord: true)
                             ->maxLength(255)
                             ->helperText('Используется в техническом поддомене и ссылках. Латиница, цифры и дефис.'),
+                        Select::make('theme_key')
+                            ->label('Тема публичного сайта')
+                            ->options([
+                                'default' => 'По умолчанию',
+                                'moto' => 'Мото',
+                                'auto' => 'Авто',
+                            ])
+                            ->default('default')
+                            ->required()
+                            ->helperText('Пресет внешнего вида (Blade в tenant/themes/{ключ}). Недостающие страницы берутся из слоя default и движка.'),
                         TextInput::make('brand_name')
                             ->label('Бренд на сайте')
                             ->maxLength(255)

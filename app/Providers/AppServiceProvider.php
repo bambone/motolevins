@@ -75,9 +75,10 @@ class AppServiceProvider extends ServiceProvider
                     'telegram' => ltrim(TenantSetting::getForTenant($tenant->id, 'contacts.telegram', 'motolevins'), '@'),
                 ]);
                 $view->with('branding', [
-                    'logo' => TenantSetting::getForTenant($tenant->id, 'branding.logo', ''),
+                    'logo' => tenant_branding_logo_url(),
                     'primary_color' => TenantSetting::getForTenant($tenant->id, 'branding.primary_color', '#f59e0b'),
-                    'favicon' => TenantSetting::getForTenant($tenant->id, 'branding.favicon', ''),
+                    'favicon' => tenant_branding_favicon_url(),
+                    'hero_image' => tenant_branding_hero_url(),
                 ]);
                 $view->with('site_name', TenantSetting::getForTenant($tenant->id, 'general.site_name', config('app.name')));
             } else {

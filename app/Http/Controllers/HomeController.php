@@ -6,15 +6,10 @@ use App\Models\Faq;
 use App\Models\Motorcycle;
 use App\Models\Page;
 use App\Models\Review;
-use App\Services\Tenancy\TenantViewResolver;
 use Illuminate\Database\Eloquent\Collection;
 
 class HomeController extends Controller
 {
-    public function __construct(
-        private readonly TenantViewResolver $tenantViews,
-    ) {}
-
     public function index()
     {
         $bikes = Motorcycle::where('show_in_catalog', true)
@@ -41,7 +36,7 @@ class HomeController extends Controller
             ->get();
         $reviews = $this->getHomeReviews($sections['reviews_block'] ?? []);
 
-        return view($this->tenantViews->resolve('pages.home'), compact('bikes', 'badges', 'sections', 'faqs', 'reviews', 'seoMeta'));
+        return tenant_view('pages.home', compact('bikes', 'badges', 'sections', 'faqs', 'reviews', 'seoMeta'));
     }
 
     private function getHomeReviews(array $section): Collection

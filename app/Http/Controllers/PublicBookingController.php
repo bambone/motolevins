@@ -33,7 +33,7 @@ class PublicBookingController extends Controller
             ->orderBy('sort_order')
             ->get();
 
-        return view('tenant.booking.index', compact('motorcycles'));
+        return tenant_view('booking.index', compact('motorcycles'));
     }
 
     /**

@@ -18,4 +18,10 @@ return [
     ],
 
     'provision_use_sudo' => (bool) env('TENANCY_PROVISION_USE_SUDO', false),
+
+    /*
+    | When true, TenantViewResolver logs debug lines (tenant id, theme keys, logical name, resolved view).
+    | Prefer explicit flag over APP_DEBUG in production tracing.
+    */
+    'log_view_resolution' => (bool) env('TENANCY_LOG_VIEW_RESOLUTION', false),
 ];

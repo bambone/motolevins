@@ -4,6 +4,7 @@ namespace Tests\Unit;
 
 use App\Models\Tenant;
 use App\Services\Tenancy\TenantViewResolver;
+use InvalidArgumentException;
 use Tests\TestCase;
 
 class TenantViewResolverTest extends TestCase
@@ -54,5 +55,25 @@ class TenantViewResolverTest extends TestCase
         $resolved = app(TenantViewResolver::class)->resolve('pages.home', null);
 
         $this->assertSame('tenant.themes.default.pages.home', $resolved);
+    }
+
+    public function test_invalid_logical_name_with_dotdot_throws(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        app(TenantViewResolver::class)->resolve('pages..home', new Tenant(['theme_key' => 'default']));
+    }
+
+    public function test_invalid_logical_name_with_uppercase_throws(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        app(TenantViewResolver::class)->resolve('Pages.Home', new Tenant(['theme_key' => 'default']));
+    }
+
+    public function test_tenant_view_helper_resolves_like_resolver_without_bound_tenant(): void
+    {
+        $this->assertSame(
+            app(TenantViewResolver::class)->resolve('pages.home', null),
+            tenant_view('pages.home')->name()
+        );
     }
 }

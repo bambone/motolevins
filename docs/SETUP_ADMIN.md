@@ -12,6 +12,9 @@
 
 Именованные папки вида `resources/views/tenants/{slug}/` **не используются**: тенантские сайты — общий движок + темы (`resources/views/tenant/themes/*`) и данные в БД. Загрузки — в `storage/app/public/tenants/{tenant_id}/…`. Подробный план рефакторинга: [ARCHITECTURE_PRESENTATION.md](ARCHITECTURE_PRESENTATION.md).
 
+- **Тема сайта:** в Platform Console при редактировании клиента поле **«Тема публичного сайта»** (`theme_key`: default / moto / auto).
+- **Логотип и иконки:** в Tenant Admin → **Настройки** — файлы (приоритет) или внешний URL (legacy). Нужен `php artisan storage:link` на сервере.
+
 ## Две панели Filament
 
 | Панель | URL (пример) | Доступ |

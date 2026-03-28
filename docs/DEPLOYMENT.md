@@ -1,5 +1,19 @@
 # Деплой на production
 
+## Tenant branding (загрузки в storage)
+
+Файлы брендинга клиента пишутся в `storage/app/public/tenants/{tenant_id}/…`. На сервере должен существовать симлинк:
+
+```bash
+php artisan storage:link
+```
+
+Без него браузер не отдаст `/storage/...` (404). После смены `APP_URL` пересоберите кеш конфига, чтобы `Storage::url()` совпадал с публичным origin.
+
+Опционально: `TENANCY_LOG_VIEW_RESOLUTION=true` в `.env` для отладки выбора Blade-темы (пишет в `debug`-лог); на проде обычно `false`.
+
+---
+
 ## Ошибка `Table '…tenant_domains' doesn't exist`
 
 Сообщение `SQLSTATE[42S02]: Base table or view not found: 1146 … tenant_domains` означает, что в **той БД**, к которой подключается Laravel на сервере (см. `DB_*` в `.env`), **ещё не создана схема** из миграций. Локально таблица есть, потому что у вас выполнен `php artisan migrate`.

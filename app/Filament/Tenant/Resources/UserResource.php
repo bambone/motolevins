@@ -34,11 +34,11 @@ class UserResource extends Resource
         $tenant = currentTenant();
         $query = parent::getEloquentQuery();
 
-        if ($tenant) {
-            $query->whereHas('tenants', fn (Builder $q) => $q->where('tenants.id', $tenant->id));
+        if ($tenant === null) {
+            return $query->whereRaw('0 = 1');
         }
 
-        return $query;
+        return $query->whereHas('tenants', fn (Builder $q) => $q->where('tenants.id', $tenant->id));
     }
 
     public static function form(Schema $schema): Schema
