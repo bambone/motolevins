@@ -1,7 +1,7 @@
 <section id="sravnenie" class="pm-section-anchor border-b border-slate-200 bg-white py-12 sm:py-16 md:py-20" aria-labelledby="sravnenie-heading">
     <div class="mx-auto max-w-6xl px-3 sm:px-4 md:px-6">
-        <h2 id="sravnenie-heading" class="text-balance text-xl font-bold leading-tight text-slate-900 sm:text-2xl md:text-3xl">Сравнение подходов</h2>
-        <p class="mt-3 max-w-2xl text-sm leading-relaxed text-slate-600 sm:text-base">Сводка: RentBase даёт готовый контур записи и клиентов; таблицы и самописные сайты чаще требуют ручной рутины или дорогой разработки.</p>
+        <h2 id="sravnenie-heading" class="text-balance text-xl font-bold leading-tight text-slate-900 sm:text-2xl md:text-3xl">Почему не Excel и не WordPress</h2>
+        <p class="mt-3 max-w-2xl text-sm leading-relaxed text-slate-600 sm:text-base">RentBase даёт готовый контур записи и клиентов; таблицы и самописные сайты чаще тянут ручную рутину или дорогую разработку.</p>
         <p class="mt-2 text-xs text-slate-500 md:hidden">Таблицу можно прокручивать по горизонтали.</p>
         <div class="-mx-4 mt-6 overflow-x-auto overscroll-x-contain px-4 [scrollbar-gutter:stable] md:mx-0 md:mt-8 md:px-0">
             <table class="w-full min-w-[640px] border-collapse text-left text-sm">
@@ -47,5 +47,6 @@
                 </tbody>
             </table>
         </div>
+        <p class="mt-6 max-w-2xl text-sm font-medium text-slate-800 sm:text-base">RentBase закрывает весь процесс, а не часть.</p>
     </div>
 </section>

@@ -28,12 +28,12 @@
         <div class="mb-6 grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2">
             <div class="min-w-0">
                 <label class="mb-2 block text-sm text-silver" for="booking-start-date">Дата начала</label>
-                <input id="booking-start-date" type="date" x-model="startDate" @change="calculatePrice" :min="minDate"
+                <input id="booking-start-date" name="rental_start_date" type="date" x-model="startDate" @change="calculatePrice" :min="minDate" autocomplete="off"
                     class="h-12 w-full rounded-xl border border-white/10 bg-black/50 px-4 py-3 text-base text-white outline-none focus:border-moto-amber focus:ring-1 focus:ring-moto-amber [color-scheme:dark]">
             </div>
             <div class="min-w-0">
                 <label class="mb-2 block text-sm text-silver" for="booking-end-date">Дата возврата</label>
-                <input id="booking-end-date" type="date" x-model="endDate" @change="calculatePrice" :min="minDate"
+                <input id="booking-end-date" name="rental_end_date" type="date" x-model="endDate" @change="calculatePrice" :min="minDate" autocomplete="off"
                     class="h-12 w-full rounded-xl border border-white/10 bg-black/50 px-4 py-3 text-base text-white outline-none focus:border-moto-amber focus:ring-1 focus:ring-moto-amber [color-scheme:dark]">
             </div>
         </div>
@@ -43,9 +43,9 @@
                 <span class="mb-3 block text-sm text-silver">Дополнительные опции</span>
                 <div class="space-y-3">
                     @foreach($addons as $addon)
-                        <label class="flex cursor-pointer flex-col gap-2 rounded-xl border border-white/5 bg-white/[0.02] p-3 sm:flex-row sm:items-center sm:gap-3 sm:border-0 sm:bg-transparent sm:p-0">
+                        <label for="booking-addon-qty-{{ $addon->id }}" class="flex cursor-pointer flex-col gap-2 rounded-xl border border-white/5 bg-white/[0.02] p-3 sm:flex-row sm:items-center sm:gap-3 sm:border-0 sm:bg-transparent sm:p-0">
                             <div class="flex items-center gap-3">
-                                <input type="number" min="0" x-model.number="addons[{{ $addon->id }}]" @change="calculatePrice" aria-label="Количество: {{ $addon->name }}"
+                                <input id="booking-addon-qty-{{ $addon->id }}" name="addon_quantity[{{ $addon->id }}]" type="number" min="0" x-model.number="addons[{{ $addon->id }}]" @change="calculatePrice" inputmode="numeric" autocomplete="off"
                                     class="h-11 w-20 shrink-0 rounded-lg border border-white/10 bg-black/50 px-3 py-2 text-sm text-white">
                                 <span class="min-w-0 flex-1 text-sm text-white sm:text-base">{{ $addon->name }}</span>
                             </div>
@@ -79,7 +79,7 @@
         </div>
 
         <button type="button" @click="proceedToCheckout" :disabled="!canProceed || loading"
-            class="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-moto-amber py-3.5 font-bold text-white transition-colors hover:bg-moto-amber/90 disabled:cursor-not-allowed disabled:opacity-50 touch-manipulation sm:min-h-14 sm:py-4">
+            class="tenant-btn-primary min-h-12 w-full gap-2 py-3.5 touch-manipulation disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-14 sm:py-4">
             <span x-show="!loading">Перейти к оформлению</span>
             <span x-show="loading">Проверка...</span>
         </button>

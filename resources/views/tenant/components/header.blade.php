@@ -13,11 +13,13 @@
                     <img src="{{ $branding['logo'] }}" alt="{{ $site_name ?? config('app.name') }}"
                          width="96" height="96"
                          loading="eager"
+                         decoding="async"
                          class="relative h-12 w-12 shrink-0 rounded-full object-contain drop-shadow-[0_4px_12px_rgba(0,0,0,0.5)] sm:h-14 sm:w-14 lg:h-24 lg:w-24" />
                 @else
                     <img src="{{ asset(config('tenant_landing.motolevins_public_prefix').'/marketing/logo-round-dark.png') }}" alt="{{ $site_name ?? config('app.name') }}"
                          width="96" height="96"
                          loading="eager"
+                         decoding="async"
                          class="relative h-12 w-12 shrink-0 rounded-full object-contain drop-shadow-[0_4px_12px_rgba(0,0,0,0.5)] sm:h-14 sm:w-14 lg:h-24 lg:w-24" />
                 @endif
                 <span class="truncate text-lg font-bold leading-tight tracking-tight text-white sm:text-xl lg:whitespace-nowrap lg:text-2xl xl:text-3xl">{{ $site_name ?? config('app.name') }}</span>

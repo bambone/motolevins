@@ -6,6 +6,7 @@ use App\Http\Controllers\LeadController;
 use App\Http\Controllers\MotorcycleController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\PlatformLlmsTxtController;
+use App\Http\Controllers\PlatformMarketingContactController;
 use App\Http\Controllers\PlatformMarketingRobotsController;
 use App\Http\Controllers\PlatformMarketingSitemapController;
 use App\Http\Controllers\PublicBookingController;
@@ -43,10 +44,14 @@ if ($marketingHosts !== []) {
                 Route::view('/', 'platform.marketing.home')->name('platform.home');
                 Route::view('/features', 'platform.marketing.features')->name('platform.features');
                 Route::view('/pricing', 'platform.marketing.pricing')->name('platform.pricing');
-                Route::view('/for-moto-rental', 'platform.marketing.for-moto-rental')->name('platform.for-moto-rental');
-                Route::view('/for-car-rental', 'platform.marketing.for-car-rental')->name('platform.for-car-rental');
+                Route::get('/for-moto-rental', fn () => view('platform.marketing.segment-landing', ['segmentKey' => 'moto']))->name('platform.for-moto-rental');
+                Route::get('/for-car-rental', fn () => view('platform.marketing.segment-landing', ['segmentKey' => 'car']))->name('platform.for-car-rental');
+                Route::get('/for-services', fn () => view('platform.marketing.segment-landing', ['segmentKey' => 'services']))->name('platform.for-services');
                 Route::view('/faq', 'platform.marketing.faq')->name('platform.faq');
                 Route::view('/contact', 'platform.marketing.contact')->name('platform.contact');
+                Route::post('/contact', [PlatformMarketingContactController::class, 'store'])
+                    ->middleware('throttle:15,1')
+                    ->name('platform.contact.store');
             } else {
                 Route::get('/robots.txt', PlatformMarketingRobotsController::class);
                 Route::get('/sitemap.xml', PlatformMarketingSitemapController::class);
@@ -54,10 +59,13 @@ if ($marketingHosts !== []) {
                 Route::view('/', 'platform.marketing.home');
                 Route::view('/features', 'platform.marketing.features');
                 Route::view('/pricing', 'platform.marketing.pricing');
-                Route::view('/for-moto-rental', 'platform.marketing.for-moto-rental');
-                Route::view('/for-car-rental', 'platform.marketing.for-car-rental');
+                Route::get('/for-moto-rental', fn () => view('platform.marketing.segment-landing', ['segmentKey' => 'moto']));
+                Route::get('/for-car-rental', fn () => view('platform.marketing.segment-landing', ['segmentKey' => 'car']));
+                Route::get('/for-services', fn () => view('platform.marketing.segment-landing', ['segmentKey' => 'services']));
                 Route::view('/faq', 'platform.marketing.faq');
                 Route::view('/contact', 'platform.marketing.contact');
+                Route::post('/contact', [PlatformMarketingContactController::class, 'store'])
+                    ->middleware('throttle:15,1');
             }
         });
     }

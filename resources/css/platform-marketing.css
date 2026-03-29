@@ -1,14 +1,39 @@
 @import 'tailwindcss';
 
-@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
-@source '../../storage/framework/views/*.php';
-@source '../**/*.blade.php';
-@source '../**/*.js';
+/* Только маркетинг платформы — меньше CSS в бандле, чем скан всего resources/ */
+@source '../views/platform/**/*.blade.php';
+@source '../views/components/platform/**/*.blade.php';
+@source '../js/platform-marketing.js';
 
 @theme {
-    --font-sans: ui-sans-serif, system-ui, sans-serif, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
-    --color-pm-accent: #1d4ed8;
-    --color-pm-accent-hover: #1e40af;
+  --color-pm-accent: var(--color-indigo-600);
+  --color-pm-accent-hover: var(--color-indigo-700);
+  --color-navy: #0f172a;
+  --font-PM: Inter, ui-sans-serif, system-ui, sans-serif;
+  --shadow-premium: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+  --shadow-glow: 0 0 30px -10px var(--color-indigo-500);
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-4px); }
+  }
+  @keyframes pulse-slow {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.95; transform: scale(0.99); }
+  }
+  @keyframes glow-breath {
+    0%, 100% { opacity: 0.1; }
+    50% { opacity: 0.3; }
+  }
+  @keyframes data-fill-x {
+    from { width: 0; }
+    to { width: 100%; }
+  }
+  
+  --animate-float: float 6s ease-in-out infinite;
+  --animate-pulse-slow: pulse-slow 8s ease-in-out infinite;
+  --animate-glow-breath: glow-breath 5s ease-in-out infinite;
+  --animate-data-fill-x: data-fill-x 1.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
 @layer base {
@@ -22,7 +47,74 @@
     }
 
     .pm-section-anchor {
-        /* Учёт sticky header: меньше отступ на узких экранах */
         scroll-margin-top: clamp(3.75rem, 11vw, 5.75rem);
+    }
+
+    /* Декоративный макет в hero: ниже стоимость layout вне вьюпорта */
+    .pm-hero-mockup {
+        content-visibility: auto;
+        contain-intrinsic-size: 540px 440px;
+    }
+
+    /* Мобильный sticky CTA на всех маркетинговых страницах: запас снизу у main */
+    @media (max-width: 1023px) {
+        .pm-marketing-with-sticky main {
+            padding-bottom: 5rem;
+        }
+    }
+}
+
+@layer utilities {
+    .glass-panel {
+        @apply bg-white/90 backdrop-blur-md border border-slate-900/10 shadow-premium;
+    }
+    .glass-panel-dark {
+        @apply bg-navy/90 backdrop-blur-md border border-white/10 shadow-premium;
+    }
+    .fade-reveal {
+        opacity: 0;
+        transform: translateY(12px);
+        transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1), transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+        will-change: opacity, transform;
+    }
+    .fade-reveal.visible {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    /* Ступени задержки для fade-reveal (без Blade в inline style — дружелюбно к CSS-линтеру) */
+    .pm-reveal-cases-0 { transition-delay: 200ms; }
+    .pm-reveal-cases-1 { transition-delay: 350ms; }
+    .pm-reveal-cases-2 { transition-delay: 500ms; }
+    .pm-reveal-cases-3 { transition-delay: 650ms; }
+    .pm-reveal-cases-4 { transition-delay: 800ms; }
+
+    .pm-reveal-kpi-0 { transition-delay: 300ms; }
+    .pm-reveal-kpi-1 { transition-delay: 450ms; }
+    .pm-reveal-kpi-2 { transition-delay: 600ms; }
+
+    @media (prefers-reduced-motion: reduce) {
+        .fade-reveal {
+            transition: none;
+            transform: none;
+            opacity: 1;
+        }
+        .animate-float, .animate-pulse-slow, .animate-glow-breath, .animate-data-fill-x {
+            animation: none !important;
+        }
+    }
+
+    /* JS: platform-marketing.js — узкие экраны или системное «меньше анимаций» */
+    html.reduced-motion .fade-reveal {
+        transition: none !important;
+        transform: none !important;
+        opacity: 1 !important;
+    }
+
+    html.reduced-motion *,
+    html.reduced-motion *::before,
+    html.reduced-motion *::after {
+        animation: none !important;
+        transition: none !important;
     }
 }

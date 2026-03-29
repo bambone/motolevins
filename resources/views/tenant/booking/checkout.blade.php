@@ -49,33 +49,33 @@
         <div class="space-y-4">
             <div>
                 <label class="mb-2 block text-sm text-silver" for="checkout-name">Ваше имя *</label>
-                <input id="checkout-name" type="text" name="customer_name" value="{{ old('customer_name') }}" required autocomplete="name"
-                    class="h-12 w-full rounded-xl border border-white/10 bg-black/50 px-4 py-3 text-base text-white outline-none focus:border-moto-amber focus:ring-1 focus:ring-moto-amber @error('customer_name') border-red-500 @enderror">
+                <input id="checkout-name" type="text" name="customer_name" value="{{ old('customer_name') }}" required autocomplete="name" placeholder="Как к вам обращаться"
+                    class="h-12 w-full rounded-xl border border-white/10 bg-black/50 px-4 py-3 text-base text-white placeholder:text-zinc-500 outline-none focus:border-moto-amber focus:ring-1 focus:ring-moto-amber @error('customer_name') border-red-500 @enderror">
                 @error('customer_name')
                     <p class="mt-1 text-sm text-red-400">{{ $message }}</p>
                 @enderror
             </div>
             <div>
                 <label class="mb-2 block text-sm text-silver" for="checkout-phone">Телефон *</label>
-                <input id="checkout-phone" type="tel" name="phone" value="{{ old('phone') }}" required autocomplete="tel"
-                    class="h-12 w-full rounded-xl border border-white/10 bg-black/50 px-4 py-3 text-base text-white outline-none focus:border-moto-amber focus:ring-1 focus:ring-moto-amber @error('phone') border-red-500 @enderror">
+                <input id="checkout-phone" type="tel" name="phone" value="{{ old('phone') }}" required autocomplete="tel" placeholder="+7 (900) 000-00-00"
+                    class="h-12 w-full rounded-xl border border-white/10 bg-black/50 px-4 py-3 text-base text-white placeholder:text-zinc-500 outline-none focus:border-moto-amber focus:ring-1 focus:ring-moto-amber @error('phone') border-red-500 @enderror">
                 @error('phone')
                     <p class="mt-1 text-sm text-red-400">{{ $message }}</p>
                 @enderror
             </div>
             <div>
                 <label class="mb-2 block text-sm text-silver" for="checkout-email">Email</label>
-                <input id="checkout-email" type="email" name="email" value="{{ old('email') }}" autocomplete="email"
-                    class="h-12 w-full rounded-xl border border-white/10 bg-black/50 px-4 py-3 text-base text-white outline-none focus:border-moto-amber focus:ring-1 focus:ring-moto-amber">
+                <input id="checkout-email" type="email" name="email" value="{{ old('email') }}" autocomplete="email" placeholder="name@example.com"
+                    class="h-12 w-full rounded-xl border border-white/10 bg-black/50 px-4 py-3 text-base text-white placeholder:text-zinc-500 outline-none focus:border-moto-amber focus:ring-1 focus:ring-moto-amber">
             </div>
             <div>
                 <label class="mb-2 block text-sm text-silver" for="checkout-comment">Комментарий</label>
-                <textarea id="checkout-comment" name="customer_comment" rows="3"
-                    class="w-full resize-none rounded-xl border border-white/10 bg-black/50 px-4 py-3 text-base text-white outline-none focus:border-moto-amber focus:ring-1 focus:ring-moto-amber">{{ old('customer_comment') }}</textarea>
+                <textarea id="checkout-comment" name="customer_comment" rows="3" placeholder="Пожелания по времени выдачи и т.п."
+                    class="w-full resize-none rounded-xl border border-white/10 bg-black/50 px-4 py-3 text-base text-white placeholder:text-zinc-500 outline-none focus:border-moto-amber focus:ring-1 focus:ring-moto-amber">{{ old('customer_comment') }}</textarea>
             </div>
         </div>
 
-        <button type="submit" class="mt-8 min-h-12 w-full rounded-xl bg-moto-amber py-3.5 font-bold text-white transition-colors hover:bg-moto-amber/90 touch-manipulation sm:min-h-14 sm:py-4">
+        <button type="submit" class="tenant-btn-primary mt-8 min-h-12 w-full py-3.5 touch-manipulation sm:min-h-14 sm:py-4">
             Подтвердить бронирование
         </button>
     </form>

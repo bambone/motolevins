@@ -27,8 +27,8 @@
             </div>
 
             <div class="flex flex-col gap-2 sm:flex-row sm:gap-3">
-                <button type="button" x-show="!isIos" @click="installApp()" class="min-h-11 flex-1 rounded-lg bg-moto-amber px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-moto-amber/20 transition-colors hover:bg-orange-600 touch-manipulation">Установить</button>
-                <button type="button" @click="dismissPrompt()" class="min-h-11 flex-1 rounded-lg border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-white/10 touch-manipulation">Позже</button>
+                <button type="button" x-show="!isIos" @click="installApp()" class="tenant-btn-primary min-h-11 flex-1 px-4 py-2.5 text-sm shadow-lg touch-manipulation">Установить</button>
+                <button type="button" @click="dismissPrompt()" class="tenant-btn-secondary min-h-11 flex-1 px-4 py-2.5 text-sm font-medium touch-manipulation">Позже</button>
             </div>
         </div>
     </div>

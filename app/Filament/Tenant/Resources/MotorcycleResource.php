@@ -5,6 +5,7 @@ namespace App\Filament\Tenant\Resources;
 use App\Filament\Forms\Components\SeoMetaFields;
 use App\Filament\Tenant\Resources\MotorcycleResource\Pages;
 use App\Models\Motorcycle;
+use App\Support\CatalogHighlightNormalizer;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -18,6 +19,7 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Fieldset;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Set;
@@ -87,12 +89,112 @@ class MotorcycleResource extends Resource
                                     ->id('motorcycle-model')
                                     ->maxLength(255),
                                 Textarea::make('short_description')
-                                    ->label('Краткое описание')
+                                    ->label('Позиционирование в каталоге')
                                     ->id('motorcycle-short-description')
-                                    ->rows(4)
+                                    ->rows(3)
+                                    ->helperText('1–2 короткие строки: для какого сценария модель и чем отличается от соседних. Только правдивый маркетинговый смысл, без выдуманных цифр.')
+                                    ->columnSpanFull(),
+                                TextInput::make('catalog_scenario')
+                                    ->label('Сценарий / кому подойдёт')
+                                    ->id('motorcycle-catalog-scenario')
+                                    ->maxLength(120)
+                                    ->placeholder('Например: Туристу и трассе')
+                                    ->columnSpanFull(),
+                                Fieldset::make('Быстрые преимущества (чипы в каталоге, словарь на сайте)')
+                                    ->schema([
+                                        Grid::make(3)
+                                            ->schema([
+                                                Select::make('catalog_highlight_1')
+                                                    ->label('Чип 1')
+                                                    ->id('motorcycle-catalog-highlight-1')
+                                                    ->placeholder('—')
+                                                    ->formatStateUsing(fn (?string $state): ?string => CatalogHighlightNormalizer::normalizeToKey($state))
+                                                    ->options(fn (): array => CatalogHighlightNormalizer::selectOptions()),
+                                                Select::make('catalog_highlight_2')
+                                                    ->label('Чип 2')
+                                                    ->id('motorcycle-catalog-highlight-2')
+                                                    ->placeholder('—')
+                                                    ->formatStateUsing(fn (?string $state): ?string => CatalogHighlightNormalizer::normalizeToKey($state))
+                                                    ->options(fn (): array => CatalogHighlightNormalizer::selectOptions()),
+                                                Select::make('catalog_highlight_3')
+                                                    ->label('Чип 3')
+                                                    ->id('motorcycle-catalog-highlight-3')
+                                                    ->placeholder('—')
+                                                    ->formatStateUsing(fn (?string $state): ?string => CatalogHighlightNormalizer::normalizeToKey($state))
+                                                    ->options(fn (): array => CatalogHighlightNormalizer::selectOptions()),
+                                            ]),
+                                    ])
+                                    ->columnSpanFull(),
+                                TextInput::make('catalog_price_note')
+                                    ->label('Подпись под ценой в каталоге')
+                                    ->id('motorcycle-catalog-price-note')
+                                    ->maxLength(80)
+                                    ->placeholder('Только реальное условие')
+                                    ->helperText('Необязательно. Например: «за сутки», «бронь по предоплате» — только если это действительно так.')
                                     ->columnSpanFull(),
                             ])
                             ->columns(2),
+
+                        Section::make('Страница модели (/moto/…)')
+                            ->description('Блоки на публичной карточке техники. Пустые поля скрываются; тезисы по сценарию при отсутствии данных можно подтянуть из категории (см. конфиг tenant_landing).')
+                            ->schema([
+                                Textarea::make('detail_audience')
+                                    ->label('Кому подойдёт')
+                                    ->id('motorcycle-detail-audience')
+                                    ->rows(3)
+                                    ->helperText('1–3 предложения. Если пусто — на сайте используется сценарий из поля выше.')
+                                    ->columnSpanFull(),
+                                Textarea::make('detail_use_case_bullets')
+                                    ->label('Сценарий: тезисы (по одному на строку, до 4)')
+                                    ->id('motorcycle-detail-use-case')
+                                    ->rows(5)
+                                    ->formatStateUsing(function ($state): string {
+                                        if (is_array($state)) {
+                                            return implode("\n", array_filter($state, 'filled'));
+                                        }
+
+                                        return '';
+                                    })
+                                    ->dehydrateStateUsing(function (?string $state): array {
+                                        if ($state === null || trim($state) === '') {
+                                            return [];
+                                        }
+                                        $lines = preg_split('/\r\n|\r|\n/', $state) ?: [];
+                                        $lines = array_values(array_filter(array_map('trim', $lines), fn (string $l): bool => $l !== ''));
+
+                                        return array_slice($lines, 0, 4);
+                                    })
+                                    ->columnSpanFull(),
+                                Textarea::make('detail_advantage_bullets')
+                                    ->label('Ключевые плюсы (по одному на строку, до 6)')
+                                    ->id('motorcycle-detail-advantages')
+                                    ->rows(6)
+                                    ->formatStateUsing(function ($state): string {
+                                        if (is_array($state)) {
+                                            return implode("\n", array_filter($state, 'filled'));
+                                        }
+
+                                        return '';
+                                    })
+                                    ->dehydrateStateUsing(function (?string $state): array {
+                                        if ($state === null || trim($state) === '') {
+                                            return [];
+                                        }
+                                        $lines = preg_split('/\r\n|\r|\n/', $state) ?: [];
+                                        $lines = array_values(array_filter(array_map('trim', $lines), fn (string $l): bool => $l !== ''));
+
+                                        return array_slice($lines, 0, 6);
+                                    })
+                                    ->columnSpanFull(),
+                                Textarea::make('detail_rental_notes')
+                                    ->label('Аренда: примечания к этой модели')
+                                    ->id('motorcycle-detail-rental')
+                                    ->rows(4)
+                                    ->helperText('Только проверяемые формулировки. Общие условия — на странице «Правила аренды».')
+                                    ->columnSpanFull(),
+                            ])
+                            ->collapsed()
+                            ->collapsible(),
 
                         Section::make('Полное описание')
                             ->description('Подробное описание для карточки мотоцикла')

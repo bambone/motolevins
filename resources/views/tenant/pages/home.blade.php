@@ -1,12 +1,17 @@
 @php
     $bikeIdsJson = $bikes->pluck('id')->toJson();
     $sections = $sections ?? [];
+    $heroLcpImage = asset(config('tenant_landing.motolevins_public_prefix', 'images/motolevins').'/marketing/hero-bg.png');
 @endphp
 @extends('tenant.layouts.app')
 
+@push('tenant-preload')
+    <link rel="preload" as="image" href="{{ $heroLcpImage }}">
+@endpush
+
 @section('content')
     <!-- Alpine App State -->
-    <div x-data="globalBookingState()" data-bike-ids="{{ $bikeIdsJson }}">
+    <div x-data="globalBookingState()" data-bike-ids="{{ $bikeIdsJson }}" class="w-full min-w-0">
         
         <!-- Extracted Hero Component -->
         <x-hero :section="$sections['hero'] ?? null" />
@@ -17,8 +22,8 @@
         <section id="catalog" class="relative z-10 border-t border-white/[0.02] bg-[#0c0c0e] py-16 sm:py-20 lg:py-28">
             <div class="mx-auto max-w-7xl px-3 sm:px-4 md:px-8">
                 
-                <div class="mb-10 flex flex-col gap-4 border-b border-white/5 pb-6 sm:mb-12 md:flex-row md:items-end md:justify-between">
-                    <div class="min-w-0">
+                <div class="mb-10 flex w-full min-w-0 flex-col gap-4 border-b border-white/5 pb-6 sm:mb-12 md:flex-row md:items-end md:justify-between">
+                    <div class="min-w-0 w-full max-w-full">
                         <h2 class="mb-3 text-balance text-2xl font-bold leading-tight text-white sm:text-3xl md:text-4xl">Наш автопарк</h2>
                         <p class="max-w-2xl text-sm leading-relaxed text-silver/80 sm:text-base md:text-lg">Премиальная техника для любого стиля. <span class="text-moto-amber/90 font-medium">Ограниченное количество мотоциклов</span> — бронируйте заранее.</p>
                     </div>

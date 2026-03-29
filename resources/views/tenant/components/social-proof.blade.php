@@ -10,7 +10,7 @@
     <div class="mx-auto max-w-7xl px-3 sm:px-4 md:px-8">
         <div class="mb-10 max-w-2xl sm:mb-12">
             <h2 class="mb-3 text-balance text-2xl font-bold leading-tight text-white sm:text-3xl md:text-4xl">{{ $heading }}</h2>
-            <p class="text-sm leading-relaxed text-silver/80 sm:text-base md:text-lg">{{ $subheading }}</p>
+            <p class="text-sm leading-relaxed text-zinc-300 sm:text-base md:text-lg">{{ $subheading }}</p>
         </div>
 
         <div class="grid grid-cols-1 gap-5 sm:gap-6 md:grid-cols-3 md:gap-6 lg:gap-8">
@@ -35,7 +35,7 @@
                             </div>
                             <div>
                                 <span class="block text-white font-bold text-sm">{{ $review->name }}</span>
-                                <span class="block text-silver text-xs mt-0.5">{{ $review->city ?? '' }}</span>
+                                <span class="block text-zinc-400 text-xs mt-0.5">{{ $review->city ?? '' }}</span>
                             </div>
                         </div>
                     </div>
@@ -60,7 +60,7 @@
                     </div>
                     <div>
                         <span class="block text-white font-bold text-sm">Алексей М.</span>
-                        <span class="block text-silver text-xs mt-0.5">Геленджик</span>
+                        <span class="block text-zinc-400 text-xs mt-0.5">Геленджик</span>
                     </div>
                 </div>
             </div>
@@ -84,7 +84,7 @@
                     </div>
                     <div>
                         <span class="block text-white font-bold text-sm">Игорь С.</span>
-                        <span class="block text-silver text-xs mt-0.5">Анапа</span>
+                        <span class="block text-zinc-400 text-xs mt-0.5">Анапа</span>
                     </div>
                 </div>
             </div>
@@ -108,7 +108,7 @@
                     </div>
                     <div>
                         <span class="block text-white font-bold text-sm">Анна В.</span>
-                        <span class="block text-silver text-xs mt-0.5">Новороссийск</span>
+                        <span class="block text-zinc-400 text-xs mt-0.5">Новороссийск</span>
                     </div>
                 </div>
             </div>

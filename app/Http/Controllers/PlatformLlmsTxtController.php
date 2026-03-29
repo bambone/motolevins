@@ -29,6 +29,7 @@ class PlatformLlmsTxtController extends Controller
             ['path' => '/contact', 'note' => 'Контакты и заявка'],
             ['path' => '/for-moto-rental', 'note' => 'Вертикаль: прокат мото'],
             ['path' => '/for-car-rental', 'note' => 'Вертикаль: прокат авто'],
+            ['path' => '/for-services', 'note' => 'Вертикаль: сервисы по записи'],
         ];
 
         foreach ($pages as $p) {

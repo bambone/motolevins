@@ -18,6 +18,7 @@ class PlatformMarketingSitemapController extends Controller
             '/contact',
             '/for-moto-rental',
             '/for-car-rental',
+            '/for-services',
         ];
 
         $urls = [];

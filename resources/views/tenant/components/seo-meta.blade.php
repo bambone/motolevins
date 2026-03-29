@@ -35,6 +35,7 @@
 <meta property="og:image" content="{{ $ogImage }}">
 @endif
 <meta property="og:type" content="{{ $ogType }}">
+<meta property="og:site_name" content="{{ config('app.name', 'Moto Levins') }}">
 <meta property="og:url" content="{{ url()->current() }}">
 <meta name="twitter:card" content="{{ $twitterCard }}">
 <meta name="twitter:title" content="{{ $ogTitle }}">

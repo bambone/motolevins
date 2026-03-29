@@ -156,21 +156,86 @@ if (! function_exists('platform_marketing_hero_headline')) {
     }
 }
 
+if (! function_exists('platform_marketing_tracking_query')) {
+    /**
+     * Параметры для сохранения при переходах с лендинга (UTM и др.).
+     *
+     * @return array<string, string>
+     */
+    function platform_marketing_tracking_query(): array
+    {
+        $keys = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'gclid', 'fbclid', 'yclid'];
+        $out = [];
+        foreach ($keys as $key) {
+            $v = request()->query($key);
+            if (is_string($v) && $v !== '') {
+                $out[$key] = $v;
+            }
+        }
+
+        return $out;
+    }
+}
+
+if (! function_exists('platform_marketing_url_with_tracking')) {
+    /**
+     * Добавить tracking query к абсолютному или относительному URL.
+     */
+    function platform_marketing_url_with_tracking(string $url): string
+    {
+        $params = platform_marketing_tracking_query();
+        if ($params === []) {
+            return $url;
+        }
+        $sep = str_contains($url, '?') ? '&' : '?';
+
+        return $url.$sep.http_build_query($params);
+    }
+}
+
+if (! function_exists('platform_marketing_contact_url')) {
+    /**
+     * URL страницы контактов с intent и сохранением UTM.
+     */
+    function platform_marketing_contact_url(?string $intent = null): string
+    {
+        $query = platform_marketing_tracking_query();
+
+        $intents = config('platform_marketing.intent', []);
+        if ($intent !== null && $intent !== '') {
+            $query['intent'] = $intent;
+        }
+
+        if (Route::has('platform.contact')) {
+            return route('platform.contact', $query);
+        }
+
+        $base = url('/contact');
+        if ($query === []) {
+            return $base;
+        }
+
+        return $base.(str_contains($base, '?') ? '&' : '?').http_build_query($query);
+    }
+}
+
 if (! function_exists('platform_marketing_demo_url')) {
     /**
-     * URL для CTA «Посмотреть демо»: env или страница контактов.
+     * URL для CTA «Посмотреть демо»: внешняя ссылка из env или /contact?intent=demo (+ UTM).
      */
     function platform_marketing_demo_url(): string
     {
         $custom = trim((string) config('platform_marketing.demo_url', ''));
         if ($custom !== '') {
-            return $custom;
+            if (preg_match('#^https?://#i', $custom)) {
+                return platform_marketing_url_with_tracking($custom);
+            }
+
+            return platform_marketing_url_with_tracking(url($custom));
         }
 
-        if (Route::has('platform.contact')) {
-            return route('platform.contact');
-        }
+        $demoIntent = (string) (config('platform_marketing.intent.demo') ?? 'demo');
 
-        return '/contact';
+        return platform_marketing_contact_url($demoIntent);
     }
 }

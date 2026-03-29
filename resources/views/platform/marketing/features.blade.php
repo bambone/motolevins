@@ -61,7 +61,7 @@
     <p class="mt-10">
         <a href="{{ url('/pricing') }}" class="font-medium text-blue-700 hover:text-blue-800">Тарифы</a>
         <span class="mx-2 text-slate-300">·</span>
-        <a href="{{ Route::has('platform.contact') ? route('platform.contact') : url('/contact') }}" class="font-medium text-blue-700 hover:text-blue-800">Запустить проект</a>
+        <a href="{{ platform_marketing_contact_url(config('platform_marketing.intent.launch', 'launch')) }}" class="font-medium text-blue-700 hover:text-blue-800">Запустить проект</a>
     </p>
 </div>
 @endsection

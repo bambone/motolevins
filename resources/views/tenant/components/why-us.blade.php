@@ -3,7 +3,7 @@
     <div class="mx-auto max-w-7xl px-3 sm:px-4 md:px-8">
         <div class="mb-10 max-w-2xl sm:mb-12">
             <h2 class="mb-3 text-balance text-2xl font-bold leading-tight text-white sm:text-3xl md:text-4xl">Почему выбирают нас</h2>
-            <p class="text-sm leading-relaxed text-silver/80 sm:text-base md:text-lg">Работаем с 2024 года. Никаких компромиссов в качестве и безопасности.</p>
+            <p class="text-sm leading-relaxed text-zinc-300 sm:text-base md:text-lg">Работаем с 2024 года. Никаких компромиссов в качестве и безопасности.</p>
         </div>
 
         <div class="grid grid-cols-1 gap-5 sm:gap-6 md:grid-cols-2 md:gap-6 lg:gap-8">
@@ -14,7 +14,7 @@
                 </div>
                 <div>
                     <h3 class="text-xl font-bold text-white mb-2">Вы получаете полностью обслуженный мотоцикл</h3>
-                    <p class="text-silver text-sm sm:text-base leading-relaxed">Детейлинг и ТО перед каждой выдачей — без риска поломки в дороге. Вы едете спокойно.</p>
+                    <p class="text-zinc-300 text-sm sm:text-base leading-relaxed">Детейлинг и ТО перед каждой выдачей — без риска поломки в дороге. Вы едете спокойно.</p>
                 </div>
             </div>
 
@@ -25,7 +25,7 @@
                 </div>
                 <div>
                     <h3 class="text-xl font-bold text-white mb-2">Прозрачные условия — без сюрпризов</h3>
-                    <p class="text-silver text-sm sm:text-base leading-relaxed">Цена в договоре = цена по факту. Полная страховка без скрытых доплат. КАСКО без франшизы — опция при бронировании.</p>
+                    <p class="text-zinc-300 text-sm sm:text-base leading-relaxed">Цена в договоре = цена по факту. Полная страховка без скрытых доплат. КАСКО без франшизы — опция при бронировании.</p>
                 </div>
             </div>
 
@@ -36,7 +36,7 @@
                 </div>
                 <div>
                     <h3 class="text-xl font-bold text-white mb-2">Поддержка 24/7 — решим в пути</h3>
-                    <p class="text-silver text-sm sm:text-base leading-relaxed">Попали в ситуацию? Мы на связи. Замена мотоцикла, консультация по маршруту — ответ в течение 15 минут.</p>
+                    <p class="text-zinc-300 text-sm sm:text-base leading-relaxed">Попали в ситуацию? Мы на связи. Замена мотоцикла, консультация по маршруту — ответ в течение 15 минут.</p>
                 </div>
             </div>
 
@@ -47,7 +47,7 @@
                 </div>
                 <div>
                     <h3 class="text-xl font-bold text-white mb-2">Экипировка включена</h3>
-                    <p class="text-silver text-sm sm:text-base leading-relaxed">Шлемы и базовая экипировка — чистая, продезинфицированная. Не везите с собой — получите при выдаче.</p>
+                    <p class="text-zinc-300 text-sm sm:text-base leading-relaxed">Шлемы и базовая экипировка — чистая, продезинфицированная. Не везите с собой — получите при выдаче.</p>
                 </div>
             </div>
         </div>
