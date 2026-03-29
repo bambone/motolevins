@@ -7,7 +7,7 @@
 @endsection
 
 @php
-    $pm = config('platform_marketing');
+    $pm = app(\App\Product\Settings\MarketingContentResolver::class)->resolved();
     $cp = $pm['contact_page'] ?? [];
     $intentConfig = is_array($cp['intents'] ?? null) ? $cp['intents'] : [];
     $intentKeys = array_keys($intentConfig);

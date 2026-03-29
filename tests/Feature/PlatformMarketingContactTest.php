@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Mail\PlatformMarketingContactMail;
+use App\Models\CrmRequest;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
@@ -50,7 +51,13 @@ class PlatformMarketingContactTest extends TestCase
         ]);
 
         $response->assertRedirect();
-        Mail::assertSent(PlatformMarketingContactMail::class);
+        Mail::assertQueued(PlatformMarketingContactMail::class);
+        $this->assertDatabaseHas('crm_requests', [
+            'tenant_id' => null,
+            'request_type' => 'platform_contact',
+            'source' => 'platform_marketing_contact',
+        ]);
+        $this->assertSame(1, CrmRequest::query()->whereNull('tenant_id')->count());
     }
 
     public function test_contact_post_requires_phone_or_email(): void

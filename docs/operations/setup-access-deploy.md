@@ -7,7 +7,7 @@
 ## URL на production (Rentbase)
 
 - **Маркетинг (лендинг платформы):** https://rentbase.su и https://www.rentbase.su — хосты из `TENANCY_CENTRAL_DOMAINS`, отдельно от `PLATFORM_HOST`.
-- **Platform Console:** https://platform.rentbase.su/platform (хост из `PLATFORM_HOST` в `.env`).
+- **Platform Console:** https://platform.rentbase.su/ (хост из `PLATFORM_HOST` в `.env`; вход `/login`, дашборд `/dashboard`).
 - **Кабинет клиента (tenant admin):** `https://<домен тенанта>/admin` (например https://motolevins.rentbase.su/admin). Списки Filament: `/admin/rental-units` и т.д. — **после входа** на домене клиента. Apex `https://rentbase.su/admin` **не** используется как клиентская админка.
 
 Поддомен **`{slug}.{TENANCY_ROOT_DOMAIN}`** (например `motolevins.rentbase.su`) создаётся при создании тенанта в Platform Console и может досеиваться миграцией `2026_03_28_140000_ensure_motolevins_canonical_subdomain`. Без строки в `tenant_domains` со **статусом «Активен»** сайт покажет «Домен не подключён».
@@ -36,7 +36,7 @@
 
 | Панель | URL (пример) | Доступ |
 |--------|----------------|--------|
-| **Platform Console** | `https://{PLATFORM_HOST}/platform` (локально часто `platform.rentbase.local`) | Spatie: `platform_owner`, `platform_admin`, `support_manager` |
+| **Platform Console** | `https://{PLATFORM_HOST}/` (локально часто `platform.rentbase.local`, `/login`) | Spatie: `platform_owner`, `platform_admin`, `support_manager` |
 | **Кабинет клиента** | `https://{домен из tenant_domains}/admin` | `tenant_user` со статусом `active` и ролью из `App\Auth\AccessRoles::TENANT_MEMBERSHIP` |
 
 Один email может иметь **и** platform-роль, **и** membership в `tenant_user`.
@@ -44,7 +44,7 @@
 ## Команда клиента и матрица прав кабинета (только Platform Console)
 
 - **Участники кабинета клиента** (`tenant_user`: роль и статус в команде) заводятся и правятся в **Platform Console** → карточка **«Клиенты»** → вкладка **«Команда клиента»**: добавить существующего пользователя, создать учётку без platform-ролей, сменить роль/статус в команде, отвязать. Ссылка на кабинет `/admin` подставляется из **активного** домена клиента (см. таблицу доменов выше).
-- **Какие именно `manage_*` / `export_leads` разрешены для каждой pivot-роли** задаётся матрицей в **Platform Console** → **«Безопасность и роли кабинета»** (`/platform/tenant-cabinet-security`). Значения хранятся в `platform_settings` (`tenant_pivot_permission_matrix`); **сброс к коду** убирает переопределение и снова включает дефолты из `App\Auth\TenantPivotPermissions::defaults()`. Редактировать матрицу могут только **`platform_owner`** и **`platform_admin`**.
+- **Какие именно `manage_*` / `export_leads` разрешены для каждой pivot-роли** задаётся матрицей в **Platform Console** → **«Безопасность и роли кабинета»** (`/tenant-cabinet-security` на хосте `PLATFORM_HOST`). Значения хранятся в `platform_settings` (`tenant_pivot_permission_matrix`); **сброс к коду** убирает переопределение и снова включает дефолты из `App\Auth\TenantPivotPermissions::defaults()`. Редактировать матрицу могут только **`platform_owner`** и **`platform_admin`**.
 - **Вход с `/admin` при двойном доступе:** глобальный флаг в той же странице (`tenant_login_prefer_tenant_panel`) отключает автоматический редирект на консоль платформы для пользователей с platform-ролью — см. строку в таблице редиректов ниже.
 
 ## Политика `super_admin`
@@ -82,7 +82,7 @@ php artisan tenant:attach-user --email=user@example.com --tenant=motolevins --ro
 
 | Сценарий | Куда ведёт |
 |----------|------------|
-| Вход на **Platform** (`/platform/login`) | `/platform` |
+| Вход на **Platform** (`/login` на `PLATFORM_HOST`) | `/dashboard` |
 | Вход на **Tenant Admin** (`/admin/login`), только tenant | `/admin` |
 | Вход на **Tenant Admin**, у пользователя **есть** platform-роль | Редирект на **Platform Console** (приоритет platform) |
 | Вход на **Tenant Admin**, у пользователя **есть** platform-роль, включён **`tenant_login_prefer_tenant_panel`** | Остаётся **Tenant Admin** (`/admin`) |
@@ -103,7 +103,7 @@ php artisan make:filament-user
 |-----|------------|
 | `http://rentbase.local/` | Лендинг платформы (`TENANCY_CENTRAL_DOMAINS`) |
 | `http://motolevins.rentbase.local/` | Публичный сайт демо-тенанта (`tenant_domains`, `TENANCY_ROOT_DOMAIN=rentbase.local`) |
-| `http://platform.rentbase.local/platform` | Filament Platform Console (`PLATFORM_HOST`) |
+| `http://platform.rentbase.local/login` | Filament Platform Console (`PLATFORM_HOST`) |
 | `http://motolevins.rentbase.local/admin` | Кабинет клиента (Filament tenant) |
 
 Пример `.env`: `APP_URL=http://rentbase.local`, `PLATFORM_HOST=platform.rentbase.local`, `TENANCY_CENTRAL_DOMAINS=rentbase.local,www.rentbase.local`, `TENANCY_ROOT_DOMAIN=rentbase.local`, `TENANT_MOTOLEVINS_PUBLIC_URL=http://motolevins.rentbase.local`. Поле `TENANT_DEFAULT_HOST` не задавать равным apex маркетинга (или не задавать вовсе).
@@ -119,7 +119,7 @@ php artisan make:filament-user
 
 **OSPanel:** поддомены (`platform`, `motolevins` и т.д.) часто задаются отдельными именами сайта или `.osp/project.ini` в репозитории. На уровне **сайта** должны быть включены HTTP и PHP.
 
-Platform Console: `https://platform.rentbase.local/platform` (или `http://…`). Хост задаётся в `.env`: `PLATFORM_HOST=...`.
+Platform Console: `https://platform.rentbase.local/login` (или `http://…`). Хост задаётся в `.env`: `PLATFORM_HOST=...`.
 
 ## Миграция bikes → motorcycles (legacy)
 

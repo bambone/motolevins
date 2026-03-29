@@ -5,8 +5,14 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * Transitional projection: история смен статуса Lead для совместимости.
+ * Источник истины по операторскому inbound-timeline — {@see CrmRequestActivity} у {@see CrmRequest} (ADR-007).
+ */
 class LeadStatusHistory extends Model
 {
+    protected $table = 'lead_status_history';
+
     public $timestamps = false;
 
     protected static function booted(): void

@@ -7,7 +7,7 @@
 @endsection
 
 @php
-    $pm = config('platform_marketing');
+    $pm = app(\App\Product\Settings\MarketingContentResolver::class)->resolved();
     $base = request()->getSchemeAndHttpHost();
     $p = $pm['pricing'] ?? [];
     $graph = [

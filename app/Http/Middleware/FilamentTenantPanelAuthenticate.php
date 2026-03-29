@@ -42,7 +42,7 @@ class FilamentTenantPanelAuthenticate extends FilamentAuthenticate
 
         $platformHost = trim((string) config('app.platform_host', ''));
         $platformHint = $platformHost !== ''
-            ? "Откройте консоль платформы: https://{$platformHost}/platform"
+            ? "Откройте консоль платформы: https://{$platformHost}/login"
             : 'Откройте консоль платформы с настроенного PLATFORM_HOST.';
 
         throw new HttpResponseException(

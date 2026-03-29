@@ -70,10 +70,10 @@ class HostRoutingSplitTest extends TestCase
             ->assertSee('http://apex.test/faq', false);
     }
 
-    public function test_platform_host_root_redirects_to_platform_panel(): void
+    public function test_platform_host_root_redirects_guest_to_login(): void
     {
         $this->getWithHost('platform.apex.test', '/')
-            ->assertRedirect('http://platform.apex.test/platform');
+            ->assertRedirect('http://platform.apex.test/login');
     }
 
     public function test_platform_host_resolver_is_non_tenant_without_tenant(): void

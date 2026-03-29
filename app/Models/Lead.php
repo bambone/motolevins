@@ -13,6 +13,7 @@ class Lead extends Model
 
     protected $fillable = [
         'tenant_id',
+        'crm_request_id',
         'name',
         'phone',
         'email',
@@ -57,6 +58,11 @@ class Lead extends Model
     public function statusHistory(): HasMany
     {
         return $this->hasMany(LeadStatusHistory::class)->orderByDesc('created_at');
+    }
+
+    public function crmRequest(): BelongsTo
+    {
+        return $this->belongsTo(CrmRequest::class);
     }
 
     public static function statuses(): array

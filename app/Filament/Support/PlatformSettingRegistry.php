@@ -22,6 +22,8 @@ final class PlatformSettingRegistry
 
     public const GROUP_TECHNICAL = 'Технические параметры';
 
+    public const GROUP_MARKETING = 'Маркетинг и лендинг';
+
     /**
      * @return array<string, array{group: string, label: string, description: string, type: 'string'|'integer'|'boolean'|'json'}>
      */
@@ -57,6 +59,30 @@ final class PlatformSettingRegistry
                 'label' => 'Режим обслуживания',
                 'description' => 'Если включено — публичные сценарии могут показывать заглушку (зависит от реализации приложения).',
                 'type' => 'boolean',
+            ],
+            'email.contact_form_recipients' => [
+                'group' => self::GROUP_EMAIL,
+                'label' => 'Получатели уведомлений по форме контактов',
+                'description' => 'Адреса через запятую или JSON-массив. Используется для входящих с маркетингового сайта (CRM + почта).',
+                'type' => 'string',
+            ],
+            'email.default_from_address' => [
+                'group' => self::GROUP_EMAIL,
+                'label' => 'From (адрес) для продуктовых писем платформы',
+                'description' => 'Отправитель служебных писем с маркетинговых форм; fallback — mail.from.',
+                'type' => 'string',
+            ],
+            'email.default_from_name' => [
+                'group' => self::GROUP_EMAIL,
+                'label' => 'From (имя) для продуктовых писем платформы',
+                'description' => 'Отображаемое имя отправителя; fallback — platform_name / бренд.',
+                'type' => 'string',
+            ],
+            'marketing.config_overlay' => [
+                'group' => self::GROUP_MARKETING,
+                'label' => 'Оверлей контента лендинга (JSON)',
+                'description' => 'Сливается поверх config/platform_marketing.php. Редактирование удобнее на странице «Маркетинг и контент».',
+                'type' => 'json',
             ],
         ];
     }

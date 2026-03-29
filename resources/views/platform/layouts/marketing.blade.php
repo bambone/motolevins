@@ -1,5 +1,5 @@
 @php
-    $pm = config('platform_marketing');
+    $pm = app(\App\Product\Settings\MarketingContentResolver::class)->resolved();
     $pmInterCss = 'https://fonts.bunny.net/css?family=inter:wght@400;600;700;800&subset=latin,cyrillic&display=swap';
     $pageTitle = trim($__env->yieldContent('title')) ?: 'Главная';
     $fullTitle = $pageTitle.' — '.($pm['brand_name'] ?? 'RentBase');
@@ -9,8 +9,8 @@
     }
     $canonical = url()->current();
     $pmContactUrl = platform_marketing_contact_url();
-    $pmContactUrlLaunch = platform_marketing_contact_url(config('platform_marketing.intent.launch', 'launch'));
-    $pmContactUrlDiscuss = platform_marketing_contact_url(config('platform_marketing.intent.custom', 'custom'));
+    $pmContactUrlLaunch = platform_marketing_contact_url($pm['intent']['launch'] ?? 'launch');
+    $pmContactUrlDiscuss = platform_marketing_contact_url($pm['intent']['custom'] ?? 'custom');
     $pmDemoUrl = platform_marketing_demo_url();
     $pmMainNav = [
         ['label' => 'Для кого', 'href' => url('/#dlya-kogo')],

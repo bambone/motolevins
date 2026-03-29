@@ -3,11 +3,11 @@
 @section('title', 'Главная')
 
 @section('meta_description')
-{{ config('platform_marketing.entity_core') }}
+{{ $pm['entity_core'] ?? '' }}
 @endsection
 
 @php
-    $pm = config('platform_marketing');
+    $pm = app(\App\Product\Settings\MarketingContentResolver::class)->resolved();
     $base = request()->getSchemeAndHttpHost();
     $org = $pm['organization'] ?? [];
     $graph = [

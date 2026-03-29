@@ -1,7 +1,7 @@
 @extends('platform.layouts.marketing')
 
 @php
-    $pm = config('platform_marketing');
+    $pm = app(\App\Product\Settings\MarketingContentResolver::class)->resolved();
     $seg = is_array($pm['segments'][$segmentKey] ?? null) ? $pm['segments'][$segmentKey] : [];
     $pageTitle = (string) ($seg['page_title'] ?? 'RentBase');
     $pmCases = $pm;

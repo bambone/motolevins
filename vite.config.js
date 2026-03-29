@@ -10,6 +10,7 @@ export default defineConfig({
                 'resources/js/app.js',
                 'resources/css/platform-marketing.css',
                 'resources/js/platform-marketing.js',
+                'resources/css/platform-admin.css',
             ],
             refresh: true,
         }),

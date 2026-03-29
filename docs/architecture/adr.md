@@ -26,7 +26,7 @@
 
 **Решение:** Два Filament panel:
 
-- **Platform Console** — хост из `PLATFORM_HOST` (или конфиг), путь **`/platform`**. Ресурсы: клиенты, планы, домены, настройки платформы и т.д.
+- **Platform Console** — хост из `PLATFORM_HOST` (или конфиг), панель Filament с **корнем пути** на этом хосте (`/login`, `/dashboard`, ресурсы без префикса `/platform`). Ресурсы: клиенты, планы, домены, настройки платформы и т.д.
 - **Кабинет клиента** — путь **`/admin`** на домене из `tenant_domains`. Работает только при разрешённом tenant context.
 
 **Последствия:** middleware `ResolveTenantFromDomain`, `EnsureTenantContext`, `EnsureTenantMembership`, `EnsurePlatformAccess`.
@@ -56,3 +56,20 @@
 **Статус:** Принято
 
 **Решение:** Разные сущности и сервисы: CMS/каталог vs bookings/availability/pricing vs будущие операции (договоры, платежи).
+
+---
+
+## ADR-007: Inbound CRM — `crm_request` как aggregate root, LeadStatusHistory как проекция
+
+**Статус:** Принято
+
+**Решение:**
+
+- **`crm_requests` / `CrmRequest`** — единственный долгосрочный вход и **aggregate root** операторского inbound: к нему относятся notes, activity/timeline, mail hooks, assignment, state machine статуса обработки. Не вести параллельный «истинный» timeline на `Lead`, `platform_marketing_leads` или `Booking` для той же заявки.
+- **`LeadStatusHistory`** — **transitional projection** для совместимости и возможных отчётов; не primary timeline и не отдельный workflow engine. Смена статуса `Lead` с `crm_request_id` дублируется в `CrmRequestActivity` с пометкой `lead_status_projection` (см. `LeadObserver`).
+- **`platform_marketing_leads` / `PlatformMarketingLead`** — **deprecated**, новые записи не создаются; источник — `CreateCrmRequestFromPublicForm` → `CrmRequest`.
+- **Публичные формы** обязаны проходить через **`CreateCrmRequestFromPublicForm`** (контекст platform/tenant + submission). Downstream (`Lead` и т.д.) — после CRM-записи.
+
+**Покрытие форм (на момент введения ADR):** под контрактом — маркетинговый `/contact` и tenant `POST /api/leads`. **Backlog миграции на тот же контракт:** публичный поток бронирования (`PublicBookingController`, `BookingController::store` и связанные endpoint’ы), иные формы записи/демо/колбэка — по мере переноса.
+
+**Последствия:** UI операторской истории и уведомлений развивается вокруг CRM-карточки; экран `Lead` остаётся downstream и ссылается на CRM (колонка/подсказка), без дублирования продукта как второго SoT по inbound.

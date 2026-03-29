@@ -32,6 +32,17 @@ class LeadResource extends Resource
     {
         return $schema
             ->components([
+                Section::make('CRM (входящая заявка)')
+                    ->description('Полный операторский timeline, активность и учёт уведомлений — в разделе «CRM-заявки» (колонка CRM в списке ведёт в карточку). Здесь Lead — downstream по аренде. LeadStatusHistory в БД — проекция для совместимости; источник истины по inbound — CRM-активность (ADR-007).')
+                    ->schema([
+                        TextInput::make('crm_request_id')
+                            ->label('ID CRM-заявки')
+                            ->disabled()
+                            ->dehydrated(false)
+                            ->placeholder('—'),
+                    ])
+                    ->columns(1)
+                    ->collapsible(),
                 Section::make('Контактные данные')
                     ->description('Как с вами связался потенциальный клиент.')
                     ->schema([
@@ -144,6 +155,14 @@ class LeadResource extends Resource
                         'cancelled', 'spam' => 'danger',
                         default => 'gray',
                     }),
+                TextColumn::make('crm_request_id')
+                    ->label('CRM')
+                    ->sortable()
+                    ->placeholder('—')
+                    ->url(fn (Lead $record): ?string => $record->crm_request_id
+                        ? CrmRequestResource::getUrl('view', ['record' => $record->crm_request_id])
+                        : null)
+                    ->color('primary'),
             ])
             ->filters([
                 SelectFilter::make('status')

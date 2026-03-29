@@ -7,7 +7,7 @@
 @endsection
 
 @php
-    $pm = config('platform_marketing');
+    $pm = app(\App\Product\Settings\MarketingContentResolver::class)->resolved();
     $base = request()->getSchemeAndHttpHost();
     $faqs = [
         ['Подойдёт ли RentBase для моего бизнеса?', 'Если вам нужны онлайн-запись или бронирования, заявки, клиенты и админка в одном контуре — скорее да. Прокат, курсы, инструкторы, сервисы по записи — типичные сценарии. Напишите нишу — скажем честно, насколько это совпадает с продуктом.'],

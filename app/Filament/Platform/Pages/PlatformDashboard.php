@@ -5,8 +5,7 @@ namespace App\Filament\Platform\Pages;
 use Filament\Pages\Dashboard;
 
 /**
- * Отдельный путь от корня панели: иначе GET /platform/ занят RedirectToHomeController,
- * и маршрут filament.{panel}.pages.dashboard не регистрируется (см. laravel.log).
+ * Дашборд на /dashboard: корень PLATFORM_HOST редиректит сюда из routes/web.php.
  */
 class PlatformDashboard extends Dashboard
 {

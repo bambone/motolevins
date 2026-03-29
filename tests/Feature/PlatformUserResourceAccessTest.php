@@ -26,7 +26,7 @@ class PlatformUserResourceAccessTest extends TestCase
         $peer->assignRole('platform_admin');
 
         $this->actingAs($editor)
-            ->get('http://platform.apex.test/platform/platform-users/'.$peer->id.'/edit')
+            ->get('http://platform.apex.test/platform-users/'.$peer->id.'/edit')
             ->assertOk();
     }
 }

@@ -5,9 +5,14 @@ namespace App\Providers;
 use App\Auth\AccessRoles;
 use App\Auth\TenantPivotPermissions;
 use App\Jobs\Mail\SendTenantMailableJob;
+use App\Models\Lead;
 use App\Models\Setting;
 use App\Models\TenantSetting;
 use App\Models\User;
+use App\Observers\LeadObserver;
+use App\Product\Mail\ProductMailOrchestrator;
+use App\Product\Settings\MarketingContentResolver;
+use App\Product\Settings\ProductMailSettingsResolver;
 use App\Services\CurrentTenantManager;
 use App\Services\Mail\TenantMailer;
 use App\Services\Tenancy\TenantViewResolver;
@@ -29,6 +34,9 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(CurrentTenantManager::class);
         $this->app->singleton(TenantViewResolver::class);
         $this->app->singleton(TenantMailer::class);
+        $this->app->singleton(MarketingContentResolver::class);
+        $this->app->singleton(ProductMailSettingsResolver::class);
+        $this->app->singleton(ProductMailOrchestrator::class);
     }
 
     /**
@@ -36,6 +44,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Lead::observe(LeadObserver::class);
+
         RateLimiter::for('tenant-mails', function (mixed $job) {
             if (! $job instanceof SendTenantMailableJob) {
                 return Limit::none();

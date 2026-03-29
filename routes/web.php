@@ -25,12 +25,7 @@ foreach (config('tenancy.central_domains', []) as $h) {
     }
 }
 
-$platformHost = TenantDomain::normalizeHost((string) config('app.platform_host', ''));
-if ($platformHost !== '') {
-    Route::domain($platformHost)->group(function (): void {
-        Route::redirect('/', '/platform', 302);
-    });
-}
+// Корень PLATFORM_HOST обрабатывает Filament (гость → /login, после входа — домашняя страница панели).
 
 if ($marketingHosts !== []) {
     foreach ($marketingHosts as $index => $domain) {

@@ -31,7 +31,7 @@ class FilamentPanelRoutesTest extends TestCase
 
     public function test_platform_panel_login_returns_ok(): void
     {
-        $this->getWithHost('platform.apex.test', '/platform/login')
+        $this->getWithHost('platform.apex.test', '/login')
             ->assertOk();
     }
 

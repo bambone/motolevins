@@ -22,7 +22,7 @@
 | Зона | Host | Доступ |
 |------|------|--------|
 | Platform Website | `config('app.platform_host')` | Публично, без `EnsureTenantContext`, без Filament tenant. |
-| Platform Console | тот же host, path `/platform` | `EnsurePlatformAccess`: platform host + platform-роль. |
+| Platform Console | тот же host, Filament с корня (`/login`, `/dashboard`) | `EnsurePlatformAccess`: platform host + platform-роль. |
 | Сайт клиента | домен из `tenant_domains` | `EnsureTenantContext` + публичные маршруты. |
 | Кабинет клиента | тот же домен, `/admin` | `canAccessPanel(admin)` + `EnsureTenantMembership` + `Gate::before` по pivot. |
 
@@ -52,11 +52,11 @@
 
 ### Доступ
 
-- [ ] Пользователь **только с tenant membership** не открывает Platform Console (прямой URL `/platform` после логина — отказ / 403).
+- [ ] Пользователь **только с tenant membership** не открывает Platform Console (прямой URL консоли на `PLATFORM_HOST` после логина — отказ / 403).
 - [ ] Пользователь с **platform_* без `tenant_user`** не открывает кабинет клиента на домене тенанта (`/admin`).
 - [ ] Пользователь tenant **A** не видит данные tenant **B** (прямые URL к записям, экспорт, виджеты).
 - [ ] `User.status = blocked` — не входит **ни** в Platform, **ни** в кабинет клиента.
-- [ ] На **platform host** `/platform` без platform-роли после логина → 403.
+- [ ] На **platform host** без platform-роли после логина → 403 на защищённых маршрутах панели.
 - [ ] Неизвестный домен (не platform, не в `tenant_domains`) → страница «Домен не подключён» / ожидаемый 404.
 
 ### Host spoofing
@@ -70,7 +70,7 @@
 
 ### Редирект после логина
 
-- [ ] Platform → `/platform`.
+- [ ] Platform → `/dashboard`.
 - [ ] Только tenant → `/admin`.
 - [ ] Platform + tenant, вход с `/admin/login` → редирект на Platform Console (см. [setup-access-deploy.md](setup-access-deploy.md)).
 
@@ -87,7 +87,7 @@
 
 | Сценарий | Проверка |
 |----------|----------|
-| Platform host | `/platform`, вход platform-пользователем. |
+| Platform host | `/login` → `/dashboard`, вход platform-пользователем. |
 | Tenant host | `/admin`, вход с `tenant_user`. |
 | Blocked | не пускает никуда. |
 | Оба контекста | с `/admin/login` → Platform при наличии platform-роли. |

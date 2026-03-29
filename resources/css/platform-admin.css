@@ -1,0 +1,81 @@
+@import "tailwindcss";
+
+@source "../../app/Filament/Platform/**/*.php";
+@source "../../resources/views/filament/platform/**/*.blade.php";
+@source "../../vendor/filament/**/*.blade.php";
+
+/* Layered Surface Architecture for Dark Mode 
+   Based on Stripe/Vercel premium dark aesthetics.
+*/
+@theme {
+    /* Custom brand fonts */
+    --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+}
+
+/* Base Body Application */
+.dark body {
+    /* Deep Slate/Navy Base, not pitch black */
+    --fi-bg-base: #0B0E14 !important;
+    background-color: var(--fi-bg-base) !important;
+}
+
+/* Typography enhancements */
+.dark {
+    --fi-text-primary: #f8fafc; /* Crisp white */
+    --fi-text-secondary: #94a3b8; /* Cool readable gray */
+}
+
+.dark .text-gray-500, .dark .text-gray-400 {
+    /* Prevent text from being too dim */
+    color: var(--fi-text-secondary);
+}
+
+/* Sidebar Styling: The main elevated surface */
+.dark .fi-sidebar {
+    background-color: #12141C !important;
+    border-right: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* Topbar Styling: Subtle glass but mainly solid */
+.dark .fi-topbar {
+    background-color: rgba(18, 20, 28, 0.8) !important;
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* Cards & Elevated Containers */
+.dark .fi-ta-content, 
+.dark .fi-wi-stats-overview-stat, 
+.dark .fi-section,
+.dark .fi-modal-window {
+    background-color: #161822 !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 20px 25px -5px rgba(0, 0, 0, 0.4) !important;
+    border-radius: 0.75rem; 
+}
+
+/* Table Enhancements */
+.dark .fi-ta-header {
+    background-color: #1A1D27 !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.dark .fi-ta-row {
+    transition: background-color 0.15s ease, transform 0.15s ease;
+}
+
+.dark .fi-ta-row:hover {
+    background-color: rgba(255, 255, 255, 0.04) !important;
+}
+
+/* Buttons */
+.dark .fi-btn-primary {
+    box-shadow: 0 1px 2px rgba(0,0,0,0.3) !important;
+    text-shadow: none !important; /* Ensure no text glowing */
+}
+
+/* Right Drawer Overlays (Slide-overs) */
+.dark .fi-modal-window.slide-over {
+    border-left: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: -10px 0 40px rgba(0,0,0,0.6) !important;
+}

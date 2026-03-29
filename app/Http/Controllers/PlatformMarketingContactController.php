@@ -3,16 +3,15 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\PlatformMarketingContactRequest;
-use App\Mail\PlatformMarketingContactMail;
-use App\Models\PlatformMarketingLead;
+use App\Product\CRM\Actions\CreateCrmRequestFromPublicForm;
+use App\Product\CRM\DTO\PublicInboundContext;
+use App\Product\CRM\DTO\PublicInboundSubmission;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Route;
 
 class PlatformMarketingContactController extends Controller
 {
-    public function store(PlatformMarketingContactRequest $request): RedirectResponse
+    public function store(PlatformMarketingContactRequest $request, CreateCrmRequestFromPublicForm $createCrmRequest): RedirectResponse
     {
         $intent = (string) ($request->validated('intent') ?? '');
         if ($intent === '') {
@@ -23,48 +22,30 @@ class PlatformMarketingContactController extends Controller
         $intentMeta = is_array($intentsMeta[$intent] ?? null) ? $intentsMeta[$intent] : [];
         $intentLabel = (string) ($intentMeta['title'] ?? $intent);
 
-        $payload = [
-            'name' => $request->validated('name'),
-            'phone' => $request->validated('phone'),
-            'email' => $request->validated('email'),
-            'message' => $request->validated('message'),
-            'intent' => $intent,
-            'intent_label' => $intentLabel,
-            'utm_source' => $request->validated('utm_source'),
-            'utm_medium' => $request->validated('utm_medium'),
-            'utm_campaign' => $request->validated('utm_campaign'),
-            'utm_content' => $request->validated('utm_content'),
-            'utm_term' => $request->validated('utm_term'),
-            'page_url' => $request->headers->get('referer'),
-            'ip' => $request->ip(),
-        ];
+        $submission = new PublicInboundSubmission(
+            requestType: 'platform_contact',
+            name: $request->validated('name'),
+            phone: $request->validated('phone'),
+            email: $request->validated('email') ?: null,
+            message: $request->validated('message'),
+            source: 'platform_marketing_contact',
+            channel: 'web',
+            payloadJson: [
+                'intent' => $intent,
+                'intent_label' => $intentLabel,
+            ],
+            utmSource: $request->validated('utm_source'),
+            utmMedium: $request->validated('utm_medium'),
+            utmCampaign: $request->validated('utm_campaign'),
+            utmContent: $request->validated('utm_content'),
+            utmTerm: $request->validated('utm_term'),
+            referrer: $request->headers->get('referer'),
+            landingPage: $request->headers->get('referer'),
+            ip: $request->ip(),
+            userAgent: $request->userAgent(),
+        );
 
-        $to = trim((string) config('platform_marketing.contact_mail_to', ''));
-        if ($to === '') {
-            $to = (string) config('mail.from.address', '');
-        }
-        if ($to !== '') {
-            Mail::to($to)->send(new PlatformMarketingContactMail($payload));
-        } else {
-            Log::warning('platform_marketing.contact: no mail recipient (contact_mail_to / mail.from.address empty).');
-        }
-
-        try {
-            PlatformMarketingLead::query()->create([
-                'name' => $payload['name'],
-                'phone' => $payload['phone'],
-                'email' => $payload['email'],
-                'intent' => $payload['intent'],
-                'message' => $payload['message'],
-                'utm_source' => $payload['utm_source'],
-                'utm_medium' => $payload['utm_medium'],
-                'utm_campaign' => $payload['utm_campaign'],
-                'utm_content' => $payload['utm_content'],
-                'utm_term' => $payload['utm_term'],
-            ]);
-        } catch (\Throwable $e) {
-            Log::warning('platform_marketing.lead_store: '.$e->getMessage(), ['exception' => $e]);
-        }
+        $createCrmRequest->handle(PublicInboundContext::platform(), $submission);
 
         $q = platform_marketing_tracking_query();
         if (Route::has('platform.contact')) {

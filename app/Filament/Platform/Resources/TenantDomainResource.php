@@ -7,6 +7,7 @@ use App\Filament\Platform\Resources\TenantDomainResource\Pages;
 use App\Filament\Support\FilamentInlineMarkdown;
 use App\Filament\Support\TenantDomainStatusCopy;
 use App\Models\TenantDomain;
+use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -163,7 +164,7 @@ class TenantDomainResource extends Resource
                     ->label('Основной')
                     ->boolean(),
                 TextColumn::make('status')
-                    ->label('Статус')
+                    ->label('Health')
                     ->badge()
                     ->formatStateUsing(fn (?string $state): string => TenantDomainStatusCopy::statusLabel($state))
                     ->color(fn (?string $state): string => match ($state) {
@@ -176,7 +177,7 @@ class TenantDomainResource extends Resource
                         $record->status,
                         $record->dns_target,
                         $record->host
-                    )),
+                    ))->wrap(),
                 TextColumn::make('ssl_status')
                     ->label('SSL')
                     ->badge()
@@ -187,9 +188,30 @@ class TenantDomainResource extends Resource
                         TenantDomain::SSL_PENDING => 'warning',
                         default => 'gray',
                     })
-                    ->description(fn (TenantDomain $record): string => TenantDomainStatusCopy::sslNextStep($record->ssl_status)),
+                    ->description(fn (TenantDomain $record): string => TenantDomainStatusCopy::sslNextStep($record->ssl_status))->wrap(),
             ])
-            ->actions([EditAction::make()])
+            ->recordAction(EditAction::class)
+            ->recordUrl(null)
+            ->actions([
+                Action::make('make_primary')
+                    ->label('Main')
+                    ->icon('heroicon-o-star')
+                    ->color('warning')
+                    ->action(function (TenantDomain $record) {
+                        TenantDomain::where('tenant_id', $record->tenant_id)->update(['is_primary' => false]);
+                        $record->update(['is_primary' => true]);
+                    })
+                    ->hidden(fn (TenantDomain $record): bool => (bool) $record->is_primary),
+                Action::make('copy_host')
+                    ->icon('heroicon-o-clipboard-document')
+                    ->label('Copy')
+                    ->color('gray')
+                    ->action(fn () => null) // handled via js or just native copy action natively available in Filament
+                    ->extraAttributes(fn (TenantDomain $record) => [
+                        'x-on:click' => "window.navigator.clipboard.writeText('{$record->host}'); \$tooltip('Скопировано!')",
+                    ]),
+                EditAction::make()->slideOver(),
+            ])
             ->bulkActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make()
@@ -207,7 +229,6 @@ class TenantDomainResource extends Resource
         return [
             'index' => Pages\ListTenantDomains::route('/'),
             'create' => Pages\CreateTenantDomain::route('/create'),
-            'edit' => Pages\EditTenantDomain::route('/{record}/edit'),
         ];
     }
 }

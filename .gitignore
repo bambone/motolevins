@@ -12,6 +12,8 @@
 /public/hot
 /public/images
 /public/storage
+# Не создавать: перекрывает маршрут Filament «Клиенты» (/tenants) на platform host; брендинг — storage/app/public/tenants → /storage/…
+/public/tenants
 /storage/*.key
 /storage/pail
 /vendor
