@@ -23,6 +23,7 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
+use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TrashedFilter;
@@ -33,6 +34,13 @@ use Illuminate\Support\Str;
 
 class MotorcycleResource extends Resource
 {
+    private static function motorcycleListPlaceholderImageDataUrl(): string
+    {
+        $svg = '<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96"><rect width="96" height="96" rx="10" fill="#374151"/><path fill="#6b7280" d="M28 64h40v6H28zm6-32a10 10 0 0 1 10-10h8a10 10 0 0 1 10 10v18H34V32z"/><text x="48" y="86" text-anchor="middle" fill="#d1d5db" font-size="10" font-family="ui-sans-serif,system-ui,sans-serif">Нет фото</text></svg>';
+
+        return 'data:image/svg+xml;charset=UTF-8,'.rawurlencode($svg);
+    }
+
     protected static ?string $model = Motorcycle::class;
 
     protected static ?string $navigationLabel = 'Мотоциклы';
@@ -228,7 +236,19 @@ class MotorcycleResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(fn (Builder $query): Builder => $query->with('media'))
+            ->defaultPaginationPageOption(25)
+            ->paginationPageOptions([25, 50, 100, 200])
             ->columns([
+                ImageColumn::make('cover_thumb')
+                    ->label('Фото')
+                    ->getStateUsing(fn (Motorcycle $record): ?string => $record->cover_url)
+                    ->defaultImageUrl(fn (): string => static::motorcycleListPlaceholderImageDataUrl())
+                    ->checkFileExistence(false)
+                    ->imageSize(48)
+                    ->square()
+                    ->extraCellAttributes(['class' => 'fi-motorcycle-cover-cell'])
+                    ->tooltip('Обложка карточки; наведите для увеличения'),
                 TextColumn::make('name')
                     ->label('Название')
                     ->searchable()

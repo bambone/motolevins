@@ -4,6 +4,7 @@ namespace App\Filament\Tenant\Resources;
 
 use App\Filament\Support\FilamentInlineMarkdown;
 use App\Filament\Support\RoleLabels;
+use App\Filament\Support\UserPasswordFormFields;
 use App\Filament\Tenant\Resources\UserResource\Pages;
 use App\Models\User;
 use Filament\Actions\EditAction;
@@ -16,7 +17,6 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Facades\Hash;
 
 class UserResource extends Resource
 {
@@ -50,12 +50,8 @@ class UserResource extends Resource
                     ->schema([
                         TextInput::make('name')->required()->maxLength(255),
                         TextInput::make('email')->email()->required()->unique(ignoreRecord: true),
-                        TextInput::make('password')
-                            ->password()
-                            ->dehydrateStateUsing(fn ($state) => filled($state) ? Hash::make($state) : null)
-                            ->dehydrated(fn ($state) => filled($state))
-                            ->required(fn (string $operation): bool => $operation === 'create')
-                            ->maxLength(255),
+                        UserPasswordFormFields::createPasswordInput()
+                            ->hiddenOn('edit'),
                         Select::make('status')
                             ->label('Статус учётной записи')
                             ->options(User::statuses())
@@ -75,6 +71,7 @@ class UserResource extends Resource
                             ->required()
                             ->helperText('Выберите уровень доступа согласно обязанностям сотрудника.'),
                     ]),
+                UserPasswordFormFields::editPasswordSection(),
             ]);
     }
 

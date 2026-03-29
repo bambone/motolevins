@@ -7,6 +7,7 @@ use App\Filament\Platform\Resources\Concerns\GrantsPlatformPanelAccess;
 use App\Filament\Platform\Resources\PlatformUserResource\Pages;
 use App\Filament\Support\FilamentInlineMarkdown;
 use App\Filament\Support\RoleLabels;
+use App\Filament\Support\UserPasswordFormFields;
 use App\Models\User;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\CheckboxList;
@@ -18,7 +19,6 @@ use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Facades\Hash;
 
 class PlatformUserResource extends Resource
 {
@@ -63,16 +63,8 @@ class PlatformUserResource extends Resource
                             ->required()
                             ->unique(ignoreRecord: true)
                             ->helperText('Используется для входа в консоль платформы.'),
-                        TextInput::make('password')
-                            ->label('Пароль')
-                            ->password()
-                            ->dehydrateStateUsing(fn ($state) => filled($state) ? Hash::make($state) : null)
-                            ->dehydrated(fn ($state) => filled($state))
-                            ->required(fn (string $operation): bool => $operation === 'create')
-                            ->maxLength(255)
-                            ->helperText(fn (string $operation): string => $operation === 'edit'
-                                ? 'Оставьте пустым, чтобы не менять пароль.'
-                                : ''),
+                        UserPasswordFormFields::createPasswordInput()
+                            ->hiddenOn('edit'),
                         Select::make('status')
                             ->label('Статус учётной записи')
                             ->options(User::statuses())
@@ -87,6 +79,7 @@ class PlatformUserResource extends Resource
                             ->columns(1)
                             ->bulkToggleable(),
                     ]),
+                UserPasswordFormFields::editPasswordSection(),
             ]);
     }
 

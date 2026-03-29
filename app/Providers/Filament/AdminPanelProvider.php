@@ -8,6 +8,7 @@ use App\Filament\Tenant\Widgets\TenantDashboardIntroWidget;
 use App\Http\Middleware\EnsureTenantContext;
 use App\Http\Middleware\EnsureTenantMembership;
 use App\Http\Middleware\ResolveTenantFromDomain;
+use App\Models\TenantSetting;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
@@ -36,24 +37,24 @@ class AdminPanelProvider extends PanelProvider
                     <style>
                         .fi-main-ctn { flex: 1 !important; min-width: 0 !important; }
                         .fi-main { max-width: none !important; width: 100% !important; }
+                        .fi-motorcycle-cover-cell {
+                            overflow: visible !important;
+                            vertical-align: middle !important;
+                        }
+                        .fi-motorcycle-cover-cell .fi-ta-image img {
+                            object-fit: cover;
+                            border-radius: 0.25rem;
+                            transition: transform 0.28s ease, box-shadow 0.28s ease;
+                            transform-origin: left center;
+                        }
+                        .fi-motorcycle-cover-cell:hover .fi-ta-image img {
+                            transform: scale(3.25);
+                            z-index: 50;
+                            position: relative;
+                            box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.45);
+                        }
                     </style>
-                HTML);
-            })
-            ->renderHook(PanelsRenderHook::TOPBAR_AFTER, function (): string {
-                $tenant = \currentTenant();
-                if (! $tenant) {
-                    return '';
-                }
-                $label = $tenant->brand_name ?: $tenant->name;
-
-                return Blade::render(
-                    <<<'HTML'
-                    <div class="fi-tenant-context hidden sm:flex items-center me-4 text-sm font-medium text-gray-600 dark:text-gray-400 whitespace-nowrap">
-                        <span class="opacity-70 me-1">Клиент:</span>
-                        <span class="text-gray-950 dark:text-white">{{ $label }}</span>
-                    </div>
-                    HTML,
-                    ['label' => $label]
+                HTML
                 );
             });
 
@@ -61,6 +62,34 @@ class AdminPanelProvider extends PanelProvider
             ->default()
             ->id('admin')
             ->path('admin')
+            ->brandName(function (): string {
+                $tenant = currentTenant();
+                if ($tenant === null) {
+                    return (string) config('app.name');
+                }
+
+                $name = trim((string) TenantSetting::getForTenant($tenant->id, 'general.site_name', ''));
+
+                return $name !== '' ? $name : $tenant->defaultPublicSiteName();
+            })
+            ->homeUrl(function (): ?string {
+                $tenant = currentTenant();
+                if ($tenant === null) {
+                    return null;
+                }
+
+                $stored = trim((string) TenantSetting::getForTenant($tenant->id, 'general.domain', ''));
+                if ($stored !== '' && filter_var($stored, FILTER_VALIDATE_URL)) {
+                    return $stored;
+                }
+
+                $fallback = $tenant->defaultPublicSiteUrl();
+                if (filter_var($fallback, FILTER_VALIDATE_URL)) {
+                    return $fallback;
+                }
+
+                return null;
+            })
             ->login()
             ->globalSearch(false)
             ->maxContentWidth('full')

@@ -3,12 +3,15 @@
 namespace App\Filament\Platform\Resources\PlatformUserResource\Pages;
 
 use App\Auth\AccessRoles;
+use App\Filament\Concerns\IssuesNewUserPasswordFromForm;
 use App\Filament\Platform\Resources\PlatformUserResource;
 use App\Models\User;
 use Filament\Resources\Pages\EditRecord;
 
 class EditPlatformUser extends EditRecord
 {
+    use IssuesNewUserPasswordFromForm;
+
     protected static string $resource = PlatformUserResource::class;
 
     protected function mutateFormDataBeforeFill(array $data): array
@@ -24,6 +27,7 @@ class EditPlatformUser extends EditRecord
 
     protected function mutateFormDataBeforeSave(array $data): array
     {
+        $data = $this->mergeNewPasswordIntoUserData($data);
         unset($data['platform_roles']);
 
         return $data;
@@ -33,6 +37,7 @@ class EditPlatformUser extends EditRecord
     {
         $this->record->refresh();
         $this->syncPlatformRoles($this->record, $this->data['platform_roles'] ?? []);
+        $this->sendIssuedPasswordMailIfNeeded();
     }
 
     private function syncPlatformRoles(User $user, array $platformRoles): void

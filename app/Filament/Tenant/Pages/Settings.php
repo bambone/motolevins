@@ -4,6 +4,8 @@ namespace App\Filament\Tenant\Pages;
 
 use App\Models\Setting;
 use App\Models\TenantSetting;
+use App\Rules\OptionalRussianPhone;
+use App\Support\RussianPhone;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -73,8 +75,8 @@ class Settings extends Page
                 'branding_favicon_path' => TenantSetting::getForTenant($tenant->id, 'branding.favicon_path', ''),
                 'branding_hero' => TenantSetting::getForTenant($tenant->id, 'branding.hero', ''),
                 'branding_hero_path' => TenantSetting::getForTenant($tenant->id, 'branding.hero_path', ''),
-                'contacts_phone' => TenantSetting::getForTenant($tenant->id, 'contacts.phone', ''),
-                'contacts_phone_alt' => TenantSetting::getForTenant($tenant->id, 'contacts.phone_alt', ''),
+                'contacts_phone' => RussianPhone::toMasked(TenantSetting::getForTenant($tenant->id, 'contacts.phone', '')),
+                'contacts_phone_alt' => RussianPhone::toMasked(TenantSetting::getForTenant($tenant->id, 'contacts.phone_alt', '')),
                 'contacts_email' => TenantSetting::getForTenant($tenant->id, 'contacts.email', ''),
                 'contacts_whatsapp' => TenantSetting::getForTenant($tenant->id, 'contacts.whatsapp', ''),
                 'contacts_telegram' => TenantSetting::getForTenant($tenant->id, 'contacts.telegram', ''),
@@ -90,8 +92,8 @@ class Settings extends Page
             'branding_logo' => '',
             'branding_primary_color' => '#f59e0b',
             'branding_favicon' => '',
-            'contacts_phone' => Setting::get('contacts.phone', ''),
-            'contacts_phone_alt' => Setting::get('contacts.phone_alt', ''),
+            'contacts_phone' => RussianPhone::toMasked(Setting::get('contacts.phone', '')),
+            'contacts_phone_alt' => RussianPhone::toMasked(Setting::get('contacts.phone_alt', '')),
             'contacts_email' => Setting::get('contacts.email', ''),
             'contacts_whatsapp' => Setting::get('contacts.whatsapp', ''),
             'contacts_telegram' => Setting::get('contacts.telegram', ''),
@@ -184,10 +186,22 @@ class Settings extends Page
                 Section::make('Контакты')
                     ->description('Телефоны и мессенджеры обычно выводятся в шапке, подвале и на странице контактов.')
                     ->schema([
-                        TextInput::make('contacts_phone')->label('Телефон')->tel()->placeholder('+7 …'),
-                        TextInput::make('contacts_phone_alt')->label('Дополнительный телефон')->tel(),
+                        TextInput::make('contacts_phone')
+                            ->label('Телефон')
+                            ->mask('+7 (999) 999-99-99')
+                            ->placeholder('+7 (___) ___-__-__')
+                            ->rules([new OptionalRussianPhone])
+                            ->helperText('Маска для российского номера. После сохранения в базе хранится в виде +7XXXXXXXXXX.'),
+                        TextInput::make('contacts_phone_alt')
+                            ->label('Дополнительный телефон')
+                            ->mask('+7 (999) 999-99-99')
+                            ->placeholder('+7 (___) ___-__-__')
+                            ->rules([new OptionalRussianPhone]),
                         TextInput::make('contacts_email')->label('Email')->email()->placeholder('hello@example.com'),
-                        TextInput::make('contacts_whatsapp')->label('WhatsApp')->tel()->placeholder('Только номер или ссылка wa.me'),
+                        TextInput::make('contacts_whatsapp')
+                            ->label('WhatsApp')
+                            ->placeholder('Номер или ссылка https://wa.me/…')
+                            ->helperText('Без маски: можно номер или полную ссылку WhatsApp.'),
                         TextInput::make('contacts_telegram')->label('Telegram')->placeholder('@username или ссылка t.me/…'),
                         Textarea::make('contacts_address')->label('Адрес')->rows(2),
                         Textarea::make('contacts_hours')->label('Часы работы')->rows(2)->placeholder('Например: Пн–Вс 9:00–21:00'),
@@ -220,6 +234,11 @@ class Settings extends Page
 
             $settingKey = self::FORM_FIELD_TO_SETTING_KEY[$field];
             $stored = $value === null ? '' : (string) $value;
+
+            if (in_array($field, ['contacts_phone', 'contacts_phone_alt'], true)) {
+                $normalized = RussianPhone::normalize($stored);
+                $stored = $normalized ?? '';
+            }
 
             if ($tenant) {
                 TenantSetting::setForTenant($tenant->id, $settingKey, $stored);

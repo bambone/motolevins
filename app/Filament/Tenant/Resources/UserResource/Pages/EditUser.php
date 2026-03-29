@@ -2,11 +2,14 @@
 
 namespace App\Filament\Tenant\Resources\UserResource\Pages;
 
+use App\Filament\Concerns\IssuesNewUserPasswordFromForm;
 use App\Filament\Tenant\Resources\UserResource;
 use Filament\Resources\Pages\EditRecord;
 
 class EditUser extends EditRecord
 {
+    use IssuesNewUserPasswordFromForm;
+
     protected static string $resource = UserResource::class;
 
     protected function mutateFormDataBeforeFill(array $data): array
@@ -22,6 +25,7 @@ class EditUser extends EditRecord
 
     protected function mutateFormDataBeforeSave(array $data): array
     {
+        $data = $this->mergeNewPasswordIntoUserData($data);
         unset($data['tenant_role']);
 
         return $data;
@@ -31,6 +35,8 @@ class EditUser extends EditRecord
     {
         $tenant = currentTenant();
         if (! $tenant) {
+            $this->sendIssuedPasswordMailIfNeeded();
+
             return;
         }
 
@@ -47,5 +53,7 @@ class EditUser extends EditRecord
                 'status' => 'active',
             ]);
         }
+
+        $this->sendIssuedPasswordMailIfNeeded();
     }
 }

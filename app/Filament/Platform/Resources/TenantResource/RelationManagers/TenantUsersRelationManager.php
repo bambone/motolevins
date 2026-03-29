@@ -5,6 +5,7 @@ namespace App\Filament\Platform\Resources\TenantResource\RelationManagers;
 use App\Auth\AccessRoles;
 use App\Filament\Platform\Resources\PlatformUserResource;
 use App\Filament\Support\RoleLabels;
+use App\Filament\Support\UserPasswordFormFields;
 use App\Models\Tenant;
 use App\Models\User;
 use Filament\Actions\Action;
@@ -21,7 +22,6 @@ use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\HtmlString;
 use Illuminate\Validation\ValidationException;
 
@@ -63,13 +63,7 @@ class TenantUsersRelationManager extends RelationManager
                             ->unique(ignoreRecord: true)
                             ->maxLength(255)
                             ->hiddenOn('edit'),
-                        TextInput::make('password')
-                            ->label('Пароль')
-                            ->password()
-                            ->dehydrateStateUsing(fn ($state) => filled($state) ? Hash::make($state) : null)
-                            ->dehydrated(fn ($state) => filled($state))
-                            ->required(fn (string $operation): bool => $operation === 'create')
-                            ->maxLength(255)
+                        UserPasswordFormFields::createPasswordInput()
                             ->hiddenOn('edit'),
                         Select::make('account_status')
                             ->label('Статус учётной записи')

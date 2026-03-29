@@ -161,7 +161,25 @@ class TenantResource extends Resource
                 TextColumn::make('plan.name')
                     ->label('Тариф')
                     ->placeholder('—'),
+                TextColumn::make('cabinet_admin_url')
+                    ->label('Кабинет клиента')
+                    ->getStateUsing(fn (Tenant $record): ?string => $record->cabinetAdminUrl())
+                    ->formatStateUsing(function (?string $state): string {
+                        if (blank($state)) {
+                            return '—';
+                        }
+                        $host = parse_url($state, PHP_URL_HOST);
+
+                        return is_string($host) && $host !== ''
+                            ? $host.'/admin'
+                            : $state;
+                    })
+                    ->url(fn (Tenant $record): ?string => $record->cabinetAdminUrl())
+                    ->openUrlInNewTab()
+                    ->tooltip(fn (Tenant $record): ?string => $record->cabinetAdminUrl())
+                    ->placeholder('Нет активного домена'),
             ])
+            ->modifyQueryUsing(fn (Builder $query): Builder => $query->with('domains'))
             ->filters([
                 //
             ])
