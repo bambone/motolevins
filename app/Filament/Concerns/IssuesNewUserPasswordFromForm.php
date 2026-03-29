@@ -3,6 +3,7 @@
 namespace App\Filament\Concerns;
 
 use App\Mail\AdminIssuedPasswordMail;
+use App\Services\Mail\TenantMailer;
 use Filament\Notifications\Notification;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
@@ -46,9 +47,12 @@ trait IssuesNewUserPasswordFromForm
         $this->pendingIssuedPasswordPlain = null;
 
         try {
-            Mail::to($this->record->email)->send(
-                new AdminIssuedPasswordMail($this->record, $plain)
-            );
+            $mailable = new AdminIssuedPasswordMail($this->record, $plain);
+            if (currentTenant() !== null) {
+                app(TenantMailer::class)->to($this->record->email)->queue($mailable);
+            } else {
+                Mail::to($this->record->email)->send($mailable);
+            }
         } catch (Throwable $e) {
             report($e);
             Notification::make()

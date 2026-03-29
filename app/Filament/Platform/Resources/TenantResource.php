@@ -4,6 +4,7 @@ namespace App\Filament\Platform\Resources;
 
 use App\Filament\Platform\Resources\Concerns\GrantsPlatformPanelAccess;
 use App\Filament\Platform\Resources\TenantResource\Pages;
+use App\Filament\Platform\Resources\TenantResource\RelationManagers\TenantMailLogsRelationManager;
 use App\Filament\Platform\Resources\TenantResource\RelationManagers\TenantUsersRelationManager;
 use App\Models\TemplatePreset;
 use App\Models\Tenant;
@@ -107,6 +108,19 @@ class TenantResource extends Resource
                             ->preload(),
                     ])->columns(2),
 
+                Section::make('Лимиты и доставка почты')
+                    ->description('Исходящие письма кабинета клиента (транзакционная почта) ограничиваются в минуту на клиента, чтобы не перегружать SMTP и очередь.')
+                    ->schema([
+                        TextInput::make('mail_rate_limit_per_minute')
+                            ->label('Писем в минуту (на клиента)')
+                            ->numeric()
+                            ->minValue(1)
+                            ->maxValue(1000)
+                            ->default(10)
+                            ->required()
+                            ->helperText('Значение из карточки клиента; позже может выводиться из тарифа. По умолчанию из MAIL_TENANT_PER_MINUTE, если поле некорректно.'),
+                    ]),
+
                 Section::make('Регион и валюта')
                     ->description('Влияет на время, формат и отображение цен в кабинете и на сайте.')
                     ->schema([
@@ -202,6 +216,7 @@ class TenantResource extends Resource
     {
         return [
             TenantUsersRelationManager::class,
+            TenantMailLogsRelationManager::class,
         ];
     }
 

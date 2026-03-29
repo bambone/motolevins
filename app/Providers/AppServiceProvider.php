@@ -4,14 +4,18 @@ namespace App\Providers;
 
 use App\Auth\AccessRoles;
 use App\Auth\TenantPivotPermissions;
+use App\Jobs\Mail\SendTenantMailableJob;
 use App\Models\Setting;
 use App\Models\TenantSetting;
 use App\Models\User;
 use App\Services\CurrentTenantManager;
+use App\Services\Mail\TenantMailer;
 use App\Services\Tenancy\TenantViewResolver;
 use Filament\Facades\Filament;
+use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
@@ -24,6 +28,7 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->app->singleton(CurrentTenantManager::class);
         $this->app->singleton(TenantViewResolver::class);
+        $this->app->singleton(TenantMailer::class);
     }
 
     /**
@@ -31,6 +36,18 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        RateLimiter::for('tenant-mails', function (mixed $job) {
+            if (! $job instanceof SendTenantMailableJob) {
+                return Limit::none();
+            }
+
+            $min = (int) config('mail_limits.min_per_minute', 1);
+            $max = (int) config('mail_limits.max_per_minute', 1000);
+            $n = max($min, min($max, $job->mailRateLimitPerMinute));
+
+            return Limit::perMinute($n)->by('tenant-mail:'.$job->tenantId);
+        });
+
         Blade::anonymousComponentPath(resource_path('views/tenant/components'));
 
         Gate::before(function (?User $user, string $ability) {

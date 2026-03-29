@@ -23,17 +23,18 @@
   }
   @keyframes glow-breath {
     0%, 100% { opacity: 0.1; }
-    50% { opacity: 0.3; }
+    50% { opacity: 0.5; }
   }
   @keyframes data-fill-x {
-    from { width: 0; }
-    to { width: 100%; }
+    0% { width: 0; opacity: 0.7; }
+    50% { width: 100%; opacity: 1; }
+    100% { width: 100%; opacity: 0.7; }
   }
   
-  --animate-float: float 6s ease-in-out infinite;
-  --animate-pulse-slow: pulse-slow 8s ease-in-out infinite;
-  --animate-glow-breath: glow-breath 5s ease-in-out infinite;
-  --animate-data-fill-x: data-fill-x 1.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  --animate-float: float 3.5s ease-in-out infinite;
+  --animate-pulse-slow: pulse-slow 3s ease-in-out infinite;
+  --animate-glow-breath: glow-breath 3.5s ease-in-out infinite;
+  --animate-data-fill-x: data-fill-x 3s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 
 @layer base {
@@ -48,12 +49,6 @@
 
     .pm-section-anchor {
         scroll-margin-top: clamp(3.75rem, 11vw, 5.75rem);
-    }
-
-    /* Декоративный макет в hero: ниже стоимость layout вне вьюпорта */
-    .pm-hero-mockup {
-        content-visibility: auto;
-        contain-intrinsic-size: 540px 440px;
     }
 
     /* Мобильный sticky CTA на всех маркетинговых страницах: запас снизу у main */
@@ -82,6 +77,14 @@
         transform: translateY(0);
     }
 
+    /* Без JS (CSP/404) контент не должен оставаться с opacity:0 */
+    @media (scripting: none) {
+        .fade-reveal {
+            opacity: 1;
+            transform: none;
+        }
+    }
+
     /* Ступени задержки для fade-reveal (без Blade в inline style — дружелюбно к CSS-линтеру) */
     .pm-reveal-cases-0 { transition-delay: 200ms; }
     .pm-reveal-cases-1 { transition-delay: 350ms; }
@@ -104,17 +107,17 @@
         }
     }
 
-    /* JS: platform-marketing.js — узкие экраны или системное «меньше анимаций» */
+    /* JS: platform-marketing.js — без глобального transition:none на *, иначе ломается layout/отрисовка */
     html.reduced-motion .fade-reveal {
         transition: none !important;
         transform: none !important;
         opacity: 1 !important;
     }
 
-    html.reduced-motion *,
-    html.reduced-motion *::before,
-    html.reduced-motion *::after {
+    html.reduced-motion .animate-float,
+    html.reduced-motion .animate-pulse-slow,
+    html.reduced-motion .animate-glow-breath,
+    html.reduced-motion .animate-data-fill-x {
         animation: none !important;
-        transition: none !important;
     }
 }

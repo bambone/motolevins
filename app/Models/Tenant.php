@@ -24,6 +24,7 @@ class Tenant extends Model
         'plan_id',
         'owner_user_id',
         'support_manager_id',
+        'mail_rate_limit_per_minute',
     ];
 
     public function plan(): BelongsTo
@@ -44,6 +45,11 @@ class Tenant extends Model
     public function domains(): HasMany
     {
         return $this->hasMany(TenantDomain::class);
+    }
+
+    public function mailLogs(): HasMany
+    {
+        return $this->hasMany(TenantMailLog::class);
     }
 
     public function users(): BelongsToMany

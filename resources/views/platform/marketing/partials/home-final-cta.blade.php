@@ -14,12 +14,12 @@
     <div class="pointer-events-none absolute bottom-0 left-1/2 h-[600px] w-[600px] -translate-x-1/2 translate-y-1/2 animate-glow-breath rounded-full bg-pm-accent/10 blur-[100px]"></div>
 
     <div class="relative z-10 mx-auto max-w-4xl px-3 text-center sm:px-4 md:px-6">
-        <h2 id="final-cta-heading" class="fade-reveal text-balance text-3xl font-extrabold leading-tight text-slate-900 sm:text-4xl md:text-5xl">{{ $finalHeadline }}</h2>
+        <h2 id="final-cta-heading" class="fade-reveal text-balance text-3xl font-extrabold leading-tight text-slate-900 sm:text-4xl md:text-5xl">{!! str_replace([' для ', ' с ', ' в ', ' и '], [' для&nbsp;', ' с&nbsp;', ' в&nbsp;', ' и&nbsp;'], $finalHeadline) !!}</h2>
         <p class="fade-reveal mx-auto mt-6 max-w-2xl text-base font-medium text-slate-800 sm:text-lg" style="transition-delay: 120ms;">
-            {{ $finalSubtitle }}
+            {!! str_replace([' для ', ' с ', ' в ', ' и '], [' для&nbsp;', ' с&nbsp;', ' в&nbsp;', ' и&nbsp;'], $finalSubtitle) !!}
         </p>
         <p class="fade-reveal mx-auto mt-3 max-w-2xl text-base leading-relaxed text-slate-600 sm:text-lg" style="transition-delay: 150ms;">
-            Оставьте заявку — соберём демо под ваш бизнес и покажем, как это работает на ваших сценариях.
+            Оставьте заявку&nbsp;— соберём демо под&nbsp;ваш бизнес и&nbsp;покажем, как&nbsp;это работает на&nbsp;ваших сценариях.
         </p>
 
         <div class="fade-reveal mt-10 flex flex-col justify-center gap-4 sm:flex-row" style="transition-delay: 300ms;">

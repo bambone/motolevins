@@ -8,8 +8,8 @@
                 <p class="mb-4 text-center text-sm text-slate-500">{{ $pm['cases_intro'] }}</p>
             @endif
             <h2 id="primery-heading" class="fade-reveal text-balance text-2xl font-bold leading-tight text-slate-900 sm:text-3xl md:text-4xl">Примеры проектов</h2>
-            <p class="fade-reveal mx-auto mt-3 max-w-2xl text-sm font-medium text-slate-700 sm:text-base" style="transition-delay: 80ms;">Первые проекты уже работают на платформе</p>
-            <p class="fade-reveal mx-auto mt-3 max-w-2xl text-base leading-relaxed text-slate-600" style="transition-delay: 100ms;">Только реальные сайты или честные плейсхолдеры — без вымышленных брендов.</p>
+            <p class="fade-reveal mx-auto mt-3 max-w-2xl text-sm font-medium text-slate-700 sm:text-base" style="transition-delay: 80ms;">Первые проекты уже работают на&nbsp;платформе</p>
+            <p class="fade-reveal mx-auto mt-3 max-w-2xl text-pretty text-base leading-relaxed text-slate-600" style="transition-delay: 100ms;">Только реальные сайты или честные плейсхолдеры&nbsp;— без вымышленных брендов.</p>
         </div>
 
         <div class="mt-12 grid gap-6 sm:grid-cols-2 md:mt-16 lg:grid-cols-3">
@@ -81,7 +81,7 @@
                     </div>
                     <p class="mt-1.5 text-sm leading-relaxed text-slate-600">{{ $case['type'] }}</p>
                     @if(!empty($case['real']) && $index === 0)
-                        <p class="mt-2 text-xs font-medium text-slate-500">Публичный сайт и приём заявок в бою.</p>
+                        <p class="mt-2 text-xs font-medium text-slate-500">Публичный сайт и&nbsp;приём заявок в&nbsp;бою.</p>
                     @endif
 
                     @if(!empty($case['url']) && !empty($case['real']))
@@ -98,7 +98,7 @@
 
         <div class="fade-reveal mt-12 flex flex-col items-center gap-4 border-t border-slate-200 pt-12 text-center sm:mt-16 sm:pt-16" style="transition-delay: 400ms;">
             <p class="max-w-xl text-base font-semibold text-slate-800">Ваш проект может быть следующим</p>
-            <p class="max-w-xl text-base leading-relaxed text-slate-600">Готовы к такому же публичному сайту и контуру заявок — с рабочей системой, а не картинками в портфолио.</p>
+            <p class="max-w-xl text-pretty text-base leading-relaxed text-slate-600">Готовы к&nbsp;такому же публичному сайту и&nbsp;контуру заявок&nbsp;— с&nbsp;рабочей системой, а&nbsp;не&nbsp;картинками в&nbsp;портфолио.</p>
             <a href="{{ $casesContactUrl }}" class="inline-flex min-h-12 items-center justify-center rounded-xl bg-pm-accent px-8 py-3 text-base font-bold text-white shadow-premium transition-all hover:-translate-y-0.5 hover:bg-pm-accent-hover" data-pm-event="cta_click" data-pm-cta="primary" data-pm-location="cases_footer">
                 Запустить свой проект
             </a>

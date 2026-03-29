@@ -8,6 +8,19 @@
         $metaDescription = (string) ($pm['entity_core'] ?? '');
     }
     $canonical = url()->current();
+    $pmContactUrl = platform_marketing_contact_url();
+    $pmContactUrlLaunch = platform_marketing_contact_url(config('platform_marketing.intent.launch', 'launch'));
+    $pmContactUrlDiscuss = platform_marketing_contact_url(config('platform_marketing.intent.custom', 'custom'));
+    $pmDemoUrl = platform_marketing_demo_url();
+    $pmMainNav = [
+        ['label' => 'Для кого', 'href' => url('/#dlya-kogo')],
+        ['label' => 'Возможности', 'href' => url('/#vozmozhnosti')],
+        ['label' => 'Тарифы', 'href' => url('/#tarify')],
+        ['label' => 'Подробнее', 'href' => url('/features')],
+        ['label' => 'Цены', 'href' => url('/pricing')],
+        ['label' => 'FAQ', 'href' => url('/faq')],
+        ['label' => 'Контакты', 'href' => $pmContactUrl],
+    ];
 @endphp
 <!DOCTYPE html>
 <html lang="ru">
@@ -49,21 +62,6 @@
     @stack('jsonld')
 </head>
 <body class="{{ trim('pm-body pm-marketing-with-sticky '.trim($__env->yieldContent('body_class'))) }}">
-@php
-    $pmContactUrl = platform_marketing_contact_url();
-    $pmContactUrlLaunch = platform_marketing_contact_url(config('platform_marketing.intent.launch', 'launch'));
-    $pmContactUrlDiscuss = platform_marketing_contact_url(config('platform_marketing.intent.custom', 'custom'));
-    $pmDemoUrl = platform_marketing_demo_url();
-    $pmMainNav = [
-        ['label' => 'Для кого', 'href' => url('/#dlya-kogo')],
-        ['label' => 'Возможности', 'href' => url('/#vozmozhnosti')],
-        ['label' => 'Тарифы', 'href' => url('/#tarify')],
-        ['label' => 'Подробнее', 'href' => url('/features')],
-        ['label' => 'Цены', 'href' => url('/pricing')],
-        ['label' => 'FAQ', 'href' => url('/faq')],
-        ['label' => 'Контакты', 'href' => $pmContactUrl],
-    ];
-@endphp
 <header data-pm-header class="sticky top-0 z-50 border-b border-slate-200 bg-white">
     <div class="mx-auto max-w-6xl px-3 sm:px-4 md:px-6">
         <div class="flex min-h-12 items-center justify-between gap-3 py-2.5 md:min-h-14 md:py-3">
@@ -117,7 +115,7 @@
         <div class="flex flex-col gap-6 md:flex-row md:justify-between">
             <div>
                 <div class="font-semibold text-slate-900">{{ $pm['brand_name'] ?? 'RentBase' }}</div>
-                <p class="mt-2 max-w-sm text-sm text-slate-600">{{ Str::limit($pm['entity_core'] ?? '', 200) }}</p>
+                <p class="mt-2 max-w-sm text-sm text-slate-600">{!! str_replace([' для ', ' с ', ' в ', ' и ', ' — '], [' для&nbsp;', ' с&nbsp;', ' в&nbsp;', ' и&nbsp;', '&nbsp;— '], Str::limit($pm['entity_core'] ?? '', 200)) !!}</p>
             </div>
             <nav class="flex flex-wrap gap-4 text-sm text-slate-700" aria-label="Футер">
                 <a href="{{ url('/features') }}" class="hover:text-blue-700">Возможности</a>
@@ -126,7 +124,7 @@
                 <a href="{{ $pmContactUrl }}" class="hover:text-blue-700">Контакты</a>
                 <a href="{{ url('/for-moto-rental') }}" class="hover:text-blue-700">Прокат мото</a>
                 <a href="{{ url('/for-car-rental') }}" class="hover:text-blue-700">Прокат авто</a>
-                <a href="{{ url('/for-services') }}" class="hover:text-blue-700">Сервисы по записи</a>
+                <a href="{{ url('/for-services') }}" class="hover:text-blue-700">Сервисы по&nbsp;записи</a>
             </nav>
         </div>
         <p class="mt-8 text-center text-xs text-slate-500">&copy; {{ date('Y') }} {{ $pm['brand_name'] ?? 'RentBase' }}</p>

@@ -1,7 +1,7 @@
 <section id="vozmozhnosti" class="pm-section-anchor border-b border-slate-200 bg-white py-16 sm:py-24" aria-labelledby="vozmozhnosti-heading">
     <div class="relative z-10 mx-auto max-w-6xl px-3 sm:px-4 md:px-6">
         <h2 id="vozmozhnosti-heading" class="fade-reveal text-balance text-xl font-bold leading-tight text-slate-900 sm:text-2xl md:text-3xl">Что вы получаете</h2>
-        <p class="fade-reveal mt-3 max-w-2xl text-sm leading-relaxed text-slate-600 sm:text-base" style="transition-delay: 100ms;">Публичная витрина, запись клиентов и операционный контур — без сборки из десяти сервисов.</p>
+        <p class="fade-reveal mt-3 max-w-2xl text-pretty text-sm leading-relaxed text-slate-600 sm:text-base" style="transition-delay: 100ms;">Публичная витрина, запись клиентов и&nbsp;операционный контур&nbsp;— без сборки из&nbsp;десяти сервисов.</p>
         <div class="fade-reveal mt-8 grid cursor-default gap-5 sm:mt-10 sm:gap-6 md:grid-cols-2 md:gap-8" style="transition-delay: 150ms;">
 
             <article class="group fade-reveal flex flex-col rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md" style="transition-delay: 200ms;">
@@ -16,9 +16,9 @@
                     </div>
                 </div>
                 <h3 class="text-lg font-bold text-slate-900">Сайт</h3>
-                <p class="mt-2 text-sm font-semibold leading-relaxed text-slate-800">Готовый сайт — клиент видит услуги и записывается без лишних звонков.</p>
-                <p class="mt-2 text-sm leading-relaxed text-slate-600">Контент в HTML для поиска и ботов; ваш домен и бренд.</p>
-                <p class="mt-3 text-xs text-slate-500">Страницы под ключевые запросы и доверие к бизнесу.</p>
+                <p class="mt-2 text-pretty text-sm font-semibold leading-relaxed text-slate-800">Готовый сайт&nbsp;— клиент видит услуги и&nbsp;записывается без&nbsp;лишних звонков.</p>
+                <p class="mt-2 text-sm leading-relaxed text-slate-600">Контент в&nbsp;HTML для&nbsp;поиска и&nbsp;ботов; ваш домен и&nbsp;бренд.</p>
+                <p class="mt-3 text-xs text-slate-500">Страницы под&nbsp;ключевые запросы и&nbsp;доверие к&nbsp;бизнесу.</p>
             </article>
 
             <article class="group fade-reveal flex flex-col rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md" style="transition-delay: 300ms;">
@@ -31,8 +31,8 @@
                     </div>
                 </div>
                 <h3 class="text-lg font-bold text-slate-900">Онлайн-запись</h3>
-                <p class="mt-2 text-sm font-semibold leading-relaxed text-slate-800">Онлайн-запись — клиент выбирает слот без звонков и переписки.</p>
-                <p class="mt-2 text-sm leading-relaxed text-slate-600">Календарь и бронирование видны клиенту сразу.</p>
+                <p class="mt-2 text-pretty text-sm font-semibold leading-relaxed text-slate-800">Онлайн-запись&nbsp;— клиент выбирает слот без&nbsp;звонков и&nbsp;переписки.</p>
+                <p class="mt-2 text-sm leading-relaxed text-slate-600">Календарь и&nbsp;бронирование видны клиенту сразу.</p>
                 <p class="mt-3 text-xs text-slate-500">Клиенты видят свободные слоты; заявки приходят автоматически.</p>
             </article>
 
@@ -50,9 +50,9 @@
                     </div>
                 </div>
                 <h3 class="text-lg font-bold text-slate-900">Управление</h3>
-                <p class="mt-2 text-sm font-semibold leading-relaxed text-slate-800">Управление — видите загрузку, заявки и статусы в одном месте.</p>
-                <p class="mt-2 text-sm leading-relaxed text-slate-600">Одна картина по операциям, без прыжков между сервисами.</p>
-                <p class="mt-3 text-xs text-slate-500">Меньше ручного контроля — больше ясности по дню.</p>
+                <p class="mt-2 text-pretty text-sm font-semibold leading-relaxed text-slate-800">Управление&nbsp;— видите загрузку, заявки и&nbsp;статусы в&nbsp;одном месте.</p>
+                <p class="mt-2 text-sm leading-relaxed text-slate-600">Одна картина по&nbsp;операциям, без&nbsp;прыжков между сервисами.</p>
+                <p class="mt-3 text-xs text-slate-500">Меньше ручного контроля&nbsp;— больше ясности по&nbsp;дню.</p>
             </article>
 
             <article class="group fade-reveal flex flex-col rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md" style="transition-delay: 500ms;">
@@ -70,9 +70,9 @@
                     </div>
                 </div>
                 <h3 class="text-lg font-bold text-slate-900">Админка</h3>
-                <p class="mt-2 text-sm font-semibold leading-relaxed text-slate-800">Админка — настройки, заявки и клиенты в одном интерфейсе.</p>
-                <p class="mt-2 text-sm leading-relaxed text-slate-600">Меняете логику работы без отдельной команды разработки.</p>
-                <p class="mt-3 text-xs text-slate-500">Один вход для команды; меньше ошибок и потерь данных.</p>
+                <p class="mt-2 text-pretty text-sm font-semibold leading-relaxed text-slate-800">Админка&nbsp;— полный контроль в&nbsp;одном интерфейсе без&nbsp;отдельной команды разработки.</p>
+                <p class="mt-2 text-sm leading-relaxed text-slate-600">Управляйте настройками, заявками и&nbsp;клиентами самостоятельно.</p>
+                <p class="mt-3 text-xs text-slate-500">Один вход для&nbsp;команды; меньше ошибок и&nbsp;потерь данных.</p>
             </article>
         </div>
     </div>
