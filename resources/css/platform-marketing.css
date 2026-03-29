@@ -1,0 +1,26 @@
+@import 'tailwindcss';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+@source '../**/*.blade.php';
+@source '../**/*.js';
+
+@theme {
+    --font-sans: ui-sans-serif, system-ui, sans-serif, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
+    --color-pm-accent: #1d4ed8;
+    --color-pm-accent-hover: #1e40af;
+}
+
+@layer base {
+    html {
+        scroll-behavior: smooth;
+    }
+
+    .pm-body {
+        @apply bg-slate-50 text-slate-900 antialiased;
+    }
+
+    .pm-section-anchor {
+        scroll-margin-top: 5.5rem;
+    }
+}

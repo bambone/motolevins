@@ -30,7 +30,7 @@ class PlatformPanelProvider extends PanelProvider
         return $panel
             ->id('platform')
             ->path('platform')
-            ->domain(config('app.platform_host', 'platform.motolevins.local'))
+            ->domain(config('app.platform_host', 'platform.rentbase.local'))
             ->login()
             ->renderHook(PanelsRenderHook::BODY_START, fn (): string => View::make('components.filament-access-denied-banner')->render())
             ->renderHook(PanelsRenderHook::TOPBAR_AFTER, function (): string {

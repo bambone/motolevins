@@ -42,11 +42,15 @@ class MotoLevinsTenantSeeder extends Seeder
         TenantSetting::setForTenant($tenant->id, 'contacts.hours', '');
         TenantSetting::setForTenant($tenant->id, 'branding.primary_color', '#E85D04');
 
-        $hosts = array_filter([
-            config('app.tenant_default_host'),
-            app()->environment('local') ? 'localhost' : null,
-            app()->environment('local') ? '127.0.0.1' : null,
-        ]);
+        $hosts = [];
+        $defaultHost = config('app.tenant_default_host');
+        if (is_string($defaultHost) && trim($defaultHost) !== '') {
+            $hosts[] = trim($defaultHost);
+        }
+        if (app()->environment('local')) {
+            $hosts[] = 'localhost';
+            $hosts[] = '127.0.0.1';
+        }
 
         foreach ($hosts as $index => $host) {
             $normalized = TenantDomain::normalizeHost((string) $host);

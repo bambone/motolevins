@@ -46,7 +46,7 @@ class SitemapController extends Controller
 
         $xml = view('tenant.sitemap', ['urls' => $urls])->render();
 
-        return response($xml, 200, [
+        return new Response($xml, 200, [
             'Content-Type' => 'application/xml',
             'Charset' => 'UTF-8',
         ]);

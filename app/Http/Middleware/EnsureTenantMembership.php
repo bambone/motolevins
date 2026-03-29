@@ -11,6 +11,11 @@ class EnsureTenantMembership
 {
     public function handle(Request $request, Closure $next): Response
     {
+        $routeName = $request->route()?->getName();
+        if (is_string($routeName) && str_starts_with($routeName, 'filament.admin.auth.')) {
+            return $next($request);
+        }
+
         $tenant = currentTenant();
         $user = $request->user();
 

@@ -14,9 +14,10 @@ class ExampleTest extends TestCase
      */
     public function test_the_application_returns_a_successful_response(): void
     {
-        config(['tenancy.central_domains' => ['localhost', '127.0.0.1']]);
+        $this->withoutVite();
 
-        $response = $this->get('/');
+        // Domain routes are registered at boot from phpunit.xml (TENANCY_CENTRAL_DOMAINS=apex.test).
+        $response = $this->call('GET', 'http://apex.test/');
 
         $response->assertStatus(200);
     }

@@ -14,6 +14,7 @@
 | Документ | Содержание |
 |----------|------------|
 | [views-themes-and-branding.md](architecture/views-themes-and-branding.md) | Каталоги views, `TenantViewResolver`, `theme_key`, брендинг в storage |
+| [seo-ai-discoverability.md](architecture/seo-ai-discoverability.md) | SEO / AI: central marketing + tenant public, canonical/robots/sitemap, JSON-LD по типам страниц, crawlers, `llms.txt`, webmaster checklist, антипаттерны |
 | [adr.md](architecture/adr.md) | Зафиксированные архитектурные решения (shared DB, `tenant_user`, панели и т.д.) |
 | [data-model.md](architecture/data-model.md) | Сводка таблиц и связей (не полная схема каждой колонки) |
 
@@ -35,6 +36,6 @@
 | Маркетинг платформы | `resources/views/platform/marketing/` |
 | Тенантность | `app/Tenant/`, `config/tenancy.php`, middleware `ResolveTenantFromDomain`, `EnsureTenantContext` |
 | Роли и доступ | `app/Auth/AccessRoles.php`, `TenantPivotPermissions`, `TenantAbilityRegistry`, политики, `tests/Feature/AccessControlTest.php`, `tests/Feature/TenantPivotPermissionMatrixTest.php` |
-| Правила для AI (Cursor) | [`.cursor/rules/`](../.cursor/rules/) — ядро проекта (`motolevins-core`), Blade/a11y, JS lifecycle, Filament/Livewire |
+| Правила для AI (Cursor) | [`.cursor/rules/`](../.cursor/rules/) — ядро (`motolevins-core`), SEO/AI (`seo-ai-discoverability`), Blade/a11y, JS lifecycle, Filament/Livewire |
 
 Именованные каталоги вида `resources/views/tenants/{slug}/` **не используются** — темы лежат в `resources/views/tenant/themes/{default\|moto\|auto}/`.

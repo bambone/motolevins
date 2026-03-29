@@ -7,6 +7,7 @@ use App\Services\Tenancy\TenantViewResolver;
 use App\Tenant\CurrentTenant;
 use Illuminate\Contracts\View\View;
 use Illuminate\Filesystem\FilesystemAdapter;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 
 if (! function_exists('tenant')) {
@@ -142,5 +143,34 @@ if (! function_exists('tenant_branding_hero_url')) {
             TenantSetting::getForTenant($t->id, 'branding.hero_path', ''),
             TenantSetting::getForTenant($t->id, 'branding.hero', '')
         );
+    }
+}
+
+if (! function_exists('platform_marketing_hero_headline')) {
+    function platform_marketing_hero_headline(): string
+    {
+        $c = config('platform_marketing');
+        $v = (string) ($c['hero_variant'] ?? 'c');
+
+        return (string) ($c['hero'][$v] ?? $c['hero']['c'] ?? '');
+    }
+}
+
+if (! function_exists('platform_marketing_demo_url')) {
+    /**
+     * URL для CTA «Посмотреть демо»: env или страница контактов.
+     */
+    function platform_marketing_demo_url(): string
+    {
+        $custom = trim((string) config('platform_marketing.demo_url', ''));
+        if ($custom !== '') {
+            return $custom;
+        }
+
+        if (Route::has('platform.contact')) {
+            return route('platform.contact');
+        }
+
+        return '/contact';
     }
 }

@@ -17,7 +17,7 @@ class AdminUserSeeder extends Seeder
     {
         $this->call(RolePermissionSeeder::class);
 
-        $email = env('ADMIN_EMAIL', 'admin@motolevins.local');
+        $email = env('ADMIN_EMAIL', 'admin@rentbase.local');
         $password = env('ADMIN_PASSWORD', 'password');
 
         $user = User::firstOrCreate(

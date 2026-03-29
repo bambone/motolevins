@@ -37,6 +37,7 @@ storage/app/public/tenants/{tenant_id}/logo|favicon|hero|…
 
 - **Маршруты:** `routes/web.php` — `Route::view` на central domains → `platform.marketing.*`.
 - **Шаблоны:** `resources/views/platform/marketing/*`.
+- **SEO / AI (чеклист, robots, sitemap, JSON-LD):** [seo-ai-discoverability.md](seo-ai-discoverability.md).
 
 ## Публичный сайт клиента
 

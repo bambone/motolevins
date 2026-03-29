@@ -20,7 +20,7 @@
 
 - `APP_URL` — URL приложения (для генерации ссылок в консоли и части фолбэков).
 - `TENANT_MOTOLEVINS_PUBLIC_URL` — публичный URL клиентского сайта (например `https://motolevins.rentbase.su`), подставляется сидером `MotoLevinsTenantSeeder` в `tenant_settings.general.domain`, если вы заполняете БД через Laravel, а не только SQL.
-- `TENANT_DEFAULT_HOST` — хост, на котором открывается тенант (локально часто `motolevins.local`).
+- `TENANT_DEFAULT_HOST` — опционально: дополнительный хост в `tenant_domains` для dev (например `localhost`). **Не** задавайте им маркетинговый apex (`rentbase.local` / `rentbase.su` из `TENANCY_CENTRAL_DOMAINS`). Канонический URL тенанта: `https://{slug}.{TENANCY_ROOT_DOMAIN}` (локально `http://motolevins.rentbase.local`).
 
 После правок `tenant_settings` сбросьте кэш приложения (`php artisan optimize:clear`), т.к. значения кешируются.
 
@@ -32,17 +32,16 @@
 
 Типичная картина: есть `tenants`, `tenant_domains`, пользователи, роли, **`01_tenant_settings.sql` уже выполнен**, а таблицы `bikes`, `motorcycles`, `pages`, `page_sections`, `reviews`, `faqs` **пустые**.
 
-- **`02_fix_public_image_paths.sql` не нужен** — обновления затронут 0 строк; можно не запускать. Пути к картинкам появятся при вставке данных сидерами.
-- Дальше на сервере выполните **сидеры** (вариант B ниже), начиная с каталога и контента. `MotoLevinsTenantSeeder` при желании можно пропустить, если тенант и `tenant_settings` уже на месте.
+- **`02_fix_public_image_paths.sql` не нужен** — обновления затронут 0 строк; можно не запускать. Пути к картинкам появятся при вставке данных сидерами или скриптом `03`.
+- Дальше либо выполните **`03_landing_catalog_and_cms.sql`** (полный лендинг в БД одним файлом), либо **сидеры** (вариант B ниже). `MotoLevinsTenantSeeder` при желании можно пропустить, если тенант и `tenant_settings` уже на месте.
 
 ### Вариант A — только SQL
 
 1. Убедитесь, что в `tenants` есть строка со `slug = 'motolevins'`.
 2. В `01_tenant_settings.sql` при необходимости замените значение `general.domain` на актуальный URL.
 3. `01_tenant_settings.sql` — контакты, название, домен, цвет (`ON DUPLICATE KEY UPDATE`).
-4. **`02_fix_public_image_paths.sql`** — имеет смысл **только после** импорта/миграции старых данных, где в БД уже лежат пути вида `bikes/...` или пустые аватары у нужных отзывов. На пустой БД пропустите.
-
-Контент главной (`pages` / `page_sections`) в отдельные SQL мы не выносили: удобнее заполнить сидерами.
+4. **`03_landing_catalog_and_cms.sql`** — категории, 8 `bikes`, 8 `motorcycles` (каталог на главной), страница `home`, все секции hero/контент (JSON), FAQ, отзывы. Скрипт сначала **удаляет** у этого тенанта старые строки в этих таблицах (удобно перезапускать); порядок выполнения на чистом проде: `01` → `03`. Схема соответствует дампу `platform` (MySQL 8).
+5. **`02_fix_public_image_paths.sql`** — только если уже есть данные со старыми путями `bikes/...`. На пустой БД пропустите.
 
 ### Вариант B — сидеры Laravel (рекомендуется для страниц и каталога)
 

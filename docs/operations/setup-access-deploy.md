@@ -36,7 +36,7 @@
 
 | Панель | URL (пример) | Доступ |
 |--------|----------------|--------|
-| **Platform Console** | `https://{PLATFORM_HOST}/platform` (локально часто `platform.motolevins.local`) | Spatie: `platform_owner`, `platform_admin`, `support_manager` |
+| **Platform Console** | `https://{PLATFORM_HOST}/platform` (локально часто `platform.rentbase.local`) | Spatie: `platform_owner`, `platform_admin`, `support_manager` |
 | **Кабинет клиента** | `https://{домен из tenant_domains}/admin` | `tenant_user` со статусом `active` и ролью из `App\Auth\AccessRoles::TENANT_MEMBERSHIP` |
 
 Один email может иметь **и** platform-роль, **и** membership в `tenant_user`.
@@ -60,7 +60,7 @@
 php artisan db:seed --class=AdminUserSeeder
 ```
 
-По умолчанию (если задано в сидере): `admin@motolevins.local` / `password`, роль `platform_owner`, при наличии tenant `motolevins` — также `tenant_owner` в `tenant_user`.
+По умолчанию (если задано в сидере): `admin@rentbase.local` / `password`, роль `platform_owner`, при наличии tenant `motolevins` — также `tenant_owner` в `tenant_user`.
 
 Переопределение через `.env`:
 
@@ -97,16 +97,29 @@ php artisan make:filament-user
 
 ## Локальная разработка (hosts / OSPanel)
 
-Если **`ERR_NAME_NOT_RESOLVED`** для `platform.motolevins.local` — добавьте в `C:\Windows\System32\drivers\etc\hosts` (от администратора):
+Схема как на проде: **маркетинг платформы** на apex, **сайт клиента** на `{slug}.{корень}`, **консоль платформы** на отдельном хосте.
+
+| URL | Назначение |
+|-----|------------|
+| `http://rentbase.local/` | Лендинг платформы (`TENANCY_CENTRAL_DOMAINS`) |
+| `http://motolevins.rentbase.local/` | Публичный сайт демо-тенанта (`tenant_domains`, `TENANCY_ROOT_DOMAIN=rentbase.local`) |
+| `http://platform.rentbase.local/platform` | Filament Platform Console (`PLATFORM_HOST`) |
+| `http://motolevins.rentbase.local/admin` | Кабинет клиента (Filament tenant) |
+
+Пример `.env`: `APP_URL=http://rentbase.local`, `PLATFORM_HOST=platform.rentbase.local`, `TENANCY_CENTRAL_DOMAINS=rentbase.local,www.rentbase.local`, `TENANCY_ROOT_DOMAIN=rentbase.local`, `TENANT_MOTOLEVINS_PUBLIC_URL=http://motolevins.rentbase.local`. Поле `TENANT_DEFAULT_HOST` не задавать равным apex маркетинга (или не задавать вовсе).
+
+Если **`ERR_NAME_NOT_RESOLVED`** — добавьте в `C:\Windows\System32\drivers\etc\hosts` (от администратора):
 
 ```
-127.0.0.1   motolevins.local
-127.0.0.1   platform.motolevins.local
+127.0.0.1   rentbase.local
+127.0.0.1   www.rentbase.local
+127.0.0.1   platform.rentbase.local
+127.0.0.1   motolevins.rentbase.local
 ```
 
-**OSPanel:** поддомен `platform` часто нужно добавить отдельно (второе имя сайта или `.osp/project.ini` в репозитории). На уровне **сайта** должны быть включены HTTP и PHP.
+**OSPanel:** поддомены (`platform`, `motolevins` и т.д.) часто задаются отдельными именами сайта или `.osp/project.ini` в репозитории. На уровне **сайта** должны быть включены HTTP и PHP.
 
-Platform Console: `https://platform.motolevins.local/platform`. Хост задаётся в `.env`: `PLATFORM_HOST=...`.
+Platform Console: `https://platform.rentbase.local/platform` (или `http://…`). Хост задаётся в `.env`: `PLATFORM_HOST=...`.
 
 ## Миграция bikes → motorcycles (legacy)
 

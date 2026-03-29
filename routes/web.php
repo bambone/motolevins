@@ -5,6 +5,9 @@ use App\Http\Controllers\HomeController;
 use App\Http\Controllers\LeadController;
 use App\Http\Controllers\MotorcycleController;
 use App\Http\Controllers\PageController;
+use App\Http\Controllers\PlatformLlmsTxtController;
+use App\Http\Controllers\PlatformMarketingRobotsController;
+use App\Http\Controllers\PlatformMarketingSitemapController;
 use App\Http\Controllers\PublicBookingController;
 use App\Http\Controllers\RobotsController;
 use App\Http\Controllers\SitemapController;
@@ -34,6 +37,9 @@ if ($marketingHosts !== []) {
             $named = $index === 0;
 
             if ($named) {
+                Route::get('/robots.txt', PlatformMarketingRobotsController::class)->name('platform.marketing.robots');
+                Route::get('/sitemap.xml', PlatformMarketingSitemapController::class)->name('platform.marketing.sitemap');
+                Route::get('/llms.txt', PlatformLlmsTxtController::class)->name('platform.marketing.llms');
                 Route::view('/', 'platform.marketing.home')->name('platform.home');
                 Route::view('/features', 'platform.marketing.features')->name('platform.features');
                 Route::view('/pricing', 'platform.marketing.pricing')->name('platform.pricing');
@@ -42,6 +48,9 @@ if ($marketingHosts !== []) {
                 Route::view('/faq', 'platform.marketing.faq')->name('platform.faq');
                 Route::view('/contact', 'platform.marketing.contact')->name('platform.contact');
             } else {
+                Route::get('/robots.txt', PlatformMarketingRobotsController::class);
+                Route::get('/sitemap.xml', PlatformMarketingSitemapController::class);
+                Route::get('/llms.txt', PlatformLlmsTxtController::class);
                 Route::view('/', 'platform.marketing.home');
                 Route::view('/features', 'platform.marketing.features');
                 Route::view('/pricing', 'platform.marketing.pricing');

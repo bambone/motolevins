@@ -1,0 +1,18 @@
+<section id="kak-rabotaet" class="pm-section-anchor border-b border-slate-200 bg-white py-16 md:py-20" aria-labelledby="kak-rabotaet-heading">
+    <div class="mx-auto max-w-6xl px-4 md:px-6">
+        <h2 id="kak-rabotaet-heading" class="text-2xl font-bold text-slate-900 md:text-3xl">Как это работает</h2>
+        <ol class="mt-10 grid gap-6 md:grid-cols-4">
+            @foreach([
+                'Создаёте проект',
+                'Настраиваете услуги или технику',
+                'Открываете расписание и слоты',
+                'Получаете заявки и ведёте клиентов',
+            ] as $i => $step)
+                <li class="relative rounded-2xl border border-slate-200 bg-slate-50 p-6">
+                    <span class="absolute -top-3 left-4 flex h-8 w-8 items-center justify-center rounded-full bg-blue-700 text-sm font-bold text-white">{{ $i + 1 }}</span>
+                    <p class="mt-4 text-sm font-medium text-slate-800">{{ $step }}</p>
+                </li>
+            @endforeach
+        </ol>
+    </div>
+</section>

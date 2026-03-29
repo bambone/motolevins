@@ -20,6 +20,7 @@ class HostRoutingSplitTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->withoutVite();
         Cache::flush();
     }
 
@@ -34,7 +35,38 @@ class HostRoutingSplitTest extends TestCase
     {
         $this->getWithHost('apex.test', '/')
             ->assertOk()
-            ->assertSee('Платформа для аренды', false);
+            ->assertSee('Операционная система для бизнеса с бронированиями', false)
+            ->assertSee('Запустить проект', false)
+            ->assertSee('Посмотреть демо', false)
+            ->assertSee('Обсудить проект', false);
+    }
+
+    public function test_central_domain_robots_txt_is_plain_and_lists_sitemap(): void
+    {
+        $this->getWithHost('apex.test', '/robots.txt')
+            ->assertOk()
+            ->assertHeader('content-type', 'text/plain; charset=UTF-8')
+            ->assertSee('User-agent: *', false)
+            ->assertSee('User-agent: OAI-SearchBot', false)
+            ->assertSee('Sitemap: http://apex.test/sitemap.xml', false);
+    }
+
+    public function test_central_domain_sitemap_xml_lists_core_urls(): void
+    {
+        $this->getWithHost('apex.test', '/sitemap.xml')
+            ->assertOk()
+            ->assertHeader('content-type', 'application/xml; charset=UTF-8')
+            ->assertSee('<loc>http://apex.test/</loc>', false)
+            ->assertSee('<loc>http://apex.test/pricing</loc>', false);
+    }
+
+    public function test_central_domain_llms_txt_is_plain(): void
+    {
+        $this->getWithHost('apex.test', '/llms.txt')
+            ->assertOk()
+            ->assertHeader('content-type', 'text/plain; charset=UTF-8')
+            ->assertSee('# RentBase', false)
+            ->assertSee('http://apex.test/faq', false);
     }
 
     public function test_platform_host_root_redirects_to_platform_panel(): void
@@ -74,7 +106,7 @@ class HostRoutingSplitTest extends TestCase
 
         $this->getWithHost('splitpub.apex.test', '/')
             ->assertOk()
-            ->assertDontSee('Маркетинговый сайт платформы', false);
+            ->assertDontSee('Операционная система для бизнеса с бронированиями', false);
     }
 
     public function test_tenant_subdomain_admin_login_is_not_404(): void

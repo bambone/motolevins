@@ -123,8 +123,13 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
-    'tenant_default_host' => env('TENANT_DEFAULT_HOST', 'motolevins.local'),
+    /*
+    | Optional extra hostname for tenant_domains (legacy / php artisan serve).
+    | Do not set this to the platform marketing apex — that host belongs in TENANCY_CENTRAL_DOMAINS.
+    | Canonical tenant URL is {slug}.TENANCY_ROOT_DOMAIN (see TenantDomainService::createDefaultSubdomain).
+    */
+    'tenant_default_host' => filled(env('TENANT_DEFAULT_HOST')) ? (string) env('TENANT_DEFAULT_HOST') : null,
 
-    'platform_host' => env('PLATFORM_HOST', 'platform.motolevins.local'),
+    'platform_host' => env('PLATFORM_HOST', 'platform.rentbase.local'),
 
 ];

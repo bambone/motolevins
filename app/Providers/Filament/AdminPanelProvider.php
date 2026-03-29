@@ -3,13 +3,14 @@
 namespace App\Providers\Filament;
 
 use App\Filament\Tenant\Pages\TenantDashboard;
+use App\Filament\Tenant\Pages\TenantLogin;
 use App\Filament\Tenant\Widgets\StatsOverviewWidget;
 use App\Filament\Tenant\Widgets\TenantDashboardIntroWidget;
 use App\Http\Middleware\EnsureTenantContext;
 use App\Http\Middleware\EnsureTenantMembership;
+use App\Http\Middleware\FilamentTenantPanelAuthenticate;
 use App\Http\Middleware\ResolveTenantFromDomain;
 use App\Models\TenantSetting;
-use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
 use Filament\Panel;
@@ -90,7 +91,7 @@ class AdminPanelProvider extends PanelProvider
 
                 return null;
             })
-            ->login()
+            ->login(TenantLogin::class)
             ->globalSearch(false)
             ->maxContentWidth('full')
             ->colors([
@@ -121,7 +122,7 @@ class AdminPanelProvider extends PanelProvider
                 EnsureTenantMembership::class,
             ])
             ->authMiddleware([
-                Authenticate::class,
+                FilamentTenantPanelAuthenticate::class,
             ]);
     }
 }

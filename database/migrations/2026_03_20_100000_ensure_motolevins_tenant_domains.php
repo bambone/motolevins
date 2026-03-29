@@ -14,11 +14,11 @@ return new class extends Migration
         }
 
         $isLocal = app()->environment('local');
-        $hosts = array_filter([
-            config('app.tenant_default_host', 'motolevins.local'),
+        $hosts = array_values(array_filter([
+            config('app.tenant_default_host'),
             $isLocal ? 'localhost' : null,
             $isLocal ? '127.0.0.1' : null,
-        ]);
+        ]));
 
         foreach ($hosts as $index => $host) {
             if (! DB::table('tenant_domains')->where('host', $host)->exists()) {
@@ -37,12 +37,14 @@ return new class extends Migration
 
     public function down(): void
     {
-        $hosts = [
-            config('app.tenant_default_host', 'motolevins.local'),
+        $hosts = array_values(array_filter([
+            config('app.tenant_default_host'),
             'localhost',
             '127.0.0.1',
-        ];
+        ]));
 
-        DB::table('tenant_domains')->whereIn('host', $hosts)->delete();
+        if ($hosts !== []) {
+            DB::table('tenant_domains')->whereIn('host', $hosts)->delete();
+        }
     }
 };

@@ -9,7 +9,8 @@ return new class extends Migration
 {
     /**
      * Production: motolevins.rentbase.su must exist in tenant_domains when TENANCY_ROOT_DOMAIN=rentbase.su.
-     * Legacy seeders only added TENANT_DEFAULT_HOST (e.g. motolevins.local).
+     * Local (prod-like): motolevins.rentbase.local when TENANCY_ROOT_DOMAIN=rentbase.local.
+     * Legacy: optional TENANT_DEFAULT_HOST (localhost / extra dev host), not the marketing apex.
      */
     public function up(): void
     {
