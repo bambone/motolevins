@@ -31,7 +31,7 @@ final class TenantPivotPermissions
             'content_manager' => [
                 'manage_pages', 'manage_homepage', 'manage_motorcycles',
                 'manage_reviews', 'manage_faq', 'manage_contacts',
-                'manage_media', 'manage_seo',
+                'manage_media', 'manage_seo', 'manage_seo_files',
             ],
             'operator' => ['manage_leads'],
         ];

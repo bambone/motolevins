@@ -13,6 +13,7 @@ use App\Http\Middleware\ResolveTenantFromDomain;
 use App\Models\TenantSetting;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
+use Filament\Navigation\NavigationGroup;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
@@ -33,31 +34,10 @@ class AdminPanelProvider extends PanelProvider
     {
         $panel
             ->renderHook(PanelsRenderHook::BODY_START, fn (): string => View::make('components.filament-access-denied-banner')->render())
-            ->renderHook(PanelsRenderHook::STYLES_AFTER, function (): string {
-                return Blade::render(<<<'HTML'
-                    <style>
-                        .fi-main-ctn { flex: 1 !important; min-width: 0 !important; }
-                        .fi-main { max-width: none !important; width: 100% !important; }
-                        .fi-motorcycle-cover-cell {
-                            overflow: visible !important;
-                            vertical-align: middle !important;
-                        }
-                        .fi-motorcycle-cover-cell .fi-ta-image img {
-                            object-fit: cover;
-                            border-radius: 0.25rem;
-                            transition: transform 0.28s ease, box-shadow 0.28s ease;
-                            transform-origin: left center;
-                        }
-                        .fi-motorcycle-cover-cell:hover .fi-ta-image img {
-                            transform: scale(3.25);
-                            z-index: 50;
-                            position: relative;
-                            box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.45);
-                        }
-                    </style>
-                HTML
-                );
-            });
+            ->renderHook(
+                'panels::head.done',
+                fn (): string => Blade::render("@vite('resources/css/tenant-admin.css')"),
+            );
 
         return $panel
             ->default()
@@ -93,9 +73,26 @@ class AdminPanelProvider extends PanelProvider
             })
             ->login(TenantLogin::class)
             ->globalSearch(false)
+            ->font('Inter')
+            ->sidebarCollapsibleOnDesktop()
             ->maxContentWidth('full')
             ->colors([
                 'primary' => Color::Amber,
+            ])
+            ->navigationGroups([
+                NavigationGroup::make('Dashboard'),
+                NavigationGroup::make('Operations')
+                    ->label('Операции')
+                    ->icon('heroicon-o-presentation-chart-line'),
+                NavigationGroup::make('Catalog')
+                    ->label('Каталог')
+                    ->icon('heroicon-o-shopping-bag'),
+                NavigationGroup::make('Content')
+                    ->label('Контент')
+                    ->icon('heroicon-o-document-text'),
+                NavigationGroup::make('Settings')
+                    ->label('Настройки')
+                    ->icon('heroicon-o-cog-8-tooth'),
             ])
             ->discoverResources(in: app_path('Filament/Tenant/Resources'), for: 'App\\Filament\\Tenant\\Resources')
             ->discoverPages(in: app_path('Filament/Tenant/Pages'), for: 'App\\Filament\\Tenant\\Pages')

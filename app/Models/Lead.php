@@ -60,6 +60,11 @@ class Lead extends Model
         return $this->hasMany(LeadStatusHistory::class)->orderByDesc('created_at');
     }
 
+    public function activityLogs(): HasMany
+    {
+        return $this->hasMany(LeadActivityLog::class)->orderByDesc('created_at');
+    }
+
     public function crmRequest(): BelongsTo
     {
         return $this->belongsTo(CrmRequest::class);

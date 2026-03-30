@@ -6,6 +6,7 @@ use App\Filament\Forms\Components\SeoMetaFields;
 use App\Filament\Tenant\Resources\MotorcycleResource\Pages;
 use App\Models\Motorcycle;
 use App\Support\CatalogHighlightNormalizer;
+use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -18,6 +19,7 @@ use Filament\Forms\Components\SpatieMediaLibraryFileUpload;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Fieldset;
 use Filament\Schemas\Components\Grid;
@@ -32,7 +34,9 @@ use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Str;
+use UnitEnum;
 
 class MotorcycleResource extends Resource
 {
@@ -44,6 +48,8 @@ class MotorcycleResource extends Resource
     }
 
     protected static ?string $model = Motorcycle::class;
+
+    protected static string|UnitEnum|null $navigationGroup = 'Catalog';
 
     protected static ?string $navigationLabel = 'Мотоциклы';
 
@@ -337,10 +343,16 @@ class MotorcycleResource extends Resource
 
     public static function table(Table $table): Table
     {
+        $isGrid = request()->cookie('moto_catalog_grid', 'false') === 'true' || session('moto_catalog_grid', false);
+
         return $table
             ->modifyQueryUsing(fn (Builder $query): Builder => $query->with('media'))
             ->defaultPaginationPageOption(25)
             ->paginationPageOptions([25, 50, 100, 200])
+            ->contentGrid($isGrid ? [
+                'md' => 2,
+                'xl' => 3,
+            ] : null)
             ->columns([
                 ImageColumn::make('cover_thumb')
                     ->label('Фото')
@@ -388,7 +400,46 @@ class MotorcycleResource extends Resource
                     ->options(Motorcycle::statuses()),
                 TrashedFilter::make(),
             ])
+            ->headerActions([
+                Action::make('toggle_view')
+                    ->label($isGrid ? 'Списком' : 'Сеткой')
+                    ->icon($isGrid ? 'heroicon-o-list-bullet' : 'heroicon-o-squares-2x2')
+                    ->action(function () use ($isGrid) {
+                        session(['moto_catalog_grid' => ! $isGrid]);
+                        Cookie::queue('moto_catalog_grid', ! $isGrid ? 'true' : 'false', 60 * 24 * 365);
+
+                        return redirect(request()->header('Referer'));
+                    }),
+            ])
             ->actions([
+                Action::make('quick_edit')
+                    ->label('Быстрая правка')
+                    ->icon('heroicon-o-bolt')
+                    ->slideOver()
+                    ->fillForm(fn (Motorcycle $record): array => [
+                        'status' => $record->status,
+                        'price_per_day' => $record->price_per_day,
+                        'sort_order' => $record->sort_order,
+                    ])
+                    ->form([
+                        Select::make('status')
+                            ->label('Статус')
+                            ->options(Motorcycle::statuses())
+                            ->required(),
+                        TextInput::make('price_per_day')
+                            ->label('Цена за сутки')
+                            ->numeric()
+                            ->suffix('₽')
+                            ->required(),
+                        TextInput::make('sort_order')
+                            ->label('Сортировка')
+                            ->numeric(),
+                    ])
+                    ->action(function (Motorcycle $record, array $data): void {
+                        $record->update($data);
+                        Notification::make()->title('Обновлено')->success()->send();
+                    })
+                    ->color('gray'),
                 EditAction::make(),
             ])
             ->bulkActions([

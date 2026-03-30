@@ -5,6 +5,7 @@ namespace App\Observers;
 use App\Models\CrmRequest;
 use App\Models\CrmRequestActivity;
 use App\Models\Lead;
+use App\Models\LeadActivityLog;
 use App\Models\LeadStatusHistory;
 
 /**
@@ -27,6 +28,18 @@ class LeadObserver
             'new_status' => $lead->status,
             'changed_by' => auth()->id(),
         ]);
+
+        LeadActivityLog::query()->create([
+            'lead_id' => $lead->id,
+            'actor_id' => auth()->id(),
+            'type' => 'status_change',
+            'payload' => [
+                'old_status' => null,
+                'new_status' => $lead->status,
+                'source' => 'system',
+            ],
+            'comment' => 'Заявка создана',
+        ]);
     }
 
     public function updated(Lead $lead): void
@@ -40,6 +53,17 @@ class LeadObserver
             'old_status' => $lead->getOriginal('status'),
             'new_status' => $lead->status,
             'changed_by' => auth()->id(),
+        ]);
+
+        LeadActivityLog::query()->create([
+            'lead_id' => $lead->id,
+            'actor_id' => auth()->id(),
+            'type' => 'status_change',
+            'payload' => [
+                'old_status' => $lead->getOriginal('status'),
+                'new_status' => $lead->status,
+                'source' => auth()->check() ? 'manager' : 'system',
+            ],
         ]);
 
         if ($lead->crm_request_id === null) {

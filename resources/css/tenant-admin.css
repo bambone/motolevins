@@ -1,0 +1,120 @@
+@import "tailwindcss";
+
+@source "../../app/Filament/Tenant/**/*.php";
+@source "../../resources/views/filament/tenant/**/*.blade.php";
+@source "../../vendor/filament/**/*.blade.php";
+
+/* Layered Surface Architecture for Dark Mode - Product DNA */
+@theme {
+    --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Base Body Application */
+.dark body {
+    --fi-bg-base: #0B0E14 !important;
+    background-color: var(--fi-bg-base) !important;
+}
+
+.dark {
+    --fi-text-primary: #f8fafc;
+    --fi-text-secondary: #94a3b8;
+}
+
+.dark .text-gray-500, .dark .text-gray-400 {
+    color: var(--fi-text-secondary);
+}
+
+/* Sidebar Styling */
+.dark .fi-sidebar {
+    background-color: #12141C !important;
+    border-right: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* Topbar Styling */
+.dark .fi-topbar {
+    background-color: rgba(18, 20, 28, 0.8) !important;
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* Cards & Elevated Containers */
+.dark .fi-ta-content, 
+.dark .fi-wi-stats-overview-stat, 
+.dark .fi-section,
+.dark .fi-modal-window {
+    background-color: #161822 !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 20px 25px -5px rgba(0, 0, 0, 0.4) !important;
+    border-radius: 0.75rem; 
+}
+
+/* Drawer / Slide-Over Enhancements */
+.dark .fi-modal-window.slide-over {
+    border-left: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: -10px 0 40px rgba(0,0,0,0.6) !important;
+}
+
+/* ==========================================================
+   High-Velocity CRM - Lead Styling
+   ========================================================== */
+
+/* New Leads: Subtle background tint & left border */
+.dark .fi-lead-new {
+    background-color: rgba(6, 182, 212, 0.04) !important; /* Extremely subtle cyan/blue tint */
+    position: relative;
+}
+
+.dark .fi-lead-new::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background-color: #06b6d4; /* Cyan accent */
+    border-top-right-radius: 2px;
+    border-bottom-right-radius: 2px;
+}
+
+/* Stale Leads: Warning tint & left border */
+.dark .fi-lead-stale {
+    background-color: rgba(245, 158, 11, 0.04) !important; /* Subtle amber/warning tint */
+    position: relative;
+}
+
+.dark .fi-lead-stale::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background-color: #f59e0b; /* Amber accent */
+    border-top-right-radius: 2px;
+    border-bottom-right-radius: 2px;
+}
+
+/* Mobile-First Sticky Actions in Drawer */
+@media (max-width: 640px) {
+    .fi-modal-window.slide-over {
+        width: 100vw !important;
+        max-width: 100vw !important;
+        height: 100dvh !important;
+        margin: 0 !important;
+        border-radius: 0 !important;
+    }
+
+    .fi-drawer-sticky-bottom {
+        position: sticky;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        padding: 1rem;
+        background-color: #161822;
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+        display: flex;
+        gap: 0.5rem;
+        z-index: 50;
+        box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+}

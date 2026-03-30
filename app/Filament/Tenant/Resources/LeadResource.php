@@ -4,21 +4,29 @@ namespace App\Filament\Tenant\Resources;
 
 use App\Filament\Tenant\Resources\LeadResource\Pages;
 use App\Models\Lead;
+use App\Models\LeadActivityLog;
+use Filament\Actions\Action;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\View;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Support\Facades\Auth;
+use UnitEnum;
 
 class LeadResource extends Resource
 {
     protected static ?string $model = Lead::class;
+
+    protected static string|UnitEnum|null $navigationGroup = 'Operations';
 
     protected static ?string $navigationLabel = 'Заявки';
 
@@ -109,12 +117,27 @@ class LeadResource extends Resource
                             ->rows(4)
                             ->helperText('Не показываются клиенту.'),
                     ])->columns(2),
+
+                Section::make('История действий (Timeline)')
+                    ->schema([
+                        View::make('filament.tenant.components.lead-timeline'),
+                    ])
+                    ->collapsible()
+                    ->collapsed(false),
+
+                // Sticky bottom actions for mobile drawer
+                View::make('filament.tenant.components.lead-sticky-actions')
+                    ->visible(fn () => request()->header('sec-ch-ua-mobile') === '?1' || true), // Typically handled by CSS
             ]);
     }
 
     public static function table(Table $table): Table
     {
         return $table
+            ->recordClasses(fn (Lead $record) => match ($record->status) {
+                'new' => 'fi-lead-new',
+                default => $record->created_at->diffInHours(now()) > 24 && in_array($record->status, ['new', 'in_progress'], true) ? 'fi-lead-stale' : null,
+            })
             ->columns([
                 TextColumn::make('created_at')
                     ->label('Получена')
@@ -172,9 +195,53 @@ class LeadResource extends Resource
                     ->label('Источник')
                     ->options(Lead::sources()),
             ])
-            ->defaultSort('created_at', 'desc')
+            ->recordAction(EditAction::class)
+            ->recordUrl(null)
             ->actions([
-                EditAction::make(),
+                Action::make('mark_contacted')
+                    ->label('В работу')
+                    ->icon('heroicon-o-check-circle')
+                    ->color('success')
+                    ->hidden(fn (Lead $record) => $record->status !== 'new')
+                    ->action(function (Lead $record) {
+                        $oldStatus = $record->status;
+                        $record->update(['status' => 'in_progress']);
+
+                        Notification::make()
+                            ->title('Заявка взята в работу')
+                            ->success()
+                            ->duration(8000)
+                            ->actions([
+                                \Filament\Notifications\Actions\Action::make('undo')
+                                    ->label('Отменить')
+                                    ->button()
+                                    ->color('danger')
+                                    ->close()
+                                    ->action(function () use ($record, $oldStatus) {
+                                        $record->update(['status' => $oldStatus]);
+                                        LeadActivityLog::create([
+                                            'lead_id' => $record->id,
+                                            'actor_id' => Auth::id(),
+                                            'type' => 'reverted',
+                                            'payload' => ['new_status' => $oldStatus],
+                                            'comment' => 'Действие отменено (Undo: взятие в работу)',
+                                        ]);
+                                    }),
+                            ])
+                            ->send();
+                    }),
+                Action::make('whatsapp')
+                    ->icon('heroicon-o-chat-bubble-left-ellipsis')
+                    ->color('success')
+                    ->label('WA')
+                    ->url(fn (Lead $record) => 'https://wa.me/'.preg_replace('/[^0-9]/', '', $record->phone).'?text='.urlencode('Здравствуйте! Пишу по поводу вашей заявки на аренду...'))
+                    ->openUrlInNewTab(),
+                Action::make('call')
+                    ->icon('heroicon-o-phone')
+                    ->color('gray')
+                    ->label('Call')
+                    ->url(fn (Lead $record) => 'tel:'.preg_replace('/[^0-9]/', '', $record->phone)),
+                EditAction::make()->slideOver(),
             ])
             ->emptyStateHeading('Заявок пока нет')
             ->emptyStateDescription('Когда посетители отправят форму на сайте, заявки появятся здесь.')
@@ -185,7 +252,6 @@ class LeadResource extends Resource
     {
         return [
             'index' => Pages\ListLeads::route('/'),
-            'edit' => Pages\EditLead::route('/{record}/edit'),
         ];
     }
 

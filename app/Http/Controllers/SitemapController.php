@@ -2,53 +2,26 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Motorcycle;
-use App\Models\Page;
+use App\Models\TenantSetting;
+use App\Services\Seo\TenantSeoPublicContentService;
 use Illuminate\Http\Response;
 
 class SitemapController extends Controller
 {
-    public function __invoke(): Response
+    public function __invoke(TenantSeoPublicContentService $seo): Response
     {
-        $urls = [];
+        $tenant = currentTenant();
+        abort_if($tenant === null, 404);
 
-        $urls[] = [
-            'loc' => url('/'),
-            'changefreq' => 'daily',
-            'priority' => '1.0',
-        ];
-
-        $pages = Page::where('status', 'published')
-            ->where('slug', '!=', 'home')
-            ->get();
-
-        foreach ($pages as $page) {
-            $urls[] = [
-                'loc' => url('/'.$page->slug),
-                'changefreq' => 'weekly',
-                'priority' => '0.8',
-                'lastmod' => $page->updated_at?->format('Y-m-d'),
-            ];
+        $enabled = (bool) TenantSetting::getForTenant($tenant->id, 'seo.sitemap_enabled', true);
+        if (! $enabled) {
+            abort(404);
         }
 
-        $motorcycles = Motorcycle::where('show_in_catalog', true)
-            ->where('status', 'available')
-            ->get();
+        $body = $seo->sitemapBodyForEnabledTenant($tenant);
 
-        foreach ($motorcycles as $moto) {
-            $urls[] = [
-                'loc' => route('motorcycle.show', $moto->slug),
-                'changefreq' => 'weekly',
-                'priority' => '0.7',
-                'lastmod' => $moto->updated_at?->format('Y-m-d'),
-            ];
-        }
-
-        $xml = view('tenant.sitemap', ['urls' => $urls])->render();
-
-        return new Response($xml, 200, [
-            'Content-Type' => 'application/xml',
-            'Charset' => 'UTF-8',
+        return response($body, 200, [
+            'Content-Type' => 'application/xml; charset=UTF-8',
         ]);
     }
 }

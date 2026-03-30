@@ -11,6 +11,7 @@ export default defineConfig({
                 'resources/css/platform-marketing.css',
                 'resources/js/platform-marketing.js',
                 'resources/css/platform-admin.css',
+                'resources/css/tenant-admin.css',
             ],
             refresh: true,
         }),
