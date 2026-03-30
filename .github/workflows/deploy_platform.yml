@@ -1,9 +1,14 @@
 name: Deploy platform
 
+# Gated: runs after successful "Tests" on master. workflow_dispatch is an intentional CI bypass.
 on:
-  push:
-    branches: ["master"]
+  workflow_run:
+    workflows: [Tests]
+    types: [completed]
   workflow_dispatch: {}
+
+permissions:
+  contents: read
 
 concurrency:
   group: deploy-platform
@@ -12,9 +17,20 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    if: |
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'master') ||
+      github.event_name == 'workflow_dispatch'
 
     steps:
-      - name: Checkout
+      - name: Checkout (gated commit)
+        if: github.event_name == 'workflow_run'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          submodules: false
+
+      - name: Checkout (manual dispatch)
+        if: github.event_name == 'workflow_dispatch'
         uses: actions/checkout@v4
         with:
           submodules: false

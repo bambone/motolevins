@@ -50,7 +50,7 @@
         .glass-card { background: rgba(30, 30, 30, 0.4); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.05); transition: transform 0.3s ease, background 0.3s ease, border-color 0.3s ease; }
         .glass-card:hover { transform: translateY(-4px); background: rgba(40, 40, 40, 0.6); border-color: rgba(255, 255, 255, 0.15); }
         .bg-accent-gradient { background: linear-gradient(135deg, #FF6B00 0%, #FF3D00 100%); }
-        .text-accent-gradient { background: linear-gradient(135deg, #FF8C00 0%, #FF3D00 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .text-accent-gradient { background: linear-gradient(135deg, #FF8C00 0%, #FF3D00 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
         /* Duplicate tenant button system for CDN (sync with resources/css/app.css) */
         .tenant-btn-primary {
             display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;

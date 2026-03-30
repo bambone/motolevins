@@ -1,0 +1,67 @@
+# Top-level name must stay exactly "Tests" — deploy workflow_run references it.
+name: Tests
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          extensions: mbstring, dom, fileinfo, pdo, tokenizer, xml, ctype, json, bcmath, curl, intl, zip, sqlite, pdo_sqlite
+          coverage: none
+          tools: composer:v2
+          cache: composer
+          cache-dependency-path: composer.lock
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist
+
+      # PHPUnit env comes from phpunit.xml; .env is mainly for APP_KEY during artisan.
+      # If CI fails on a missing env var, prefer a minimal `env:` block on this job over broad project edits.
+      - name: Prepare application key
+        run: |
+          cp .env.example .env
+          php artisan key:generate --no-interaction
+
+      - name: Run tests
+        run: composer test
+
+      - name: Diagnostics on failure
+        if: failure()
+        shell: bash
+        run: |
+          echo "=== PHP ==="
+          php -v || true
+          echo "=== Composer ==="
+          composer --version || true
+          echo "=== PHP extensions (loaded) ==="
+          php -m | sort || true
+          echo "=== php artisan about ==="
+          php artisan about || true
+          echo "=== ls -la (repo root) ==="
+          ls -la
+          echo "=== ls -la storage ==="
+          ls -la storage || true
+          echo "=== ls -la bootstrap/cache ==="
+          ls -la bootstrap/cache || true
+          echo "=== Laravel log tail (last 200 lines) ==="
+          if [ -f storage/logs/laravel.log ]; then tail -n 200 storage/logs/laravel.log; else echo "(no storage/logs/laravel.log)"; fi
