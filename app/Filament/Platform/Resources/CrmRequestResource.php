@@ -7,13 +7,18 @@ use App\Filament\Platform\Resources\CrmRequestResource\Pages;
 use App\Filament\Shared\CRM\CrmSharedFilters;
 use App\Filament\Shared\CRM\CrmSharedInfolist;
 use App\Filament\Shared\CRM\CrmSharedTable;
+use App\Filament\Shared\CRM\CrmSharedWorkspaceSchema;
 use App\Models\CrmRequest;
-use Filament\Actions\ViewAction;
+use App\Models\User;
+use App\Product\CRM\CrmRequestOperatorService;
+use Filament\Actions\EditAction;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
+use Filament\Support\Enums\Alignment;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Auth;
 use UnitEnum;
 
 class CrmRequestResource extends Resource
@@ -64,14 +69,36 @@ class CrmRequestResource extends Resource
             ->recordUrl(null)
             ->recordClasses(CrmSharedTable::recordClasses())
             ->actions([
-                ViewAction::make('open')
+                EditAction::make('open')
                     ->label('Открыть')
                     ->slideOver()
-                    ->modalWidth('5xl')
-                    ->modalHeading(fn (CrmRequest $record): string => $record->name ?: 'CRM-заявка #'.$record->id)
-                    ->modalContent(fn (CrmRequest $record) => view('filament.shared.crm.crm-workspace-modal', [
-                        'crmRequestId' => $record->id,
-                    ])),
+                    ->modalWidth('7xl')
+                    ->modalHeading('')
+                    ->extraModalWindowAttributes(['class' => 'crm-ws-modal'])
+                    ->stickyModalFooter()
+                    ->modalFooterActionsAlignment(Alignment::End)
+                    ->form(CrmSharedWorkspaceSchema::schema())
+                    ->mutateRecordDataUsing(function (array $data, CrmRequest $record): array {
+                        $user = Auth::user();
+                        if ($user instanceof User) {
+                            app(CrmRequestOperatorService::class)->markFirstViewed($user, $record);
+                        }
+
+                        return $data;
+                    })
+                    ->using(function (array $data, CrmRequest $record): void {
+                        $user = Auth::user();
+                        if (! $user instanceof User) {
+                            return;
+                        }
+
+                        $service = app(CrmRequestOperatorService::class);
+
+                        $service->changeStatus($user, $record, $data['status'] ?? CrmRequest::STATUS_NEW);
+                        $service->updatePriority($user, $record, $data['priority'] ?? CrmRequest::PRIORITY_NORMAL);
+                        $service->updateFollowUp($user, $record, ! empty($data['next_follow_up_at']) ? new \DateTime($data['next_follow_up_at']) : null);
+                        $service->updateSummary($user, $record, $data['internal_summary'] ?? null);
+                    }),
             ])
             ->paginated([25, 50, 100]);
     }

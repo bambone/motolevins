@@ -3,13 +3,15 @@
 namespace App\Filament\Platform\Resources\Concerns;
 
 use App\Auth\AccessRoles;
+use App\Models\User;
+use Illuminate\Support\Facades\Auth;
 
 trait GrantsPlatformPanelAccess
 {
     public static function canAccess(): bool
     {
-        $user = auth()->user();
+        $user = Auth::user();
 
-        return $user !== null && $user->hasAnyRole(AccessRoles::platformRoles());
+        return $user instanceof User && $user->hasAnyRole(AccessRoles::platformRoles());
     }
 }

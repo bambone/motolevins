@@ -78,4 +78,56 @@ class CrmRequestPolicyTest extends TestCase
 
         Filament::setCurrentPanel(null);
     }
+
+    public function test_tenant_user_in_both_tenants_cannot_view_crm_of_tenant_b_while_host_context_is_a(): void
+    {
+        $tenantA = $this->createTenantWithActiveDomain('ta');
+        $tenantB = $this->createTenantWithActiveDomain('tb');
+
+        $crmB = $this->makeCrmRequest($tenantB->id, ['email' => 'both-b@example.test']);
+
+        $user = User::factory()->create(['status' => 'active']);
+        $user->tenants()->attach($tenantA->id, ['role' => 'operator', 'status' => 'active']);
+        $user->tenants()->attach($tenantB->id, ['role' => 'operator', 'status' => 'active']);
+
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+        $domainA = $tenantA->domains()->where('is_primary', true)->first();
+        $this->app->instance(CurrentTenant::class, new CurrentTenant($tenantA, $domainA, false, $this->tenancyHostForSlug('ta')));
+
+        $this->assertFalse(Gate::forUser($user)->allows('view', $crmB));
+
+        Filament::setCurrentPanel(null);
+    }
+
+    public function test_tenant_view_any_denied_when_membership_not_in_current_tenant(): void
+    {
+        $tenantA = $this->createTenantWithActiveDomain('ta');
+        $tenantB = $this->createTenantWithActiveDomain('tb');
+
+        $user = User::factory()->create(['status' => 'active']);
+        $user->tenants()->attach($tenantB->id, ['role' => 'operator', 'status' => 'active']);
+
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+        $domainA = $tenantA->domains()->where('is_primary', true)->first();
+        $this->app->instance(CurrentTenant::class, new CurrentTenant($tenantA, $domainA, false, $this->tenancyHostForSlug('ta')));
+
+        $this->assertFalse(Gate::forUser($user)->allows('viewAny', CrmRequest::class));
+
+        Filament::setCurrentPanel(null);
+    }
+
+    public function test_tenant_view_any_denied_without_resolved_current_tenant(): void
+    {
+        $tenantA = $this->createTenantWithActiveDomain('ta');
+
+        $user = User::factory()->create(['status' => 'active']);
+        $user->tenants()->attach($tenantA->id, ['role' => 'operator', 'status' => 'active']);
+
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+        $this->app->instance(CurrentTenant::class, new CurrentTenant(null, null, false, $this->tenancyHostForSlug('ta')));
+
+        $this->assertFalse(Gate::forUser($user)->allows('viewAny', CrmRequest::class));
+
+        Filament::setCurrentPanel(null);
+    }
 }

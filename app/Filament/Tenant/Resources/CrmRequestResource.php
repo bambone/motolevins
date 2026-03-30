@@ -8,19 +8,28 @@ use App\Filament\Shared\CRM\CrmSharedTable;
 use App\Filament\Tenant\Concerns\ResolvesDomainTermLabels;
 use App\Filament\Tenant\Resources\CrmRequestResource\Pages;
 use App\Models\CrmRequest;
+use App\Models\User;
 use App\Terminology\DomainTermKeys;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
+use UnitEnum;
 
 class CrmRequestResource extends Resource
 {
     use ResolvesDomainTermLabels;
 
     protected static ?string $model = CrmRequest::class;
+
+    protected static ?string $panel = 'admin';
+
+    protected static string|UnitEnum|null $navigationGroup = 'Operations';
+
+    protected static ?int $navigationSort = 11;
 
     public static function getNavigationLabel(): string
     {
@@ -38,8 +47,6 @@ class CrmRequestResource extends Resource
     }
 
     protected static ?string $recordTitleAttribute = 'name';
-
-    protected static ?int $navigationSort = 4;
 
     public static function getEloquentQuery(): Builder
     {
@@ -83,9 +90,9 @@ class CrmRequestResource extends Resource
 
     public static function canEdit(Model $record): bool
     {
-        $user = auth()->user();
+        $user = Auth::user();
 
-        return $user !== null && Gate::forUser($user)->allows('update', $record);
+        return $user instanceof User && Gate::forUser($user)->allows('update', $record);
     }
 
     public static function canDelete(Model $record): bool

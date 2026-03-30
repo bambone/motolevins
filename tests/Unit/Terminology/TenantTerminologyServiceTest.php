@@ -37,15 +37,17 @@ class TenantTerminologyServiceTest extends TestCase
 
         $tenant->update(['domain_localization_preset_id' => $preset->id]);
 
-        $term = DomainTerm::query()->create([
-            'term_key' => DomainTermKeys::BOOKING,
-            'group' => 'booking_flow',
-            'default_label' => 'Default booking',
-            'value_type' => 'text',
-            'is_required' => true,
-            'is_active' => true,
-            'is_editable_by_tenant' => true,
-        ]);
+        $term = DomainTerm::query()->updateOrCreate(
+            ['term_key' => DomainTermKeys::BOOKING],
+            [
+                'group' => 'booking_flow',
+                'default_label' => 'Default booking',
+                'value_type' => 'text',
+                'is_required' => true,
+                'is_active' => true,
+                'is_editable_by_tenant' => true,
+            ]
+        );
 
         DomainLocalizationPresetTerm::query()->create([
             'preset_id' => $preset->id,
@@ -98,44 +100,48 @@ class TenantTerminologyServiceTest extends TestCase
         ]);
         $tenant->update(['domain_localization_preset_id' => $preset->id]);
 
-        DomainTerm::query()->create([
-            'term_key' => DomainTermKeys::BOOKING,
-            'group' => 'booking_flow',
-            'default_label' => 'Only default',
-            'value_type' => 'text',
-            'is_required' => true,
-            'is_active' => true,
-            'is_editable_by_tenant' => true,
-        ]);
+        DomainTerm::query()->updateOrCreate(
+            ['term_key' => DomainTermKeys::BOOKING],
+            [
+                'group' => 'booking_flow',
+                'default_label' => 'Only default',
+                'value_type' => 'text',
+                'is_required' => true,
+                'is_active' => true,
+                'is_editable_by_tenant' => true,
+            ]
+        );
 
         $tenant->refresh();
         $s = app(TenantTerminologyService::class);
         $this->assertSame('Only default', $s->label($tenant, DomainTermKeys::BOOKING));
     }
 
-    public function test_unknown_term_key_returns_key(): void
+    public function test_unknown_term_key_returns_humanized_label(): void
     {
         $tenant = $this->makeTenant();
         $this->seedMinimalVocabulary($tenant);
         $tenant->refresh();
 
         $s = app(TenantTerminologyService::class);
-        $this->assertSame('no.such.term', $s->label($tenant, 'no.such.term'));
+        $this->assertSame('No Such Term', $s->label($tenant, 'no.such.term'));
     }
 
     public function test_many_returns_labels_for_keys(): void
     {
         $tenant = $this->makeTenant();
         $this->seedMinimalVocabulary($tenant);
-        DomainTerm::query()->create([
-            'term_key' => DomainTermKeys::LEAD,
-            'group' => 'crm',
-            'default_label' => 'Lead default',
-            'value_type' => 'text',
-            'is_required' => true,
-            'is_active' => true,
-            'is_editable_by_tenant' => true,
-        ]);
+        DomainTerm::query()->updateOrCreate(
+            ['term_key' => DomainTermKeys::LEAD],
+            [
+                'group' => 'crm',
+                'default_label' => 'Lead default',
+                'value_type' => 'text',
+                'is_required' => true,
+                'is_active' => true,
+                'is_editable_by_tenant' => true,
+            ]
+        );
 
         $tenant->refresh();
         $s = app(TenantTerminologyService::class);
@@ -201,7 +207,7 @@ class TenantTerminologyServiceTest extends TestCase
         $this->assertSame('Preset booking', $s->label($tenant, DomainTermKeys::BOOKING));
     }
 
-    public function test_inactive_term_not_in_dictionary_falls_back_to_key(): void
+    public function test_inactive_term_not_in_dictionary_uses_humanized_or_resolved_default(): void
     {
         $tenant = $this->makeTenant();
         $this->seedMinimalVocabulary($tenant);
@@ -212,6 +218,16 @@ class TenantTerminologyServiceTest extends TestCase
         app(TenantTerminologyService::class)->forgetTenant($tenant->id);
 
         $s = app(TenantTerminologyService::class);
-        $this->assertSame(DomainTermKeys::BOOKING, $s->label($tenant, DomainTermKeys::BOOKING));
+        $this->assertSame('Default booking', $s->label($tenant, DomainTermKeys::BOOKING));
+    }
+
+    public function test_label_with_fallback_when_term_row_missing(): void
+    {
+        $tenant = $this->makeTenant();
+        $this->seedMinimalVocabulary($tenant);
+        $tenant->refresh();
+
+        $s = app(TenantTerminologyService::class);
+        $this->assertSame('Кастом', $s->labelWithFallback($tenant, 'totally_missing_key_xyz', 'Кастом'));
     }
 }

@@ -13,8 +13,20 @@ class CrmRequestPolicy
 
     public function viewAny(User $user): bool
     {
-        return $user->hasAnyRole(AccessRoles::platformRoles())
-            || $user->can('manage_leads');
+        if ($user->hasAnyRole(AccessRoles::platformRoles())) {
+            return true;
+        }
+
+        if (! $user->can('manage_leads')) {
+            return false;
+        }
+
+        $tenant = currentTenant();
+        if ($tenant === null) {
+            return false;
+        }
+
+        return $user->tenants()->where('tenant_id', $tenant->id)->exists();
     }
 
     public function view(User $user, CrmRequest $crmRequest): bool
@@ -23,18 +35,31 @@ class CrmRequestPolicy
             return $crmRequest->tenant_id === null;
         }
 
-        if ($user->can('manage_leads')) {
-            return $crmRequest->tenant_id !== null
-                && $this->userCanAccessTenant($user, $crmRequest);
+        if (! $user->can('manage_leads')) {
+            return false;
         }
 
-        return false;
+        return $crmRequest->tenant_id !== null
+            && $this->userCanAccessTenant($user, $crmRequest)
+            && $this->belongsToCurrentTenant($crmRequest);
     }
 
     public function create(User $user): bool
     {
-        return $user->hasAnyRole(AccessRoles::platformRoles())
-            || $user->can('manage_leads');
+        if ($user->hasAnyRole(AccessRoles::platformRoles())) {
+            return true;
+        }
+
+        if (! $user->can('manage_leads')) {
+            return false;
+        }
+
+        $tenant = currentTenant();
+        if ($tenant === null) {
+            return false;
+        }
+
+        return $user->tenants()->where('tenant_id', $tenant->id)->exists();
     }
 
     public function update(User $user, CrmRequest $crmRequest): bool

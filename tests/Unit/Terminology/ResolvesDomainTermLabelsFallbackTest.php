@@ -19,7 +19,7 @@ class ResolvesDomainTermLabelsFallbackTest extends TestCase
 
             public function run(): string
             {
-                return static::domainTermLabel(DomainTermKeys::BOOKING, 'Fallback booking');
+                return self::domainTermLabel(DomainTermKeys::BOOKING, 'Fallback booking');
             }
         };
 

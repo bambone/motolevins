@@ -28,7 +28,7 @@ class PresetTermsRelationManager extends RelationManager
                     ->schema([
                         Select::make('term_id')
                             ->label('Системный термин')
-                            ->relationship('term', 'term_key', modifyQueryUsing: fn ($q) => $q->orderBy('term_key'))
+                            ->relationship('term', 'term_key', modifyQueryUsing: fn ($query) => $query->orderBy('term_key'))
                             ->required()
                             ->disabledOn('edit')
                             ->preload()

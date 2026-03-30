@@ -77,7 +77,7 @@ class TenantResource extends Resource
                             ->relationship(
                                 name: 'domainLocalizationPreset',
                                 titleAttribute: 'name',
-                                modifyQueryUsing: fn ($q) => $q->where('is_active', true)->orderBy('sort_order')
+                                modifyQueryUsing: fn ($query) => $query->where('is_active', true)->orderBy('sort_order')
                             )
                             ->preload()
                             ->default(fn (): ?int => DomainLocalizationPreset::query()->where('slug', 'generic_services')->value('id'))

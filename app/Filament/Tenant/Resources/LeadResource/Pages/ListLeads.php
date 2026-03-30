@@ -18,7 +18,7 @@ class ListLeads extends ListRecords
     {
         return new HtmlString(
             '<div>'
-            .'<span class="text-xl font-semibold tracking-tight">Заявки</span>'
+            .'<span class="text-xl font-semibold tracking-tight">'.e(LeadResource::getPluralModelLabel()).'</span>'
             .'<p class="mt-2 max-w-3xl text-sm font-normal text-gray-600 dark:text-gray-400">'
             .'Входящие обращения с сайта: потенциальные клиенты и запросы на аренду. Обрабатывайте новые заявки в первую очередь — '
             .'статус и ответственный видны только вашей команде.'

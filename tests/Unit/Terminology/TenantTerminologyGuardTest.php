@@ -15,15 +15,17 @@ class TenantTerminologyGuardTest extends TestCase
 
     public function test_locked_term_aborts_403(): void
     {
-        $term = DomainTerm::query()->create([
-            'term_key' => DomainTermKeys::BOOKING,
-            'group' => 'booking_flow',
-            'default_label' => 'X',
-            'value_type' => 'text',
-            'is_required' => true,
-            'is_active' => true,
-            'is_editable_by_tenant' => false,
-        ]);
+        $term = DomainTerm::query()->updateOrCreate(
+            ['term_key' => DomainTermKeys::BOOKING],
+            [
+                'group' => 'booking_flow',
+                'default_label' => 'X',
+                'value_type' => 'text',
+                'is_required' => true,
+                'is_active' => true,
+                'is_editable_by_tenant' => false,
+            ]
+        );
 
         try {
             TenantTerminologyGuard::assertTermEditableByTenant($term);
@@ -35,15 +37,17 @@ class TenantTerminologyGuardTest extends TestCase
 
     public function test_editable_term_does_not_abort(): void
     {
-        $term = DomainTerm::query()->create([
-            'term_key' => DomainTermKeys::BOOKING,
-            'group' => 'booking_flow',
-            'default_label' => 'X',
-            'value_type' => 'text',
-            'is_required' => true,
-            'is_active' => true,
-            'is_editable_by_tenant' => true,
-        ]);
+        $term = DomainTerm::query()->updateOrCreate(
+            ['term_key' => DomainTermKeys::BOOKING],
+            [
+                'group' => 'booking_flow',
+                'default_label' => 'X',
+                'value_type' => 'text',
+                'is_required' => true,
+                'is_active' => true,
+                'is_editable_by_tenant' => true,
+            ]
+        );
 
         TenantTerminologyGuard::assertTermEditableByTenant($term);
         $this->assertTrue(true);

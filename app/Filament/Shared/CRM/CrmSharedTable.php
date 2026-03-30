@@ -3,12 +3,14 @@
 namespace App\Filament\Shared\CRM;
 
 use App\Models\CrmRequest;
+use App\Models\User;
 use App\Product\CRM\CrmRequestOperatorService;
 use Closure;
 use Filament\Notifications\Notification;
 use Filament\Tables\Columns\SelectColumn;
 use Filament\Tables\Columns\TextColumn;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 
 final class CrmSharedTable
@@ -63,8 +65,8 @@ final class CrmSharedTable
                 ->disabled(fn (CrmRequest $record): bool => ! Gate::check('update', $record))
                 ->updateStateUsing(function (mixed $state, Model $record): string {
                     $state = is_string($state) ? $state : (string) $state;
-                    $user = auth()->user();
-                    if ($user === null || ! $record instanceof CrmRequest) {
+                    $user = Auth::user();
+                    if (! $user instanceof User || ! $record instanceof CrmRequest) {
                         return $record instanceof CrmRequest ? $record->status : $state;
                     }
                     app(CrmRequestOperatorService::class)->changeStatus($user, $record, $state);

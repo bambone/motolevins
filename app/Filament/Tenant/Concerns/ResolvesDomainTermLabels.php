@@ -13,6 +13,6 @@ trait ResolvesDomainTermLabels
             return $fallback;
         }
 
-        return app(TenantTerminologyService::class)->label($tenant, $termKey);
+        return app(TenantTerminologyService::class)->labelWithFallback($tenant, $termKey, $fallback);
     }
 }

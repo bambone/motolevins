@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Support\Phone\IntlPhoneNormalizer;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -10,6 +11,15 @@ class StoreLeadRequest extends FormRequest
     public function authorize(): bool
     {
         return true;
+    }
+
+    protected function prepareForValidation(): void
+    {
+        if ($this->has('phone')) {
+            $this->merge([
+                'phone' => IntlPhoneNormalizer::normalizePhone((string) $this->input('phone')),
+            ]);
+        }
     }
 
     /**
@@ -22,7 +32,16 @@ class StoreLeadRequest extends FormRequest
             'rental_date_from' => ['nullable', 'date'],
             'rental_date_to' => ['nullable', 'date', 'after_or_equal:rental_date_from'],
             'name' => ['required', 'string', 'max:255'],
-            'phone' => ['required', 'string', 'max:20'],
+            'phone' => [
+                'required',
+                'string',
+                'max:16',
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    if (! is_string($value) || ! IntlPhoneNormalizer::validatePhone($value)) {
+                        $fail('Укажите корректный телефон в международном формате (например +7 для России).');
+                    }
+                },
+            ],
             'email' => ['nullable', 'email', 'max:255'],
             'comment' => ['nullable', 'string', 'max:1000'],
             'source' => ['nullable', 'string', 'max:50'],

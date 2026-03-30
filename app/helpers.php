@@ -6,6 +6,7 @@ use App\Models\TenantSetting;
 use App\Services\Tenancy\TenantViewResolver;
 use App\Tenant\CurrentTenant;
 use App\Terminology\TenantTerminologyService;
+use App\Terminology\TerminologyHumanizer;
 use Illuminate\Contracts\View\View;
 use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Support\Facades\Route;
@@ -69,7 +70,7 @@ if (! function_exists('tenant_term')) {
     {
         $t = currentTenant();
         if ($t === null) {
-            return $termKey;
+            return TerminologyHumanizer::humanize($termKey);
         }
 
         return app(TenantTerminologyService::class)->label($t, $termKey, $locale);

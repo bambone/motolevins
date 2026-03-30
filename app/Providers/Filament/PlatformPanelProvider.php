@@ -41,7 +41,7 @@ class PlatformPanelProvider extends PanelProvider
             ->maxContentWidth('full')
             ->sidebarCollapsibleOnDesktop()
             ->renderHook(
-                'panels::head.done',
+                PanelsRenderHook::HEAD_END,
                 fn (): string => Blade::render("@vite('resources/css/platform-admin.css')"),
             )
             ->navigationGroups([

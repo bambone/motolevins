@@ -6,6 +6,7 @@ use App\Models\DomainTerm;
 use App\Models\TenantTermOverride;
 use App\Terminology\TenantTerminologyGuard;
 use App\Terminology\TenantTerminologyService;
+use App\Terminology\TerminologyHumanizer;
 use Filament\Actions\Action;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
@@ -109,7 +110,10 @@ class TerminologySettings extends Page implements HasTable
                 TextColumn::make('resolved_label')
                     ->label('Подпись')
                     ->getStateUsing(function (DomainTerm $record): string {
-                        return $this->dictionary()[$record->term_key]['label'] ?? $record->term_key;
+                        $d = $this->dictionary();
+
+                        return $d[$record->term_key]['label']
+                            ?? ($record->default_label !== null && $record->default_label !== '' ? $record->default_label : TerminologyHumanizer::humanize($record->term_key));
                     }),
                 TextColumn::make('source')
                     ->label('Источник')
@@ -120,11 +124,15 @@ class TerminologySettings extends Page implements HasTable
                     ->formatStateUsing(fn (string $state): string => match ($state) {
                         'override' => 'Своя',
                         'preset' => 'Пресет',
+                        'fallback' => 'Автоподпись',
+                        'default' => 'Система',
                         default => 'Система',
                     })
                     ->color(fn (string $state): string => match ($state) {
                         'override' => 'warning',
                         'preset' => 'info',
+                        'fallback' => 'danger',
+                        'default' => 'gray',
                         default => 'gray',
                     }),
             ])

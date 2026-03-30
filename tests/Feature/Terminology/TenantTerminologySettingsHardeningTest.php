@@ -49,15 +49,17 @@ class TenantTerminologySettingsHardeningTest extends TestCase
             'domain_localization_preset_id' => $preset->id,
         ]);
 
-        $term = DomainTerm::query()->create([
-            'term_key' => DomainTermKeys::BOOKING,
-            'group' => 'booking_flow',
-            'default_label' => 'System booking',
-            'value_type' => 'text',
-            'is_required' => true,
-            'is_active' => true,
-            'is_editable_by_tenant' => $termEditable,
-        ]);
+        $term = DomainTerm::query()->updateOrCreate(
+            ['term_key' => DomainTermKeys::BOOKING],
+            [
+                'group' => 'booking_flow',
+                'default_label' => 'System booking',
+                'value_type' => 'text',
+                'is_required' => true,
+                'is_active' => true,
+                'is_editable_by_tenant' => $termEditable,
+            ]
+        );
 
         DomainLocalizationPresetTerm::query()->create([
             'preset_id' => $preset->id,
@@ -116,15 +118,17 @@ class TenantTerminologySettingsHardeningTest extends TestCase
     {
         [$tenant, $user, $term] = $this->tenantWithVocabulary(true);
 
-        $term2 = DomainTerm::query()->create([
-            'term_key' => DomainTermKeys::LEAD,
-            'group' => 'crm',
-            'default_label' => 'System lead',
-            'value_type' => 'text',
-            'is_required' => true,
-            'is_active' => true,
-            'is_editable_by_tenant' => true,
-        ]);
+        $term2 = DomainTerm::query()->updateOrCreate(
+            ['term_key' => DomainTermKeys::LEAD],
+            [
+                'group' => 'crm',
+                'default_label' => 'System lead',
+                'value_type' => 'text',
+                'is_required' => true,
+                'is_active' => true,
+                'is_editable_by_tenant' => true,
+            ]
+        );
 
         $presetId = $tenant->domain_localization_preset_id;
         DomainLocalizationPresetTerm::query()->create([

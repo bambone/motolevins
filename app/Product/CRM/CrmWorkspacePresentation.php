@@ -31,6 +31,20 @@ final class CrmWorkspacePresentation
         return self::filamentTokenToBadgeClasses($token);
     }
 
+    /**
+     * Бейджи в шапке slide-over: только классы из crm-slideover-workspace.css (без Tailwind из PHP),
+     * чтобы стили не зависели от content-scan.
+     */
+    public static function identityBadgeClassForStatus(?string $status): string
+    {
+        return 'crm-ws-badge crm-ws-badge--'.CrmRequest::statusColor($status);
+    }
+
+    public static function identityBadgeClassForPriority(?string $priority): string
+    {
+        return 'crm-ws-badge crm-ws-badge--'.CrmRequest::priorityColor($priority ?? CrmRequest::PRIORITY_NORMAL);
+    }
+
     public static function filamentTokenToBadgeClasses(string $token): string
     {
         return match ($token) {

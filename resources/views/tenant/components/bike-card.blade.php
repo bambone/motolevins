@@ -94,7 +94,7 @@
         {{-- 5. Цена --}}
         <div class="mb-4 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-3 sm:px-3.5">
             @if($useBookingContext)
-                <div x-show="!filters.start_date || !filters.end_date" class="min-w-0">
+                <div x-show="!$store.tenantBooking.filters.start_date || !$store.tenantBooking.filters.end_date" class="min-w-0">
                     <span class="mb-0.5 block text-[10px] font-semibold uppercase tracking-wider text-zinc-500">от</span>
                     <div class="flex flex-wrap items-baseline gap-x-1.5 gap-y-0">
                         <span class="text-[1.65rem] font-extrabold leading-none tracking-tight text-white sm:text-[2rem]">{{ number_format($bike->price_per_day, 0, ',', ' ') }}</span>
@@ -105,8 +105,8 @@
                         <p class="mt-1.5 line-clamp-1 text-xs leading-tight text-zinc-400">{{ $priceNote }}</p>
                     @endif
                 </div>
-                <div class="min-w-0" x-show="filters.start_date && filters.end_date" x-cloak>
-                    <span class="mb-0.5 block text-[10px] font-semibold uppercase tracking-wide text-zinc-500" x-text="`${Math.floor((Date.UTC(new Date(filters.end_date).getFullYear(), new Date(filters.end_date).getMonth(), new Date(filters.end_date).getDate()) - Date.UTC(new Date(filters.start_date).getFullYear(), new Date(filters.start_date).getMonth(), new Date(filters.start_date).getDate())) / (1000 * 60 * 60 * 24)) + 1} дней аренды`"></span>
+                <div class="min-w-0" x-show="$store.tenantBooking.filters.start_date && $store.tenantBooking.filters.end_date" x-cloak>
+                    <span class="mb-0.5 block text-[10px] font-semibold uppercase tracking-wide text-zinc-500" x-text="`${$store.tenantBooking.rentalDayCount()} дней аренды`"></span>
                     <div class="flex flex-wrap items-baseline gap-x-1.5">
                         <span class="text-[1.65rem] font-extrabold leading-none tracking-tight text-white sm:text-[2rem]"><span x-text="formatPrice(calculateCardTotalPrice({{ $bike->price_per_day }}))"></span></span>
                         <span class="text-base font-bold text-moto-amber">₽</span>
@@ -140,7 +140,7 @@
                 {{-- Весь PHP-пейлоад через @js (безопасно в двойных кавычках); даты из Alpine через Object.assign. Нельзя оборачивать весь @click в '…' — апостроф в названии байка рвёт атрибут. --}}
                 <button type="button"
                         class="tenant-btn-primary w-full flex-1 gap-2 sm:w-auto touch-manipulation"
-                        @click.stop="$dispatch('open-booking-modal', Object.assign({}, @js(['id' => $bike->id, 'name' => $bike->name, 'price' => $bike->price_per_day]), { start: filters.start_date, end: filters.end_date }))">
+                        @click.stop="$dispatch('open-booking-modal', Object.assign({}, @js(['id' => $bike->id, 'name' => $bike->name, 'price' => $bike->price_per_day]), { start: $store.tenantBooking.filters.start_date, end: $store.tenantBooking.filters.end_date }))">
                     Забронировать
                     <svg class="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
                 </button>

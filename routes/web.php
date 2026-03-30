@@ -12,6 +12,7 @@ use App\Http\Controllers\PlatformMarketingSitemapController;
 use App\Http\Controllers\PublicBookingController;
 use App\Http\Controllers\RobotsController;
 use App\Http\Controllers\SitemapController;
+use App\Http\Controllers\TenantPublicBookingAvailabilityController;
 use App\Http\Controllers\TenantPublicPageController;
 use App\Http\Middleware\EnsureTenantContext;
 use App\Models\TenantDomain;
@@ -25,7 +26,7 @@ foreach (config('tenancy.central_domains', []) as $h) {
     }
 }
 
-// Корень PLATFORM_HOST обрабатывает Filament (гость → /login, после входа — домашняя страница панели).
+// РљРѕСЂРµРЅСЊ PLATFORM_HOST РѕР±СЂР°Р±Р°С‚С‹РІР°РµС‚ Filament (РіРѕСЃС‚СЊ в†’ /login, РїРѕСЃР»Рµ РІС…РѕРґР° вЂ” РґРѕРјР°С€РЅСЏСЏ СЃС‚СЂР°РЅРёС†Р° РїР°РЅРµР»Рё).
 
 if ($marketingHosts !== []) {
     foreach ($marketingHosts as $index => $domain) {
@@ -98,7 +99,13 @@ Route::middleware([EnsureTenantContext::class])->group(function () {
     Route::post('/checkout', [PublicBookingController::class, 'storeCheckout'])->name('booking.store-checkout');
     Route::get('/thank-you/{booking?}', [PublicBookingController::class, 'thankYou'])->name('booking.thank-you');
     Route::view('/articles', 'tenant.pages.articles.index')->name('articles.index');
-    Route::get('/{slug}', [PageController::class, 'show'])->where('slug', '[a-z0-9\-]+')->name('page.show');
+    Route::post('/api/tenant/booking/catalog-availability', [TenantPublicBookingAvailabilityController::class, 'catalogAvailability'])
+        ->middleware('throttle:120,1')
+        ->name('api.tenant.booking.catalog-availability');
+    Route::post('/api/tenant/booking/motorcycle-calendar-hints', [TenantPublicBookingAvailabilityController::class, 'motorcycleCalendarHints'])
+        ->middleware('throttle:120,1')
+        ->name('api.tenant.booking.motorcycle-calendar-hints');
     Route::post('/api/bookings', [BookingController::class, 'store'])->name('api.bookings.store');
     Route::post('/api/leads', [LeadController::class, 'store'])->name('api.leads.store');
+    Route::get('/{slug}', [PageController::class, 'show'])->where('slug', '[a-z0-9\-]+')->name('page.show');
 });

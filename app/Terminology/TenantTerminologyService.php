@@ -7,27 +7,65 @@ use App\Models\DomainTerm;
 use App\Models\Tenant;
 use App\Models\TenantTermOverride;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 
 final class TenantTerminologyService
 {
-    private const CACHE_VERSION = 'v1';
+    private const CACHE_VERSION = 'v3';
 
     public function label(Tenant $tenant, string $termKey, ?string $locale = null): string
     {
         $dict = $this->dictionary($tenant, $locale);
         $entry = $dict[$termKey] ?? null;
+        if (is_array($entry)) {
+            return (string) ($entry['label'] ?? TerminologyHumanizer::humanize($termKey));
+        }
 
-        return is_array($entry) ? (string) ($entry['label'] ?? $termKey) : $termKey;
+        $term = DomainTerm::query()->where('term_key', $termKey)->first();
+        if ($term === null) {
+            return TerminologyHumanizer::humanize($termKey);
+        }
+
+        if (! $term->is_active) {
+            return $this->composeInactiveTermEntry($tenant, $term)['label'];
+        }
+
+        return $this->composeTermEntry($term, $this->loadOverride($tenant, $term), $this->loadPresetRow($tenant, $term), $tenant->id)['label'];
+    }
+
+    /**
+     * Like {@see label()}, but when the term_key is not registered in domain_terms at all,
+     * returns $fallback (e.g. resource hardcoded Russian label).
+     */
+    public function labelWithFallback(Tenant $tenant, string $termKey, string $fallback): string
+    {
+        if (! DomainTerm::query()->where('term_key', $termKey)->exists()) {
+            return $fallback;
+        }
+
+        return $this->label($tenant, $termKey);
     }
 
     public function shortLabel(Tenant $tenant, string $termKey, ?string $locale = null): ?string
     {
         $dict = $this->dictionary($tenant, $locale);
         $entry = $dict[$termKey] ?? null;
-        if (! is_array($entry)) {
+        if (is_array($entry)) {
+            $short = $entry['short_label'] ?? null;
+
+            return $short !== null && $short !== '' ? (string) $short : null;
+        }
+
+        $term = DomainTerm::query()->where('term_key', $termKey)->first();
+        if ($term === null) {
             return null;
         }
-        $short = $entry['short_label'] ?? null;
+
+        if (! $term->is_active) {
+            $short = $this->composeInactiveTermEntry($tenant, $term)['short_label'];
+        } else {
+            $short = $this->composeTermEntry($term, $this->loadOverride($tenant, $term), $this->loadPresetRow($tenant, $term), $tenant->id)['short_label'];
+        }
 
         return $short !== null && $short !== '' ? (string) $short : null;
     }
@@ -42,14 +80,16 @@ final class TenantTerminologyService
         $out = [];
         foreach ($termKeys as $key) {
             $entry = $dict[$key] ?? null;
-            $out[$key] = is_array($entry) ? (string) ($entry['label'] ?? $key) : $key;
+            $out[$key] = is_array($entry)
+                ? (string) ($entry['label'] ?? TerminologyHumanizer::humanize($key))
+                : $this->label($tenant, $key, $locale);
         }
 
         return $out;
     }
 
     /**
-     * @return array<string, array{label: string, short_label: ?string}>
+     * @return array<string, array{label: string, short_label: ?string, source: string}>
      */
     public function dictionary(Tenant $tenant, ?string $locale = null): array
     {
@@ -113,7 +153,7 @@ final class TenantTerminologyService
     }
 
     /**
-     * @return array<string, array{label: string, short_label: ?string}>
+     * @return array<string, array{label: string, short_label: ?string, source: string}>
      */
     private function buildDictionary(Tenant $tenant): array
     {
@@ -146,33 +186,125 @@ final class TenantTerminologyService
         $map = [];
         foreach ($terms as $termKey => $term) {
             /** @var DomainTerm $term */
-            $override = $overridesByTermId->get($term->id);
-            $presetRow = $presetTermsByTermId->get($term->id);
-
-            $label = $override?->label
-                ?? $presetRow?->label
-                ?? $term->default_label
-                ?? $termKey;
-
-            $short = $override?->short_label ?? $presetRow?->short_label;
-            if ($short === '') {
-                $short = null;
-            }
-
-            $source = 'default';
-            if ($override !== null) {
-                $source = 'override';
-            } elseif ($presetRow !== null) {
-                $source = 'preset';
-            }
-
-            $map[$termKey] = [
-                'label' => (string) $label,
-                'short_label' => $short,
-                'source' => $source,
-            ];
+            $map[$termKey] = $this->composeTermEntry(
+                $term,
+                $overridesByTermId->get($term->id),
+                $presetTermsByTermId->get($term->id),
+                $tenant->id
+            );
         }
 
         return $map;
+    }
+
+    /**
+     * Inactive terms are excluded from the cached dictionary; if addressed directly, ignore preset
+     * (term is off) but still honour tenant override and DB default_label.
+     *
+     * @return array{label: string, short_label: ?string, source: string}
+     */
+    private function composeInactiveTermEntry(Tenant $tenant, DomainTerm $term): array
+    {
+        $override = $this->loadOverride($tenant, $term);
+        $termKey = $term->term_key;
+        $fromDefault = $term->default_label !== null && $term->default_label !== '';
+        $systemBase = $fromDefault ? (string) $term->default_label : TerminologyHumanizer::humanize($termKey);
+
+        $label = $override?->label ?? $systemBase;
+
+        $short = $override?->short_label;
+        if ($short === '') {
+            $short = null;
+        }
+
+        if ($override !== null) {
+            $source = 'inactive_override';
+        } elseif ($fromDefault) {
+            $source = 'inactive';
+        } else {
+            $source = 'inactive_fallback';
+            $this->maybeLogTerminologyFallback($termKey, $tenant->id, 'inactive_term_empty_default');
+        }
+
+        return [
+            'label' => (string) $label,
+            'short_label' => $short,
+            'source' => $source,
+        ];
+    }
+
+    /**
+     * @return array{label: string, short_label: ?string, source: string}
+     */
+    private function composeTermEntry(
+        DomainTerm $term,
+        ?TenantTermOverride $override,
+        ?DomainLocalizationPresetTerm $presetRow,
+        ?int $logTenantId = null
+    ): array {
+        $termKey = $term->term_key;
+        $fromDefault = $term->default_label !== null && $term->default_label !== '';
+        $systemBase = $fromDefault ? (string) $term->default_label : TerminologyHumanizer::humanize($termKey);
+
+        $label = $override?->label ?? $presetRow?->label ?? $systemBase;
+
+        $short = $override?->short_label ?? $presetRow?->short_label;
+        if ($short === '') {
+            $short = null;
+        }
+
+        if ($override !== null) {
+            $source = 'override';
+        } elseif ($presetRow !== null) {
+            $source = 'preset';
+        } elseif ($fromDefault) {
+            $source = 'default';
+        } else {
+            $source = 'fallback';
+            $this->maybeLogTerminologyFallback($termKey, $logTenantId, 'empty_default_no_preset');
+        }
+
+        return [
+            'label' => (string) $label,
+            'short_label' => $short,
+            'source' => $source,
+        ];
+    }
+
+    private function maybeLogTerminologyFallback(string $termKey, ?int $tenantId, string $reason): void
+    {
+        if (! config('terminology.log_fallbacks', true)) {
+            return;
+        }
+
+        if (! config('app.debug') && ! app()->environment('local')) {
+            return;
+        }
+
+        Log::warning('Terminology fallback label used', [
+            'term_key' => $termKey,
+            'tenant_id' => $tenantId,
+            'reason' => $reason,
+        ]);
+    }
+
+    private function loadOverride(Tenant $tenant, DomainTerm $term): ?TenantTermOverride
+    {
+        return TenantTermOverride::query()
+            ->where('tenant_id', $tenant->id)
+            ->where('term_id', $term->id)
+            ->first();
+    }
+
+    private function loadPresetRow(Tenant $tenant, DomainTerm $term): ?DomainLocalizationPresetTerm
+    {
+        if ($tenant->domain_localization_preset_id === null) {
+            return null;
+        }
+
+        return DomainLocalizationPresetTerm::query()
+            ->where('preset_id', $tenant->domain_localization_preset_id)
+            ->where('term_id', $term->id)
+            ->first();
     }
 }

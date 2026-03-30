@@ -11,7 +11,7 @@
 
 @section('content')
     <!-- Alpine App State -->
-    <div x-data="globalBookingState()" data-bike-ids="{{ $bikeIdsJson }}" class="w-full min-w-0">
+    <div x-data="globalBookingState()" data-bike-ids="{{ $bikeIdsJson }}" class="w-full min-w-0" x-init="$nextTick(() => { const s = Alpine.store('tenantBooking'); if (s.filters.start_date && s.filters.end_date) { s.applyCatalogSearch(); } })">
         
         <!-- Extracted Hero Component -->
         <x-hero :section="$sections['hero'] ?? null" />
@@ -46,7 +46,10 @@
                 <!-- Bikes Grid -->
                 <div class="grid grid-cols-1 gap-5 sm:gap-6 md:grid-cols-2 md:gap-6 xl:grid-cols-3 xl:gap-8" x-show="filteredBikes.length > 0">
                     @foreach($bikes as $index => $bike)
-                        <div x-show="isBikeVisible({{ $bike->id }})">
+                        <div class="min-w-0 transition-opacity duration-300"
+                             x-show="isBikeVisible({{ $bike->id }})"
+                             :class="{ 'opacity-[0.42]': isCatalogDimmed({{ $bike->id }}) }"
+                             :style="{ order: catalogOrder({{ $bike->id }}) }">
                             <x-bike-card :bike="$bike" :badge="$badges[$index] ?? null" />
                         </div>
                     @endforeach
@@ -75,31 +78,37 @@
             const el = document.querySelector('[data-bike-ids]');
             const bikeIds = el ? JSON.parse(el.getAttribute('data-bike-ids')) : [];
             return {
-                filters: { start_date: '', end_date: '', location: '' },
-                isSearching: false,
                 allBikes: bikeIds,
                 filteredBikes: [...bikeIds],
 
-            applySearch() {
-                if (!this.filters.start_date || !this.filters.end_date) {
-                    const el = document.getElementById('start_date');
-                    if (el) el.focus();
-                    return;
-                }
-                
-                this.isSearching = true;
-                
-                // Simulate network filtering
-                setTimeout(() => {
-                    document.getElementById('catalog').scrollIntoView({behavior: 'smooth'});
-                    this.isSearching = false;
-                }, 400);
+            resetFilters() {
+                const s = Alpine.store('tenantBooking');
+                s.filters.start_date = '';
+                s.filters.end_date = '';
+                s.filters.location = '';
+                s.catalogAvailability = null;
+                s.persist();
+                window.TenantDatePickers?.clearBar?.();
+                this.filteredBikes = this.allBikes;
             },
 
-            resetFilters() {
-                this.filters.start_date = '';
-                this.filters.end_date = '';
-                this.filteredBikes = this.allBikes;
+            catalogOrder(id) {
+                const m = Alpine.store('tenantBooking').catalogAvailability;
+                if (m == null || typeof m !== 'object') {
+                    return 0;
+                }
+                const ok = m[String(id)] === true || m[id] === true;
+
+                return ok ? 0 : 1;
+            },
+
+            isCatalogDimmed(id) {
+                const m = Alpine.store('tenantBooking').catalogAvailability;
+                if (m == null || typeof m !== 'object') {
+                    return false;
+                }
+
+                return ! (m[String(id)] === true || m[id] === true);
             },
 
             isBikeVisible(id) {
@@ -117,17 +126,7 @@
             },
 
             calculateCardTotalPrice(pricePerDay) {
-                if (!this.filters.start_date || !this.filters.end_date) return 0;
-                const start = new Date(this.filters.start_date);
-                const end = new Date(this.filters.end_date);
-                if (end < start) return 0;
-                
-                const MS_PER_DAY = 1000 * 60 * 60 * 24;
-                const utc1 = Date.UTC(start.getFullYear(), start.getMonth(), start.getDate());
-                const utc2 = Date.UTC(end.getFullYear(), end.getMonth(), end.getDate());
-                
-                const days = Math.floor((utc2 - utc1) / MS_PER_DAY) + 1;
-                return days * pricePerDay;
+                return Alpine.store('tenantBooking').calculateCardTotalPrice(pricePerDay);
             }
         };
         });

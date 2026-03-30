@@ -30,15 +30,17 @@ class TenantTerminologyIsolationTest extends TestCase
             'sort_order' => 0,
         ]);
 
-        $term = DomainTerm::query()->create([
-            'term_key' => DomainTermKeys::BOOKING,
-            'group' => 'booking_flow',
-            'default_label' => 'Booking default',
-            'value_type' => 'text',
-            'is_required' => true,
-            'is_active' => true,
-            'is_editable_by_tenant' => true,
-        ]);
+        $term = DomainTerm::query()->updateOrCreate(
+            ['term_key' => DomainTermKeys::BOOKING],
+            [
+                'group' => 'booking_flow',
+                'default_label' => 'Booking default',
+                'value_type' => 'text',
+                'is_required' => true,
+                'is_active' => true,
+                'is_editable_by_tenant' => true,
+            ]
+        );
 
         DomainLocalizationPresetTerm::query()->create([
             'preset_id' => $presetA->id,

@@ -99,4 +99,29 @@ class Booking extends Model
     {
         return $this->hasMany(BookingAddon::class);
     }
+
+    /**
+     * Статусы брони, при которых слот считается занятым для публичной доступности.
+     *
+     * @return list<BookingStatus>
+     */
+    public static function occupyingStatuses(): array
+    {
+        return [
+            BookingStatus::PENDING,
+            BookingStatus::AWAITING_PAYMENT,
+            BookingStatus::CONFIRMED,
+        ];
+    }
+
+    /**
+     * @return list<string>
+     */
+    public static function occupyingStatusValues(): array
+    {
+        return array_map(
+            static fn (BookingStatus $s): string => $s->value,
+            self::occupyingStatuses(),
+        );
+    }
 }

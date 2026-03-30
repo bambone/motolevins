@@ -74,18 +74,27 @@ class CrmRequestFilamentIsolationTest extends TestCase
             '/admin/crm-requests/'.$crmB->id
         );
 
+        // ViewCrmRequest::resolveRecord uses tenant-scoped getEloquentQuery() → ModelNotFound → 404 (no id existence leak).
+        $response->assertNotFound();
         $response->assertDontSee($secretB, false);
-        $this->assertTrue(
-            $response->isRedirect() || $response->isNotFound(),
-            'Expected redirect (policy) or 404 (scoped record missing), got '.$response->getStatusCode()
+    }
+
+    public function test_tenant_can_view_own_crm_record_via_direct_url(): void
+    {
+        $tenantA = $this->createTenantWithActiveDomain('tview');
+        $secretA = 'own-view-'.uniqid('', true).'@example.test';
+        $crmA = $this->makeCrmRequest($tenantA->id, ['email' => $secretA]);
+
+        $user = User::factory()->create(['status' => 'active']);
+        $user->tenants()->attach($tenantA->id, ['role' => 'operator', 'status' => 'active']);
+
+        $response = $this->actingAs($user)->getWithHost(
+            $this->tenancyHostForSlug('tview'),
+            '/admin/crm-requests/'.$crmA->id
         );
 
-        if ($response->isRedirect()) {
-            $response->assertSessionHas(FilamentAccessDeniedRedirect::SESSION_KEY);
-            $location = (string) $response->headers->get('Location');
-            $this->assertStringNotContainsString($secretB, $location);
-            $this->actingAs($user)->get($location)->assertDontSee($secretB, false);
-        }
+        $response->assertOk();
+        $response->assertSee($secretA, false);
     }
 
     public function test_corrupted_lead_crm_link_same_as_foreign_crm_id_does_not_leak_tenant_b_pii(): void

@@ -6,6 +6,7 @@ use App\Models\DomainLocalizationPreset;
 use App\Models\DomainLocalizationPresetTerm;
 use App\Models\DomainTerm;
 use App\Models\Tenant;
+use App\Terminology\DomainTermEmergencyLabels;
 use App\Terminology\DomainTermKeys;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Seeder;
@@ -162,6 +163,38 @@ class DomainTerminologySeeder extends Seeder
                 DomainTermKeys::FLEET_UNIT => 'Единица инструмента',
                 DomainTermKeys::FLEET_UNIT_PLURAL => 'Единицы инструмента',
             ]),
+            'advanced_driving_pk' => array_replace($g, [
+                DomainTermKeys::BOOKING => 'Запись',
+                DomainTermKeys::BOOKING_PLURAL => 'Записи',
+                DomainTermKeys::APPOINTMENT => 'Занятие',
+                DomainTermKeys::APPOINTMENT_PLURAL => 'Занятия',
+                DomainTermKeys::RESOURCE => 'Курс',
+                DomainTermKeys::RESOURCE_PLURAL => 'Курсы',
+                DomainTermKeys::STAFF_MEMBER => 'Инструктор',
+                DomainTermKeys::STAFF_MEMBER_PLURAL => 'Инструкторы',
+                DomainTermKeys::FLEET_UNIT => 'Учебный автомобиль',
+                DomainTermKeys::FLEET_UNIT_PLURAL => 'Учебные автомобили',
+                DomainTermKeys::LEAD => 'Заявка на обучение',
+                DomainTermKeys::LEAD_PLURAL => 'Заявки на обучение',
+                DomainTermKeys::REQUEST => 'CRM-обращение',
+                DomainTermKeys::REQUEST_PLURAL => 'CRM-обращения',
+            ]),
+            'nail_service_booking' => array_replace($g, [
+                DomainTermKeys::BOOKING => 'Запись',
+                DomainTermKeys::BOOKING_PLURAL => 'Записи',
+                DomainTermKeys::APPOINTMENT => 'Приём',
+                DomainTermKeys::APPOINTMENT_PLURAL => 'Приёмы',
+                DomainTermKeys::RESOURCE => 'Услуга',
+                DomainTermKeys::RESOURCE_PLURAL => 'Услуги',
+                DomainTermKeys::STAFF_MEMBER => 'Мастер',
+                DomainTermKeys::STAFF_MEMBER_PLURAL => 'Мастера',
+                DomainTermKeys::LEAD => 'Обращение',
+                DomainTermKeys::LEAD_PLURAL => 'Обращения',
+                DomainTermKeys::REQUEST => 'CRM-обращение',
+                DomainTermKeys::REQUEST_PLURAL => 'CRM-обращения',
+                DomainTermKeys::FLEET_UNIT => 'Рабочее место',
+                DomainTermKeys::FLEET_UNIT_PLURAL => 'Рабочие места',
+            ]),
         ];
     }
 
@@ -170,33 +203,6 @@ class DomainTerminologySeeder extends Seeder
      */
     private function genericLabels(): array
     {
-        return [
-            DomainTermKeys::LEAD => 'Заявка',
-            DomainTermKeys::LEAD_PLURAL => 'Заявки',
-            DomainTermKeys::BOOKING => 'Бронирование',
-            DomainTermKeys::BOOKING_PLURAL => 'Бронирования',
-            DomainTermKeys::APPOINTMENT => 'Запись',
-            DomainTermKeys::APPOINTMENT_PLURAL => 'Записи',
-            DomainTermKeys::REQUEST => 'Обращение',
-            DomainTermKeys::REQUEST_PLURAL => 'Обращения',
-            DomainTermKeys::CUSTOMER => 'Клиент',
-            DomainTermKeys::CUSTOMER_PLURAL => 'Клиенты',
-            DomainTermKeys::SERVICE => 'Услуга',
-            DomainTermKeys::SERVICE_PLURAL => 'Услуги',
-            DomainTermKeys::RESOURCE => 'Объект каталога',
-            DomainTermKeys::RESOURCE_PLURAL => 'Объекты каталога',
-            DomainTermKeys::STAFF_MEMBER => 'Сотрудник',
-            DomainTermKeys::STAFF_MEMBER_PLURAL => 'Сотрудники',
-            DomainTermKeys::LOCATION => 'Локация',
-            DomainTermKeys::LOCATION_PLURAL => 'Локации',
-            DomainTermKeys::CATEGORY => 'Категория',
-            DomainTermKeys::CATEGORY_PLURAL => 'Категории',
-            DomainTermKeys::FLEET_UNIT => 'Единица парка',
-            DomainTermKeys::FLEET_UNIT_PLURAL => 'Единицы парка',
-            DomainTermKeys::NAV_OPERATIONS => 'Операции',
-            DomainTermKeys::NAV_CATALOG => 'Каталог',
-            DomainTermKeys::NAV_CONTENT => 'Контент',
-            DomainTermKeys::NAV_SETTINGS => 'Настройки',
-        ];
+        return DomainTermEmergencyLabels::ruMap();
     }
 }

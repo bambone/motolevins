@@ -10,6 +10,7 @@ use App\Models\Bike;
 use App\Models\Booking;
 use App\Models\BookingAddon;
 use App\Models\RentalUnit;
+use App\Support\PhoneNormalizer;
 use Carbon\Carbon;
 use Exception;
 
@@ -49,7 +50,7 @@ class BookingService
             'total_price' => $totalPrice,
             'customer_name' => $data->customer_name,
             'phone' => $data->phone,
-            'phone_normalized' => $this->normalizePhone($data->phone),
+            'phone_normalized' => PhoneNormalizer::normalize($data->phone),
             'source' => $data->source,
             'customer_comment' => $data->customer_comment,
         ]);
@@ -83,7 +84,7 @@ class BookingService
             'payment_status' => 'pending',
             'customer_name' => $data['customer_name'],
             'phone' => $data['phone'],
-            'phone_normalized' => $this->normalizePhone($data['phone']),
+            'phone_normalized' => PhoneNormalizer::normalize($data['phone']),
             'source' => $data['source'] ?? 'public_booking',
             'customer_comment' => $data['customer_comment'] ?? null,
         ]);
@@ -112,7 +113,7 @@ class BookingService
     public function isAvailable(int $bikeId, string $startDate, string $endDate): bool
     {
         return ! Booking::where('bike_id', $bikeId)
-            ->whereIn('status', [BookingStatus::PENDING, BookingStatus::CONFIRMED])
+            ->whereIn('status', Booking::occupyingStatusValues())
             ->where('start_date', '<=', $endDate)
             ->where('end_date', '>=', $startDate)
             ->exists();
@@ -120,11 +121,14 @@ class BookingService
 
     public function isAvailableForMotorcycle(int $motorcycleId, string $startDate, string $endDate): bool
     {
-        $rentalUnits = RentalUnit::where('motorcycle_id', $motorcycleId)->where('status', 'active')->pluck('id');
+        $rentalUnits = RentalUnit::query()
+            ->where('motorcycle_id', $motorcycleId)
+            ->where('status', 'active')
+            ->get();
 
         if ($rentalUnits->isEmpty()) {
             return ! Booking::where('motorcycle_id', $motorcycleId)
-                ->whereIn('status', [BookingStatus::PENDING, BookingStatus::CONFIRMED])
+                ->whereIn('status', Booking::occupyingStatusValues())
                 ->where('start_date', '<=', $endDate)
                 ->where('end_date', '>=', $startDate)
                 ->exists();
@@ -133,18 +137,12 @@ class BookingService
         $start = Carbon::parse($startDate)->startOfDay();
         $end = Carbon::parse($endDate)->endOfDay();
 
-        foreach ($rentalUnits as $unitId) {
-            $unit = RentalUnit::find($unitId);
-            if ($unit && $this->availabilityService->isAvailable($unit, $start, $end)) {
+        foreach ($rentalUnits as $unit) {
+            if ($this->availabilityService->isAvailable($unit, $start, $end)) {
                 return true;
             }
         }
 
         return false;
-    }
-
-    private function normalizePhone(string $phone): string
-    {
-        return preg_replace('/[^0-9+]/', '', $phone);
     }
 }

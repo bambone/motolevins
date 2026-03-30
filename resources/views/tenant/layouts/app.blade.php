@@ -36,8 +36,148 @@
         </script>
     @endif
 
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css">
+
     <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.14.3/dist/cdn.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.3/dist/cdn.min.js"></script>
+    <script>
+        document.addEventListener('alpine:init', () => {
+            if (window.__tenantBookingStoreRegistered) {
+                return;
+            }
+            window.__tenantBookingStoreRegistered = true;
+
+            const STORAGE_KEY = 'tenant_rental_period_v1';
+
+            Alpine.store('tenantBooking', {
+                filters: { start_date: '', end_date: '', location: '' },
+                isSearching: false,
+                catalogAvailability: null,
+                _persistTimer: null,
+
+                loadFromStorage() {
+                    try {
+                        const raw = localStorage.getItem(STORAGE_KEY);
+                        if (! raw) {
+                            return;
+                        }
+                        const o = JSON.parse(raw);
+                        if (typeof o.start_date === 'string') {
+                            this.filters.start_date = o.start_date;
+                        }
+                        if (typeof o.end_date === 'string') {
+                            this.filters.end_date = o.end_date;
+                        }
+                        if (typeof o.location === 'string') {
+                            this.filters.location = o.location;
+                        }
+                    } catch (e) {}
+                },
+
+                persist() {
+                    try {
+                        localStorage.setItem(STORAGE_KEY, JSON.stringify({
+                            start_date: this.filters.start_date,
+                            end_date: this.filters.end_date,
+                            location: this.filters.location,
+                        }));
+                    } catch (e) {}
+                },
+
+                schedulePersist() {
+                    clearTimeout(this._persistTimer);
+                    this._persistTimer = setTimeout(() => this.persist(), 40);
+                },
+
+                onLocationChange() {
+                    this.schedulePersist();
+                },
+
+                async applyCatalogSearch() {
+                    if (! this.filters.start_date || ! this.filters.end_date) {
+                        this.catalogAvailability = null;
+                        if (typeof window.TenantDatePickers?.openBarStart === 'function') {
+                            window.TenantDatePickers.openBarStart();
+                        } else {
+                            document.getElementById('start_date')?.focus();
+                        }
+
+                        return;
+                    }
+                    this.persist();
+                    this.isSearching = true;
+                    this.catalogAvailability = null;
+                    try {
+                        const bikeIdsEl = document.querySelector('[data-bike-ids]');
+                        let motorcycleIds = [];
+                        if (bikeIdsEl) {
+                            try {
+                                motorcycleIds = JSON.parse(bikeIdsEl.getAttribute('data-bike-ids') || '[]');
+                            } catch (e) {
+                                motorcycleIds = [];
+                            }
+                        }
+                        const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+                        if (csrf && Array.isArray(motorcycleIds) && motorcycleIds.length > 0) {
+                            const res = await fetch('/api/tenant/booking/catalog-availability', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRF-TOKEN': csrf,
+                                    Accept: 'application/json',
+                                },
+                                body: JSON.stringify({
+                                    start_date: this.filters.start_date,
+                                    end_date: this.filters.end_date,
+                                    motorcycle_ids: motorcycleIds,
+                                }),
+                            });
+                            const data = await res.json().catch(() => ({}));
+                            if (res.ok && data.availability && typeof data.availability === 'object') {
+                                this.catalogAvailability = data.availability;
+                            }
+                        }
+                    } catch (e) {
+                        this.catalogAvailability = null;
+                    } finally {
+                        this.isSearching = false;
+                        setTimeout(() => {
+                            document.getElementById('catalog')?.scrollIntoView({ behavior: 'smooth' });
+                        }, 50);
+                    }
+                },
+
+                rentalDayCount() {
+                    const f = this.filters;
+                    if (! f.start_date || ! f.end_date) {
+                        return 0;
+                    }
+                    const start = new Date(f.start_date);
+                    const end = new Date(f.end_date);
+                    if (end < start) {
+                        return 0;
+                    }
+                    const MS_PER_DAY = 1000 * 60 * 60 * 24;
+                    const utc1 = Date.UTC(start.getFullYear(), start.getMonth(), start.getDate());
+                    const utc2 = Date.UTC(end.getFullYear(), end.getMonth(), end.getDate());
+
+                    return Math.floor((utc2 - utc1) / MS_PER_DAY) + 1;
+                },
+
+                calculateCardTotalPrice(pricePerDay) {
+                    const days = this.rentalDayCount();
+
+                    return days > 0 ? days * Number(pricePerDay) : 0;
+                },
+
+                formatPrice(amount) {
+                    return new Intl.NumberFormat('ru-RU').format(amount);
+                },
+            });
+
+            Alpine.store('tenantBooking').loadFromStorage();
+        });
+    </script>
 
     <style>
         [x-cloak] { display: none !important; }
@@ -83,13 +223,117 @@
         }
         .tenant-btn-secondary:focus-visible { outline: 2px solid #e85d04; outline-offset: 2px; }
         .tenant-btn-secondary:active { transform: scale(0.98); }
+
+        /* Flatpickr — тёмная тема под мотошапку / модалку */
+        .flatpickr-calendar.tenant-fp {
+            z-index: 200 !important;
+            background: #141417;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 1rem;
+            box-shadow: 0 24px 48px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(232, 93, 4, 0.12);
+            color: #e4e4e7;
+            font-family: inherit;
+        }
+        .flatpickr-calendar.tenant-fp .flatpickr-months {
+            padding: 0.5rem 0.35rem 0.25rem;
+        }
+        .flatpickr-calendar.tenant-fp .flatpickr-month {
+            color: #fafafa;
+        }
+        .flatpickr-calendar.tenant-fp .flatpickr-current-month {
+            font-weight: 700;
+        }
+        .flatpickr-calendar.tenant-fp .flatpickr-weekdays {
+            background: transparent;
+        }
+        .flatpickr-calendar.tenant-fp span.flatpickr-weekday {
+            color: #a1a1aa;
+            font-weight: 600;
+        }
+        .flatpickr-calendar.tenant-fp .flatpickr-day {
+            border-radius: 0.5rem;
+            color: #e4e4e7;
+            border-color: transparent;
+        }
+        .flatpickr-calendar.tenant-fp .flatpickr-day:hover,
+        .flatpickr-calendar.tenant-fp .flatpickr-day:focus {
+            background: rgba(232, 93, 4, 0.2);
+            border-color: rgba(232, 93, 4, 0.45);
+            color: #fff;
+        }
+        .flatpickr-calendar.tenant-fp .flatpickr-day.selected,
+        .flatpickr-calendar.tenant-fp .flatpickr-day.startRange,
+        .flatpickr-calendar.tenant-fp .flatpickr-day.endRange {
+            background: #e85d04;
+            border-color: #e85d04;
+            color: #0c0c0c;
+            font-weight: 700;
+        }
+        .flatpickr-calendar.tenant-fp .flatpickr-day.today {
+            border-color: rgba(232, 93, 4, 0.55);
+        }
+        .flatpickr-calendar.tenant-fp .flatpickr-day.flatpickr-disabled,
+        .flatpickr-calendar.tenant-fp .flatpickr-day.prevMonthDay,
+        .flatpickr-calendar.tenant-fp .flatpickr-day.nextMonthDay {
+            color: #52525b;
+        }
+        .flatpickr-calendar.tenant-fp .flatpickr-prev-month,
+        .flatpickr-calendar.tenant-fp .flatpickr-next-month {
+            fill: #fafafa;
+        }
+        .flatpickr-calendar.tenant-fp .flatpickr-prev-month:hover svg,
+        .flatpickr-calendar.tenant-fp .flatpickr-next-month:hover svg {
+            fill: #e85d04;
+        }
+        input.tenant-fp-alt {
+            width: 100%;
+            min-height: 2.75rem;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 0.75rem;
+            padding: 0.625rem 1rem;
+            color: #fff;
+            font-size: 0.875rem;
+            outline: none;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
+            cursor: pointer;
+        }
+        input.tenant-fp-alt--sm {
+            min-height: 2.5rem;
+            padding-top: 0.5rem;
+            padding-bottom: 0.5rem;
+            font-size: 0.8125rem;
+        }
+        .tenant-fp-alt:focus {
+            border-color: rgba(232, 93, 4, 0.55);
+            box-shadow: 0 0 0 1px rgba(232, 93, 4, 0.35);
+        }
+        .tenant-thin-scrollbar {
+            scrollbar-width: thin;
+            scrollbar-color: rgba(232, 93, 4, 0.35) rgba(255, 255, 255, 0.06);
+        }
+        .tenant-thin-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .tenant-thin-scrollbar::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.04);
+            border-radius: 999px;
+        }
+        .tenant-thin-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(232, 93, 4, 0.35);
+            border-radius: 999px;
+        }
+        .tenant-thin-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: rgba(232, 93, 4, 0.5);
+        }
     </style>
 </head>
 <body class="antialiased premium-bg text-silver selection:bg-moto-amber selection:text-[#0c0c0c] overflow-x-clip pb-32 sm:pb-0">
 
     <x-header />
 
-    <main class="w-full min-w-0 pb-32 sm:pb-0">
+    {{-- Корневой x-data: без него Alpine не обрабатывает @click/$dispatch на страницах вне обёртки (например карточка мотоцикла). --}}
+    <main class="w-full min-w-0 pb-32 sm:pb-0" x-data="{}">
         @yield('content')
     </main>
 
@@ -117,6 +361,213 @@
     </div>
 
     <x-pwa-install-prompt />
+
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/l10n/ru.js"></script>
+    @include('tenant.partials.intl-phone')
+    <script>
+        (function () {
+            window.TenantDatePickers = {
+                _barStart: null,
+                _barEnd: null,
+                _modalStart: null,
+                _modalEnd: null,
+                _modalVm: null,
+
+                _locale() {
+                    return (typeof flatpickr !== 'undefined' && flatpickr.l10ns && flatpickr.l10ns.ru)
+                        ? flatpickr.l10ns.ru
+                        : {};
+                },
+
+                _baseOpts(altInputClass) {
+                    return {
+                        locale: this._locale(),
+                        dateFormat: 'Y-m-d',
+                        altInput: true,
+                        altFormat: 'd.m.Y',
+                        altInputClass: altInputClass,
+                        allowInput: false,
+                        disableMobile: true,
+                        onReady(_d, _s, inst) {
+                            inst.calendarContainer.classList.add('tenant-fp');
+                        },
+                    };
+                },
+
+                destroyBar() {
+                    if (this._barStart) {
+                        this._barStart.destroy();
+                        this._barStart = null;
+                    }
+                    if (this._barEnd) {
+                        this._barEnd.destroy();
+                        this._barEnd = null;
+                    }
+                },
+
+                initBar() {
+                    if (typeof flatpickr === 'undefined' || typeof Alpine === 'undefined') {
+                        return;
+                    }
+                    const startEl = document.getElementById('start_date');
+                    const endEl = document.getElementById('end_date');
+                    if (! startEl || ! endEl) {
+                        return;
+                    }
+                    if (startEl._flatpickr) {
+                        return;
+                    }
+
+                    this.destroyBar();
+
+                    const store = Alpine.store('tenantBooking');
+                    const minStr = startEl.getAttribute('data-fp-min') || 'today';
+                    const baseBar = this._baseOpts('tenant-fp-alt');
+
+                    this._barEnd = flatpickr(endEl, {
+                        ...baseBar,
+                        minDate: store.filters.start_date || minStr,
+                        defaultDate: store.filters.end_date || undefined,
+                        onChange: (selectedDates) => {
+                            if (selectedDates[0]) {
+                                store.filters.end_date = this._barEnd.formatDate(selectedDates[0], 'Y-m-d');
+                                store.schedulePersist();
+                            }
+                        },
+                    });
+
+                    this._barStart = flatpickr(startEl, {
+                        ...baseBar,
+                        minDate: minStr,
+                        defaultDate: store.filters.start_date || undefined,
+                        onChange: (selectedDates) => {
+                            if (selectedDates[0]) {
+                                store.filters.start_date = this._barStart.formatDate(selectedDates[0], 'Y-m-d');
+                                store.schedulePersist();
+                                this._barEnd.set('minDate', selectedDates[0]);
+                                const endSel = this._barEnd.selectedDates[0];
+                                if (endSel && endSel < selectedDates[0]) {
+                                    this._barEnd.setDate(selectedDates[0]);
+                                }
+                                requestAnimationFrame(() => this._barEnd.open());
+                            }
+                        },
+                    });
+                },
+
+                openBarEnd() {
+                    this._barEnd?.open();
+                },
+
+                openBarStart() {
+                    this._barStart?.open();
+                },
+
+                clearBar() {
+                    this._barStart?.clear();
+                    this._barEnd?.clear();
+                },
+
+
+                setModalDisableDates(isoDates) {
+                    const set = new Set(isoDates || []);
+                    const fn = (d) => set.has(this._calendarYmd(d));
+                    if (this._modalStart) {
+                        this._modalStart.set('disable', [fn]);
+                    }
+                    if (this._modalEnd) {
+                        this._modalEnd.set('disable', [fn]);
+                    }
+                },
+
+                clearModalDisableDates() {
+                    if (this._modalStart) {
+                        this._modalStart.set('disable', []);
+                    }
+                    if (this._modalEnd) {
+                        this._modalEnd.set('disable', []);
+                    }
+                },
+
+                _calendarYmd(d) {
+                    const y = d.getFullYear();
+                    const m = String(d.getMonth() + 1).padStart(2, '0');
+                    const day = String(d.getDate()).padStart(2, '0');
+
+                    return `${y}-${m}-${day}`;
+                },
+
+                destroyModal() {
+                    this.clearModalDisableDates();
+                    if (this._modalStart) {
+                        this._modalStart.destroy();
+                        this._modalStart = null;
+                    }
+                    if (this._modalEnd) {
+                        this._modalEnd.destroy();
+                        this._modalEnd = null;
+                    }
+                    this._modalVm = null;
+                },
+
+                initModal(vm) {
+                    if (typeof flatpickr === 'undefined') {
+                        return;
+                    }
+                    this.destroyModal();
+                    this._modalVm = vm;
+
+                    const startEl = document.getElementById('booking-modal-start-date');
+                    const endEl = document.getElementById('booking-modal-end-date');
+                    if (! startEl || ! endEl) {
+                        return;
+                    }
+
+                    const minStr = startEl.getAttribute('data-fp-min') || 'today';
+                    const baseModal = this._baseOpts('tenant-fp-alt tenant-fp-alt--sm');
+
+                    this._modalEnd = flatpickr(endEl, {
+                        ...baseModal,
+                        minDate: vm.form.start_date || minStr,
+                        defaultDate: vm.form.end_date || undefined,
+                        onChange: (selectedDates) => {
+                            if (selectedDates[0] && this._modalVm) {
+                                this._modalVm.form.end_date = this._modalEnd.formatDate(selectedDates[0], 'Y-m-d');
+                                this._modalVm.calculatePrice();
+                                if (typeof this._modalVm.scheduleHintsFetch === 'function') {
+                                    this._modalVm.scheduleHintsFetch();
+                                }
+                            }
+                        },
+                    });
+
+                    this._modalStart = flatpickr(startEl, {
+                        ...baseModal,
+                        minDate: minStr,
+                        defaultDate: vm.form.start_date || undefined,
+                        onChange: (selectedDates) => {
+                            if (selectedDates[0] && this._modalVm) {
+                                this._modalVm.form.start_date = this._modalStart.formatDate(selectedDates[0], 'Y-m-d');
+                                this._modalVm.calculatePrice();
+                                if (typeof this._modalVm.scheduleHintsFetch === 'function') {
+                                    this._modalVm.scheduleHintsFetch();
+                                }
+                                this._modalEnd.set('minDate', selectedDates[0]);
+                                const endSel = this._modalEnd.selectedDates[0];
+                                if (endSel && endSel < selectedDates[0]) {
+                                    this._modalEnd.setDate(selectedDates[0]);
+                                }
+                            }
+                        },
+                    });
+                    if (typeof vm.scheduleHintsFetch === 'function') {
+                        vm.scheduleHintsFetch();
+                    }
+                },
+            };
+        })();
+    </script>
 
     @if (! request()->routeIs('offline'))
     <script>
