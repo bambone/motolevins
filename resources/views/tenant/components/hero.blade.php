@@ -2,11 +2,12 @@
 @php
     $section = is_array($section) ? $section : [];
     $videoFile = config('tenant_landing.motolevins_hero_video', 'Moto_levins_1.mp4');
-    $themePosterUrl = tenant_theme_public_url('site/marketing/hero-bg.png');
     $themeVideoUrl = tenant_theme_public_url('site/videos/'.$videoFile);
     $platformPosterUrl = theme_platform_asset_url('marketing/hero-bg.png');
     $platformVideoUrl = theme_platform_asset_url('videos/'.$videoFile);
-    $defaultPosterAbs = $themePosterUrl !== '' ? $themePosterUrl : $platformPosterUrl;
+    // Постер по умолчанию — из bundled-темы (_system/…), как логотипы: дубликат под tenants/{id}/public/site/…
+    // на R2 даёт net::ERR_BLOCKED_BY_ORB в Chrome; кастомный постер — только из секции (video_poster).
+    $defaultPosterAbs = $platformPosterUrl;
     $defaultVideoAbs = $themeVideoUrl !== '' ? $themeVideoUrl : $platformVideoUrl;
 
     /**

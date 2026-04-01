@@ -583,8 +583,9 @@ class TenantNormalizeStorageCommand extends Command
     }
 
     /**
-     * Кладёт дефолтные hero poster + видео в публичное хранилище тенанта (S3/R2 при настроенном диске),
-     * чтобы {@see tenant_theme_public_url()} отдавал URL без legacy public/images.
+     * Кладёт дефолтное hero-видео в публичное хранилище тенанта (S3/R2 при настроенном диске).
+     * Постер не дублируем: в шаблонах дефолт — {@see theme_platform_asset_url('marketing/hero-bg.png')} (_system/…),
+     * иначе на CDN дубликат под tenants/{id}/public/site/… ловит ORB в Chrome.
      */
     private function seedMotoTemplateThemeAssets(): void
     {
@@ -596,13 +597,8 @@ class TenantNormalizeStorageCommand extends Command
             $videoSrc = resource_path('themes/moto/public/videos/'.$videoName);
         }
 
-        $posterSrc = public_path($prefix.'/marketing/hero-bg.png');
-        if (! is_file($posterSrc)) {
-            $posterSrc = resource_path('themes/moto/public/marketing/hero-bg.png');
-        }
-
-        if (! is_file($videoSrc) && ! is_file($posterSrc)) {
-            $this->warn('Нет исходных hero-ассетов в public и в resources/themes/moto/public — пропуск seed-theme-assets.');
+        if (! is_file($videoSrc)) {
+            $this->warn('Нет исходного hero-видео в public и в resources/themes/moto/public — пропуск seed-theme-assets.');
 
             return;
         }
@@ -613,14 +609,8 @@ class TenantNormalizeStorageCommand extends Command
                 continue;
             }
             $ts = TenantStorage::forTrusted($tenant);
-            if (is_file($videoSrc)) {
-                $ts->putPublic('site/videos/'.$videoName, (string) file_get_contents($videoSrc));
-                $this->line("  hero video → tenant #{$tenant->id} ({$tenant->slug})");
-            }
-            if (is_file($posterSrc)) {
-                $ts->putPublic('site/marketing/hero-bg.png', (string) file_get_contents($posterSrc));
-                $this->line("  hero poster → tenant #{$tenant->id} ({$tenant->slug})");
-            }
+            $ts->putPublic('site/videos/'.$videoName, (string) file_get_contents($videoSrc));
+            $this->line("  hero video → tenant #{$tenant->id} ({$tenant->slug})");
             $n++;
         }
 

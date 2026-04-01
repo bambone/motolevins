@@ -1,8 +1,7 @@
 @php
     $bikeIdsJson = $bikes->pluck('id')->toJson();
     $sections = $sections ?? [];
-    $themeHeroLcp = tenant_theme_public_url('site/marketing/hero-bg.png');
-    $heroLcpImage = $themeHeroLcp !== '' ? $themeHeroLcp : theme_platform_asset_url('marketing/hero-bg.png');
+    $heroLcpImage = theme_platform_asset_url('marketing/hero-bg.png');
 @endphp
 @extends('tenant.layouts.app')
 
