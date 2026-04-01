@@ -11,6 +11,10 @@
 /public/build
 /public/hot
 /public/images
+# Собирается из resources/themes + theme:sync-platform-assets; дублирует legacy — не хранить в git
+/public/themes
+# Hero-ролик с прода (~48MB); локально скачать с motolevins.rentbase.su или держать только в R2 у тенанта
+/resources/themes/moto/public/videos/*.mp4
 /public/storage
 # Не создавать: перекрывает маршрут Filament «Клиенты» (/tenants) на platform host; брендинг — storage/app/public/tenants → /storage/…
 /public/tenants

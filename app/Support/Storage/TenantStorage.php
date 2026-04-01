@@ -31,6 +31,18 @@ final class TenantStorage
     /** Каталог Spatie media относительно {@code tenants/{id}/public/}. */
     public const MEDIA_FOLDER = 'media';
 
+    /**
+     * Объектный ключ на public-диске для предустановленной темы (репозиторий + {@code php artisan theme:push-system-bundled}).
+     * Пример: {@code tenants/_system/themes/moto/marketing/hero-bg.png}.
+     */
+    public static function systemBundledThemeObjectKey(string $themeKey, string $relativeWithinTheme): string
+    {
+        $k = strtolower(trim($themeKey, '/'));
+        $rel = ltrim(str_replace('\\', '/', $relativeWithinTheme), '/');
+
+        return self::SYSTEM_POOL_PREFIX.'/themes/'.$k.($rel !== '' ? '/'.$rel : '');
+    }
+
     private function __construct(
         private readonly int $tenantId,
     ) {}
@@ -77,6 +89,16 @@ final class TenantStorage
     public function publicPath(string $path): string
     {
         return $this->root().'/public/'.ltrim($path, '/');
+    }
+
+    /**
+     * Ключ на public-диске: {@code tenants/{id}/public/themes/{relative}}.
+     */
+    public function publicThemesPath(string $relativeWithinThemes = ''): string
+    {
+        $rel = ltrim(str_replace('\\', '/', $relativeWithinThemes), '/');
+
+        return $this->publicPath($rel === '' ? 'themes' : 'themes/'.$rel);
     }
 
     /**

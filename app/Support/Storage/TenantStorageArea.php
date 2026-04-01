@@ -11,6 +11,9 @@ enum TenantStorageArea: string
     /** {@code tenants/{id}/public/site/…} */
     case PublicSite = 'public_site';
 
+    /** {@code tenants/{id}/public/themes/…} — переопределения ассетов темы витрины (поверх bundled / {@code tenants/_system/themes/…}). */
+    case PublicThemes = 'public_themes';
+
     /** {@code tenants/{id}/private/site/seo/…} */
     case PrivateSeo = 'private_seo';
 
@@ -24,6 +27,7 @@ enum TenantStorageArea: string
     {
         return match ($this) {
             self::PublicSite => 'site',
+            self::PublicThemes => 'themes',
             self::PrivateSeo => 'site/seo',
             self::PrivateSeoBackups => 'site/seo-backups',
         };
@@ -31,6 +35,6 @@ enum TenantStorageArea: string
 
     public function isPublicDisk(): bool
     {
-        return $this === self::PublicSite;
+        return $this === self::PublicSite || $this === self::PublicThemes;
     }
 }

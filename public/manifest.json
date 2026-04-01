@@ -11,17 +11,17 @@
   "prefer_related_applications": false,
   "icons": [
     {
-      "src": "themes/moto/icons/icon-192.png",
+      "src": "/theme/build/moto/icons/icon-192.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "themes/moto/icons/icon-512.png",
+      "src": "/theme/build/moto/icons/icon-512.png",
       "sizes": "512x512",
       "type": "image/png"
     },
     {
-      "src": "themes/moto/icons/icon-maskable.png",
+      "src": "/theme/build/moto/icons/icon-maskable.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"

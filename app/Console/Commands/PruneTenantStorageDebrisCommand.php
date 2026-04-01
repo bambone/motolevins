@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use Carbon\CarbonImmutable;
 use Illuminate\Console\Command;
 use Illuminate\Contracts\Filesystem\Filesystem;
+use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Support\Facades\Storage;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
@@ -31,7 +32,9 @@ class PruneTenantStorageDebrisCommand extends Command
         $this->info("livewire-tmp: удаление файлов старше {$maxAge}ч (dry-run=".($dry ? 'yes' : 'no').')…');
         $tmpDir = 'livewire-tmp';
         if (! $disk->exists($tmpDir)) {
-            $this->line('  каталог отсутствует');
+            $absolute = $disk instanceof FilesystemAdapter ? $disk->path($tmpDir) : $tmpDir;
+            $this->line('  каталог отсутствует: '.$absolute);
+            $this->comment('  (диск `local` = storage/app/private; нет временных Livewire-файлов — нечего чистить, это нормально на проде с R2, если загрузок не было.)');
         } else {
             $removed = 0;
             foreach ($disk->files($tmpDir) as $path) {

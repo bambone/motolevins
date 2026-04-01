@@ -25,6 +25,8 @@ class ThemePublishBundledAssetsCommand extends Command
         'avatars/avatar-2.png',
         'avatars/avatar-3.png',
         'icons/icon-192.png',
+        'icons/icon-512.png',
+        'icons/icon-maskable.png',
     ];
 
     protected $signature = 'theme:publish-bundled

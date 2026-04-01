@@ -60,11 +60,12 @@ class Review extends Model implements HasMedia
         }
         if ($this->avatar) {
             $path = ltrim((string) $this->avatar, '/');
+            $fromLegacy = theme_platform_url_from_legacy_public_path($path);
+            if ($fromLegacy !== null && $fromLegacy !== '') {
+                return $fromLegacy;
+            }
             if (str_starts_with($path, 'images/')) {
                 return asset($path);
-            }
-            if (str_starts_with($path, 'motolevins/')) {
-                return asset('images/'.$path);
             }
 
             $disk = Storage::disk(TenantStorageDisks::publicDiskName());

@@ -1,7 +1,6 @@
 @props(['section' => null])
 @php
     $section = is_array($section) ? $section : [];
-    $legacyPrefix = config('themes.legacy_asset_url_prefix', 'images/motolevins');
     $videoFile = config('tenant_landing.motolevins_hero_video', 'Moto_levins_1.mp4');
     $themePosterUrl = tenant_theme_public_url('site/marketing/hero-bg.png');
     $themeVideoUrl = tenant_theme_public_url('site/videos/'.$videoFile);
@@ -14,7 +13,7 @@
      * Старые записи в page_sections указывали poster/video от корня public (images/hero-bg.png, videos/…),
      * из‑за чего запросы шли на /images/hero-bg.png и /videos/… — 404. Перенаправляем в каталог legacy-темы.
      */
-    $normalizeTenantMediaPath = function (?string $path, string $fallbackAbs) use ($legacyPrefix): string {
+    $normalizeTenantMediaPath = function (?string $path, string $fallbackAbs): string {
         $path = $path === null ? '' : trim($path);
         if ($path === '') {
             return $fallbackAbs;
@@ -23,17 +22,21 @@
             return $path;
         }
         $path = ltrim(str_replace('\\', '/', $path), '/');
-        if (str_contains($path, 'motolevins') || str_contains($path, 'themes/')) {
+        $fromLegacy = theme_platform_url_from_legacy_public_path($path);
+        if ($fromLegacy !== null && $fromLegacy !== '') {
+            return $fromLegacy;
+        }
+        if (str_contains($path, 'themes/')) {
             return $path;
         }
         if (preg_match('#^videos/[^/]+\.(mp4|webm)$#i', $path)) {
-            return $legacyPrefix.'/videos/'.basename($path);
+            return theme_platform_asset_url('videos/'.basename($path));
         }
         if (preg_match('#^[^/]+\.(mp4|webm)$#i', $path)) {
-            return $legacyPrefix.'/videos/'.$path;
+            return theme_platform_asset_url('videos/'.$path);
         }
         if (preg_match('#^images/hero-bg\.(png|jpe?g)$#i', $path) || preg_match('#^hero-bg\.(png|jpe?g)$#i', $path)) {
-            return $legacyPrefix.'/marketing/hero-bg.png';
+            return theme_platform_asset_url('marketing/hero-bg.png');
         }
 
         return $path;

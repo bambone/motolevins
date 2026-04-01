@@ -2,6 +2,10 @@
 
 namespace App\Themes;
 
+use App\Models\Tenant;
+use App\Support\Storage\TenantStorage;
+use App\Support\Storage\TenantStorageDisks;
+use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Support\Facades\File;
 
 /**
@@ -43,15 +47,39 @@ final class ThemeRegistry
     }
 
     /**
-     * Публичный URL ассета темы: сначала {@see public/themes/{key}}, затем legacy-префикс из конфига.
+     * См. {@see assetUrl()} — порядок разрешения URL в теле метода.
      */
-    public function assetUrl(string $themeKey, string $relativeWithinTheme): string
+    public function assetUrl(string $themeKey, string $relativeWithinTheme, ?Tenant $tenant = null): string
     {
-        $relativeWithinTheme = ltrim($relativeWithinTheme, '/');
+        $relativeWithinTheme = ltrim(str_replace('\\', '/', $relativeWithinTheme), '/');
         $def = $this->get($this->normalizeKey($themeKey));
+        $disk = TenantStorageDisks::publicDisk();
+
+        if ($tenant !== null && $relativeWithinTheme !== '' && $disk instanceof FilesystemAdapter) {
+            $tenantKey = TenantStorage::forTrusted($tenant)->publicThemesPath($relativeWithinTheme);
+            if (TenantStorageDisks::usesLocalFlyAdapter($disk)) {
+                if ($disk->exists($tenantKey)) {
+                    return $disk->url($tenantKey);
+                }
+            } elseif ($disk->exists($tenantKey)) {
+                return $disk->url($tenantKey);
+            }
+        }
+
         $primary = $def->assetWebPrefix.'/'.$relativeWithinTheme;
         if ($relativeWithinTheme !== '' && is_file(public_path($primary))) {
             return asset($primary);
+        }
+
+        if ($relativeWithinTheme !== '' && $disk instanceof FilesystemAdapter && $this->systemBundledUsesObjectStorage()) {
+            if (! TenantStorageDisks::usesLocalFlyAdapter($disk)) {
+                return $disk->url(TenantStorage::systemBundledThemeObjectKey($def->key, $relativeWithinTheme));
+            }
+
+            $systemKey = TenantStorage::systemBundledThemeObjectKey($def->key, $relativeWithinTheme);
+            if ($disk->exists($systemKey)) {
+                return $disk->url($systemKey);
+            }
         }
 
         $resourceFile = resource_path('themes/'.$def->key.'/public/'.$relativeWithinTheme);
@@ -65,6 +93,16 @@ final class ThemeRegistry
         }
 
         return asset($primary);
+    }
+
+    private function systemBundledUsesObjectStorage(): bool
+    {
+        $raw = config('themes.system_theme_use_object_storage');
+        if ($raw === null || $raw === '') {
+            return ! TenantStorageDisks::usesLocalFlyAdapter(TenantStorageDisks::publicDisk());
+        }
+
+        return filter_var($raw, FILTER_VALIDATE_BOOLEAN);
     }
 
     /**

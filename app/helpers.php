@@ -139,7 +139,38 @@ if (! function_exists('theme_platform_asset_url')) {
             ? (string) config('themes.default_key', 'moto')
             : $tenant->themeKey();
 
-        return app(ThemeRegistry::class)->assetUrl($key, $relativeWithinTheme);
+        return app(ThemeRegistry::class)->assetUrl($key, $relativeWithinTheme, $tenant);
+    }
+}
+
+if (! function_exists('theme_platform_url_from_legacy_public_path')) {
+    /**
+     * Старые значения в БД: {@code images/motolevins/…}, опечатка {@code images/motolevin/…}, {@code motolevins/…} без префикса images.
+     * После удаления {@code public/images/…} их нужно отдавать через {@see theme_platform_asset_url} (/theme/build/… или CDN).
+     */
+    function theme_platform_url_from_legacy_public_path(string $path): ?string
+    {
+        $path = trim(str_replace('\\', '/', $path), '/');
+        if ($path === '') {
+            return null;
+        }
+
+        if (preg_match('#^images/(?:motolevins|motolevin)/(.+)$#i', $path, $m)) {
+            return theme_platform_asset_url($m[1]);
+        }
+
+        $legacy = trim((string) config('themes.legacy_asset_url_prefix', ''), '/');
+        if ($legacy !== '' && str_starts_with(strtolower($path), strtolower($legacy).'/')) {
+            $rest = substr($path, strlen($legacy) + 1);
+
+            return $rest !== '' ? theme_platform_asset_url($rest) : null;
+        }
+
+        if (preg_match('#^motolevins/(.+)$#i', $path, $m)) {
+            return theme_platform_asset_url($m[1]);
+        }
+
+        return null;
     }
 }
 
