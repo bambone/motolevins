@@ -93,6 +93,7 @@ class AdminPanelProvider extends PanelProvider
                 return null;
             })
             ->login(TenantLogin::class)
+            ->favicon(asset('favicon.svg'))
             ->globalSearch(false)
             ->font('Inter')
             ->sidebarCollapsibleOnDesktop()

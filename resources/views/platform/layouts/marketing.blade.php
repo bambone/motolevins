@@ -42,6 +42,7 @@
     <link rel="preload" href="{{ $pmInterCss }}" as="style">
     <link href="{{ $pmInterCss }}" rel="stylesheet" media="print" onload="this.media='all'">
     <noscript><link href="{{ $pmInterCss }}" rel="stylesheet"></noscript>
+    <link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}">
     <title>{{ $fullTitle }}</title>
     <meta name="description" content="{{ Str::limit(strip_tags($metaDescription), 320, '') }}">
     <link rel="canonical" href="{{ $canonical }}">

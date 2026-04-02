@@ -23,6 +23,7 @@ use Illuminate\Session\Middleware\AuthenticateSession;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\View;
+use Illuminate\View\ComponentAttributeBag;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 
 class PlatformPanelProvider extends PanelProvider
@@ -35,7 +36,11 @@ class PlatformPanelProvider extends PanelProvider
             ->domain(config('app.platform_host', 'platform.rentbase.local'))
             ->login()
             ->renderHook(PanelsRenderHook::BODY_START, fn (): string => View::make('components.filament-access-denied-banner')->render())
-            ->brandName('Platform Console')
+            ->brandName('RentBase Platform')
+            ->brandLogo(fn () => View::make('components.platform-logo', [
+                'attributes' => new ComponentAttributeBag(),
+            ]))
+            ->favicon(asset('favicon.svg'))
             ->globalSearch(false)
             ->font('Inter')
             ->maxContentWidth('full')
