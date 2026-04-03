@@ -83,6 +83,7 @@ final class CreateCrmRequestFromPublicForm
             'name' => $submission->name,
             'phone' => $submission->phone,
             'email' => $submission->email,
+            'messenger' => $submission->leadMessenger,
             'comment' => $submission->message,
             'motorcycle_id' => isset($extras['motorcycle_id']) ? (int) $extras['motorcycle_id'] : null,
             'rental_date_from' => $extras['rental_date_from'] ?? null,
@@ -94,7 +95,7 @@ final class CreateCrmRequestFromPublicForm
             'utm_campaign' => $submission->utmCampaign,
             'utm_content' => $submission->utmContent,
             'utm_term' => $submission->utmTerm,
-            'status' => 'new',
+            'status' => $submission->leadInitialStatus ?? 'new',
         ]);
     }
 }

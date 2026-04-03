@@ -11,6 +11,10 @@
         <testsuite name="Feature">
             <directory>tests/Feature</directory>
             <exclude>tests/Feature/CRM</exclude>
+            <exclude>tests/Feature/PageBuilder/Smoke</exclude>
+        </testsuite>
+        <testsuite name="PageBuilderSmoke">
+            <directory>tests/Feature/PageBuilder/Smoke</directory>
         </testsuite>
         <testsuite name="CrmSecurity">
             <directory>tests/Feature/CRM</directory>

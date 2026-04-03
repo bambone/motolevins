@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Motorcycle;
 use App\Models\Page;
+use App\Models\PageSection;
 use App\Models\Tenant;
 use App\Models\TenantDomain;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -139,7 +140,27 @@ class TenantThemeViewResolverTest extends TestCase
 
     public function test_moto_theme_contacts_faq_about_use_resolver_and_engine_fallback(): void
     {
-        $this->createTenantSite('statictheme', ['theme_key' => 'moto']);
+        $tenant = $this->createTenantSite('statictheme', ['theme_key' => 'moto']);
+
+        $contactsPage = Page::query()->create([
+            'tenant_id' => $tenant->id,
+            'name' => 'Контакты',
+            'slug' => 'contacts',
+            'template' => 'default',
+            'status' => 'published',
+            'published_at' => now(),
+        ]);
+
+        PageSection::query()->create([
+            'tenant_id' => $tenant->id,
+            'page_id' => $contactsPage->id,
+            'section_key' => 'main',
+            'title' => 'Основной текст',
+            'data_json' => ['content' => '<p>Контент для теста</p>'],
+            'sort_order' => 0,
+            'is_visible' => true,
+            'status' => 'published',
+        ]);
 
         foreach (['/contacts', '/faq', '/about'] as $path) {
             $this->getWithHost('statictheme.apex.test', $path)

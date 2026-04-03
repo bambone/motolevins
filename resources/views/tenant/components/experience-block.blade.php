@@ -16,7 +16,7 @@
                  @keydown.space.prevent="filters.location = 'Геленджик'; document.getElementById('catalog').scrollIntoView({behavior: 'smooth'})"
                  class="group relative flex aspect-[4/5] cursor-pointer flex-col justify-end overflow-hidden rounded-2xl border border-white/5 bg-carbon p-5 shadow-xl transition-all duration-300 hover:border-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moto-amber md:aspect-[3/4] md:p-8 touch-manipulation">
                 <div class="absolute inset-0 z-0">
-                    <img src="{{ theme_platform_asset_url('marketing/experience-coastal.png') }}" alt="Побережье" width="800" height="1000" sizes="(max-width:768px) 100vw, (max-width:1280px) 50vw, 33vw" loading="lazy" decoding="async" class="h-full w-full object-cover transition-transform duration-[15s] ease-out group-hover:scale-105" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden')">
+                    <img src="{{ theme_platform_asset_url('marketing/experience-coastal.png') }}" alt="Побережье" width="800" height="1000" sizes="(max-width:768px) 100vw, (max-width:1280px) 50vw, 33vw" loading="lazy" decoding="async" fetchpriority="low" class="h-full w-full object-cover transition-transform duration-[15s] ease-out group-hover:scale-105" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden')">
                     <div class="w-full h-full bg-[#111113] hidden img-fallback relative overflow-hidden">
                         <div class="absolute inset-x-0 bottom-0 h-1/2 bg-moto-amber/5 blur-[80px]"></div>
                     </div>
@@ -41,7 +41,7 @@
                  @keydown.space.prevent="filters.location = 'Анапа'; document.getElementById('catalog').scrollIntoView({behavior: 'smooth'})"
                  class="group relative flex aspect-[4/5] cursor-pointer flex-col justify-end overflow-hidden rounded-2xl border border-white/5 bg-carbon p-5 shadow-xl transition-all duration-300 hover:border-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moto-amber md:aspect-[3/4] md:p-8 touch-manipulation">
                 <div class="absolute inset-0 z-0">
-                    <img src="{{ theme_platform_asset_url('marketing/experience-city.png') }}" alt="Город" width="800" height="1000" sizes="(max-width:768px) 100vw, (max-width:1280px) 50vw, 33vw" loading="lazy" decoding="async" class="h-full w-full object-cover transition-transform duration-[15s] ease-out group-hover:scale-105" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden')">
+                    <img src="{{ theme_platform_asset_url('marketing/experience-city.png') }}" alt="Город" width="800" height="1000" sizes="(max-width:768px) 100vw, (max-width:1280px) 50vw, 33vw" loading="lazy" decoding="async" fetchpriority="low" class="h-full w-full object-cover transition-transform duration-[15s] ease-out group-hover:scale-105" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden')">
                     <div class="w-full h-full bg-[#111113] hidden img-fallback relative overflow-hidden">
                         <div class="absolute inset-x-0 bottom-0 h-1/2 bg-moto-amber/5 blur-[80px]"></div>
                     </div>
@@ -66,7 +66,7 @@
                  @keydown.space.prevent="filters.location = 'Новороссийск'; document.getElementById('catalog').scrollIntoView({behavior: 'smooth'})"
                  class="group relative flex aspect-[4/5] cursor-pointer flex-col justify-end overflow-hidden rounded-2xl border border-white/5 bg-carbon p-5 shadow-xl transition-all duration-300 hover:border-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moto-amber md:aspect-[3/4] md:p-8 touch-manipulation">
                 <div class="absolute inset-0 z-0">
-                    <img src="{{ theme_platform_asset_url('marketing/experience-touring.png') }}" alt="Трасса" width="800" height="1000" sizes="(max-width:768px) 100vw, (max-width:1280px) 50vw, 33vw" loading="lazy" decoding="async" class="h-full w-full object-cover transition-transform duration-[15s] ease-out group-hover:scale-105" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden')">
+                    <img src="{{ theme_platform_asset_url('marketing/experience-touring.png') }}" alt="Трасса" width="800" height="1000" sizes="(max-width:768px) 100vw, (max-width:1280px) 50vw, 33vw" loading="lazy" decoding="async" fetchpriority="low" class="h-full w-full object-cover transition-transform duration-[15s] ease-out group-hover:scale-105" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden')">
                     <div class="w-full h-full bg-[#111113] hidden img-fallback relative overflow-hidden">
                         <div class="absolute inset-x-0 bottom-0 h-1/2 bg-moto-amber/5 blur-[80px]"></div>
                     </div>

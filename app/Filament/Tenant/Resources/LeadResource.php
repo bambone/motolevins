@@ -4,14 +4,21 @@ namespace App\Filament\Tenant\Resources;
 
 use App\Auth\AccessRoles;
 use App\Filament\Tenant\Concerns\ResolvesDomainTermLabels;
+use App\Filament\Tenant\Forms\ManualOperatorBookingForm;
 use App\Filament\Tenant\Resources\LeadResource\Pages;
+use App\Models\Booking;
 use App\Models\Lead;
 use App\Models\LeadActivityLog;
+use App\Product\CRM\DTO\ManualBookingCreateData;
+use App\Product\CRM\ManualLeadBookingService;
 use App\Support\FilamentMotorcycleThumbnail;
+use App\Support\PhoneNormalizer;
 use App\Terminology\DomainTermKeys;
+use Closure;
 use Filament\Actions\Action;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Field;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -20,12 +27,17 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\View;
 use Filament\Schemas\Schema;
+use Filament\Support\Enums\Alignment;
+use Filament\Support\Enums\FontWeight;
+use Filament\Support\Enums\IconPosition;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\ValidationException;
 use UnitEnum;
 
 class LeadResource extends Resource
@@ -62,6 +74,105 @@ class LeadResource extends Resource
         return parent::getEloquentQuery()->with(['motorcycle.media']);
     }
 
+    /**
+     * Slide-over без кнопок «Сохранить» / «Отмена»: поля формы сохраняют запись сами (см. persist-хуки в form()).
+     */
+    protected static function leadSlideOverEditAction(): EditAction
+    {
+        return EditAction::make()
+            ->slideOver()
+            ->iconButton()
+            ->label('Редактировать заявку')
+            ->tooltip('Редактировать заявку')
+            ->color('gray')
+            ->modalDescription('Изменения сохраняются автоматически при смене значения. Закройте панель крестиком или кликом вне её.')
+            ->modalSubmitAction(false)
+            ->modalCancelAction(false);
+    }
+
+    protected static function persistLeadFieldClosure(string $attribute): Closure
+    {
+        return function (mixed $state, mixed $old, Field $component) use ($attribute): void {
+            static::persistLeadAttribute($component, $attribute, $state, $old);
+        };
+    }
+
+    protected static function leadAttributeValuesAreEqual(string $attribute, mixed $current, mixed $newValue): bool
+    {
+        if (in_array($attribute, ['rental_date_from', 'rental_date_to'], true)) {
+            $normalize = function (mixed $v): ?string {
+                if ($v instanceof \DateTimeInterface) {
+                    return $v->format('Y-m-d');
+                }
+
+                return $v === null || $v === '' ? null : (string) $v;
+            };
+
+            return $normalize($current) === $normalize($newValue);
+        }
+
+        if (in_array($attribute, ['motorcycle_id', 'assigned_user_id'], true)) {
+            $n = $newValue === '' || $newValue === null ? null : (int) $newValue;
+            $c = $current === '' || $current === null ? null : (int) $current;
+
+            return $n === $c;
+        }
+
+        return (string) ($current ?? '') === (string) ($newValue ?? '');
+    }
+
+    protected static function persistLeadAttribute(
+        Field $component,
+        string $attribute,
+        mixed $state,
+        mixed $old,
+    ): void {
+        $record = $component->getRecord();
+        if (! $record instanceof Lead || ! $record->exists) {
+            return;
+        }
+
+        $newValue = $state === '' ? null : $state;
+
+        if (static::leadAttributeValuesAreEqual($attribute, $record->getAttribute($attribute), $newValue)) {
+            return;
+        }
+
+        if ($attribute === 'name' && ($newValue === null || $newValue === '')) {
+            Notification::make()->title('Имя обязательно')->warning()->send();
+            $component->state($old);
+
+            return;
+        }
+
+        if ($attribute === 'phone' && ($newValue === null || $newValue === '')) {
+            Notification::make()->title('Телефон обязателен')->warning()->send();
+            $component->state($old);
+
+            return;
+        }
+
+        if ($attribute === 'email' && filled($newValue) && ! filter_var((string) $newValue, FILTER_VALIDATE_EMAIL)) {
+            Notification::make()->title('Некорректный email')->warning()->send();
+            $component->state($old);
+
+            return;
+        }
+
+        try {
+            $record->update([$attribute => $newValue]);
+            $record->refresh();
+        } catch (ValidationException $e) {
+            $message = collect($e->errors())->flatten()->first() ?? $e->getMessage();
+            Notification::make()->title('Не удалось сохранить')->body($message)->danger()->send();
+            $component->state($old);
+        } catch (\Throwable $e) {
+            report($e);
+            Notification::make()->title('Не удалось сохранить')->body('Повторите попытку.')->danger()->send();
+            $component->state($old);
+        }
+    }
+
     public static function form(Schema $schema): Schema
     {
         return $schema
@@ -83,20 +194,28 @@ class LeadResource extends Resource
                         TextInput::make('name')
                             ->label('Имя')
                             ->required()
-                            ->maxLength(255),
+                            ->maxLength(255)
+                            ->live(onBlur: true)
+                            ->afterStateUpdated(static::persistLeadFieldClosure('name')),
                         TextInput::make('phone')
                             ->label('Телефон')
                             ->required()
                             ->tel()
-                            ->maxLength(20),
+                            ->maxLength(20)
+                            ->live(onBlur: true)
+                            ->afterStateUpdated(static::persistLeadFieldClosure('phone')),
                         TextInput::make('email')
                             ->label('Email')
                             ->email()
-                            ->maxLength(255),
+                            ->maxLength(255)
+                            ->live(onBlur: true)
+                            ->afterStateUpdated(static::persistLeadFieldClosure('email')),
                         TextInput::make('messenger')
                             ->label('Мессенджер')
                             ->maxLength(255)
-                            ->helperText('Ник или способ связи, если указан.'),
+                            ->helperText('Ник или способ связи, если указан.')
+                            ->live(onBlur: true)
+                            ->afterStateUpdated(static::persistLeadFieldClosure('messenger')),
                     ])->columns(2),
 
                 Section::make('Детали заявки')
@@ -107,20 +226,30 @@ class LeadResource extends Resource
                             ->relationship('motorcycle', 'name')
                             ->searchable()
                             ->preload()
-                            ->helperText('Можно оставить пустым, если заявка общая.'),
+                            ->helperText('Можно оставить пустым, если заявка общая.')
+                            ->live()
+                            ->afterStateUpdated(static::persistLeadFieldClosure('motorcycle_id')),
                         DatePicker::make('rental_date_from')
                             ->label('Дата начала аренды')
-                            ->native(false),
+                            ->native(false)
+                            ->live()
+                            ->afterStateUpdated(static::persistLeadFieldClosure('rental_date_from')),
                         DatePicker::make('rental_date_to')
                             ->label('Дата окончания аренды')
-                            ->native(false),
+                            ->native(false)
+                            ->live()
+                            ->afterStateUpdated(static::persistLeadFieldClosure('rental_date_to')),
                         Select::make('source')
                             ->label('Источник')
                             ->options(Lead::sources())
-                            ->helperText('Откуда пришла заявка: форма на сайте, звонок и т.д.'),
+                            ->helperText('Откуда пришла заявка: форма на сайте, звонок и т.д.')
+                            ->live()
+                            ->afterStateUpdated(static::persistLeadFieldClosure('source')),
                         Textarea::make('comment')
                             ->label('Комментарий клиента')
-                            ->rows(3),
+                            ->rows(3)
+                            ->live(onBlur: true)
+                            ->afterStateUpdated(static::persistLeadFieldClosure('comment')),
                     ])->columns(2),
 
                 Section::make('Работа менеджера')
@@ -131,6 +260,7 @@ class LeadResource extends Resource
                             ->options(Lead::statuses())
                             ->required()
                             ->live()
+                            ->afterStateUpdated(static::persistLeadFieldClosure('status'))
                             ->helperText('Новая — ещё не обработана. В работе — менеджер связался. Завершена/отменена фиксируют исход.'),
                         Select::make('assigned_user_id')
                             ->label('Ответственный')
@@ -155,18 +285,26 @@ class LeadResource extends Resource
                                                 ->whereIn('tenant_user.role', AccessRoles::tenantMembershipRolesForPanel());
                                         });
                                         if ($currentAssigneeId !== null) {
-                                            $inner->orWhereKey($currentAssigneeId);
+                                            $inner->orWhere(
+                                                $inner->getModel()->getQualifiedKeyName(),
+                                                $currentAssigneeId,
+                                            );
                                         }
                                     });
                                 },
                             )
                             ->searchable()
                             ->preload()
-                            ->helperText('Кто ведёт заявку внутри команды.'),
+                            ->helperText('Кто ведёт заявку внутри команды.')
+                            ->live()
+                            ->afterStateUpdated(static::persistLeadFieldClosure('assigned_user_id')),
                         Textarea::make('manager_notes')
                             ->label('Внутренние заметки')
                             ->rows(4)
-                            ->helperText('Не показываются клиенту.'),
+                            ->columnSpanFull()
+                            ->helperText('Не показываются клиенту.')
+                            ->live(onBlur: true)
+                            ->afterStateUpdated(static::persistLeadFieldClosure('manager_notes')),
                     ])->columns(2),
 
                 Section::make('История действий (Timeline)')
@@ -191,44 +329,88 @@ class LeadResource extends Resource
             })
             ->columns([
                 ImageColumn::make('motorcycle_thumb')
-                    ->label('')
+                    ->label('Фото')
+                    ->alignment(Alignment::Center)
+                    ->width('3.75rem')
+                    ->grow(false)
                     ->getStateUsing(fn (Lead $record): string => FilamentMotorcycleThumbnail::coverUrlOrPlaceholder($record->motorcycle))
                     ->defaultImageUrl(FilamentMotorcycleThumbnail::placeholderDataUrl())
                     ->checkFileExistence(false)
-                    ->imageSize(48)
+                    ->imageSize(40)
                     ->square()
+                    ->verticallyAlignCenter()
                     ->extraImgAttributes([
-                        'class' => 'rounded-lg object-cover',
+                        'class' => 'fi-lead-thumb-img rounded-lg object-cover',
                         'loading' => 'lazy',
                         'decoding' => 'async',
                     ])
-                    ->extraCellAttributes(['class' => 'w-px pe-0']),
+                    ->extraHeaderAttributes([
+                        'class' => 'fi-lead-col-thumb',
+                    ], merge: true)
+                    ->extraCellAttributes([
+                        'class' => 'fi-lead-col-thumb',
+                    ], merge: true),
                 TextColumn::make('created_at')
                     ->label('Получена')
                     ->dateTime('d.m.Y H:i')
-                    ->sortable(),
+                    ->sortable()
+                    ->width('10.5rem')
+                    ->grow(false)
+                    ->verticallyAlignCenter()
+                    ->extraHeaderAttributes(['class' => 'fi-lead-col-received'], merge: true)
+                    ->extraCellAttributes(['class' => 'fi-lead-col-received'], merge: true),
                 TextColumn::make('motorcycle.name')
                     ->label('Модель')
                     ->sortable()
                     ->placeholder('—')
                     ->description(fn (Lead $record): string => $record->name)
-                    ->wrap(),
+                    ->weight(FontWeight::SemiBold)
+                    ->wrap()
+                    ->grow()
+                    ->verticallyAlignCenter()
+                    ->extraHeaderAttributes(['class' => 'fi-lead-col-model'], merge: true)
+                    ->extraCellAttributes(['class' => 'fi-lead-col-model'], merge: true),
                 TextColumn::make('phone')
                     ->label('Телефон')
-                    ->searchable(),
+                    ->searchable()
+                    ->formatStateUsing(fn (?string $state): string => PhoneNormalizer::formatForDisplay($state))
+                    ->tooltip(fn (Lead $record): ?string => filled(trim((string) $record->phone)) ? $record->phone : null)
+                    ->wrap()
+                    ->width('11.25rem')
+                    ->grow(false)
+                    ->verticallyAlignCenter()
+                    ->extraHeaderAttributes(['class' => 'fi-lead-col-phone'], merge: true)
+                    ->extraCellAttributes(['class' => 'fi-lead-col-phone'], merge: true),
                 TextColumn::make('rental_date_from')
-                    ->label('С')
+                    ->label('Дата с')
                     ->date('d.m.Y')
                     ->sortable()
-                    ->placeholder('—'),
+                    ->placeholder('—')
+                    ->width('6.75rem')
+                    ->grow(false)
+                    ->verticallyAlignCenter()
+                    ->extraHeaderAttributes(['class' => 'fi-lead-col-date'], merge: true)
+                    ->extraCellAttributes(['class' => 'fi-lead-col-date'], merge: true),
                 TextColumn::make('rental_date_to')
-                    ->label('По')
+                    ->label('Дата по')
                     ->date('d.m.Y')
-                    ->placeholder('—'),
+                    ->placeholder('—')
+                    ->width('6.75rem')
+                    ->grow(false)
+                    ->verticallyAlignCenter()
+                    ->extraHeaderAttributes(['class' => 'fi-lead-col-date'], merge: true)
+                    ->extraCellAttributes(['class' => 'fi-lead-col-date'], merge: true),
                 TextColumn::make('source')
                     ->label('Источник')
                     ->formatStateUsing(fn (?string $state): string => Lead::sources()[$state] ?? $state ?? '—')
-                    ->badge(),
+                    ->badge()
+                    ->color('gray')
+                    ->wrap()
+                    ->width('11.5rem')
+                    ->grow(false)
+                    ->verticallyAlignCenter()
+                    ->extraHeaderAttributes(['class' => 'fi-lead-col-source'], merge: true)
+                    ->extraCellAttributes(['class' => 'fi-lead-col-source'], merge: true),
                 TextColumn::make('status')
                     ->label('Статус')
                     ->badge()
@@ -239,15 +421,30 @@ class LeadResource extends Resource
                         'confirmed', 'completed' => 'success',
                         'cancelled', 'spam' => 'danger',
                         default => 'gray',
-                    }),
+                    })
+                    ->wrap()
+                    ->width('12rem')
+                    ->grow(false)
+                    ->verticallyAlignCenter()
+                    ->extraHeaderAttributes(['class' => 'fi-lead-col-status'], merge: true)
+                    ->extraCellAttributes(['class' => 'fi-lead-col-status'], merge: true),
                 TextColumn::make('crm_request_id')
                     ->label('CRM')
                     ->sortable()
+                    ->formatStateUsing(fn (?string $state): string => filled($state) ? '#'.$state : '—')
+                    ->icon(fn (?string $state): ?string => filled($state) ? 'heroicon-o-arrow-top-right-on-square' : null)
+                    ->iconPosition(IconPosition::Before)
                     ->placeholder('—')
+                    ->alignment(Alignment::Center)
                     ->url(fn (Lead $record): ?string => $record->crm_request_id
                         ? CrmRequestResource::getUrl('view', ['record' => $record->crm_request_id])
                         : null)
-                    ->color('primary'),
+                    ->color('gray')
+                    ->width('4.25rem')
+                    ->grow(false)
+                    ->verticallyAlignCenter()
+                    ->extraHeaderAttributes(['class' => 'fi-lead-col-crm'], merge: true)
+                    ->extraCellAttributes(['class' => 'fi-lead-col-crm'], merge: true),
             ])
             ->filters([
                 SelectFilter::make('status')
@@ -259,9 +456,13 @@ class LeadResource extends Resource
             ])
             ->recordAction(EditAction::class)
             ->recordUrl(null)
-            ->actions([
+            ->recordActionsColumnLabel('Действия')
+            ->recordActionsAlignment('end')
+            ->recordActions([
                 Action::make('mark_contacted')
-                    ->label('В работу')
+                    ->iconButton()
+                    ->label('Взять в работу')
+                    ->tooltip('Взять в работу')
                     ->icon('heroicon-o-check-circle')
                     ->color('success')
                     ->hidden(fn (Lead $record) => $record->status !== 'new')
@@ -292,19 +493,67 @@ class LeadResource extends Resource
                             ])
                             ->send();
                     }),
+                Action::make('create_booking_for_lead')
+                    ->iconButton()
+                    ->label('Бронирование')
+                    ->tooltip('Создать бронирование')
+                    ->icon('heroicon-o-calendar-days')
+                    ->color('primary')
+                    ->visible(fn (): bool => Gate::allows('create', Booking::class))
+                    ->form(ManualOperatorBookingForm::bookingFromLeadComponents())
+                    ->action(function (Lead $record, array $data): void {
+                        $tenant = currentTenant();
+                        if ($tenant === null) {
+                            return;
+                        }
+
+                        $start = ManualOperatorBookingForm::toYmd($data['start_date'] ?? null);
+                        $end = ManualOperatorBookingForm::toYmd($data['end_date'] ?? null);
+                        if ($start === null || $end === null) {
+                            throw ValidationException::withMessages([
+                                'start_date' => 'Укажите даты бронирования.',
+                            ]);
+                        }
+
+                        app(ManualLeadBookingService::class)->createManualBooking(new ManualBookingCreateData(
+                            tenantId: $tenant->id,
+                            name: (string) ($record->name ?? ''),
+                            motorcycleId: (int) $data['motorcycle_id'],
+                            rentalUnitId: (int) $data['rental_unit_id'],
+                            startDateYmd: $start,
+                            endDateYmd: $end,
+                            phone: $record->phone,
+                            email: $record->email,
+                            comment: $record->comment,
+                            messenger: $record->messenger,
+                            existingLeadId: $record->id,
+                            createLead: false,
+                            createCrm: false,
+                        ));
+
+                        Notification::make()
+                            ->title('Бронирование создано')
+                            ->success()
+                            ->send();
+                    }),
                 Action::make('whatsapp')
+                    ->iconButton()
+                    ->label('Написать в WhatsApp')
+                    ->tooltip('Написать в WhatsApp')
                     ->icon('heroicon-o-chat-bubble-left-ellipsis')
                     ->color('success')
-                    ->label('WA')
                     ->url(fn (Lead $record) => 'https://wa.me/'.preg_replace('/[^0-9]/', '', $record->phone).'?text='.urlencode('Здравствуйте! Пишу по поводу вашей заявки на аренду...'))
                     ->openUrlInNewTab(),
                 Action::make('call')
+                    ->iconButton()
+                    ->label('Позвонить')
+                    ->tooltip('Позвонить')
                     ->icon('heroicon-o-phone')
                     ->color('gray')
-                    ->label('Call')
                     ->url(fn (Lead $record) => 'tel:'.preg_replace('/[^0-9]/', '', $record->phone)),
-                EditAction::make()->slideOver(),
+                static::leadSlideOverEditAction(),
             ])
+            ->extraAttributes(['class' => 'fi-lead-list-table'], merge: true)
             ->emptyStateHeading('Заявок пока нет')
             ->emptyStateDescription('Когда посетители отправят форму на сайте, заявки появятся здесь.')
             ->emptyStateIcon('heroicon-o-inbox');

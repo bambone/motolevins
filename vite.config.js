@@ -12,6 +12,8 @@ export default defineConfig({
                 'resources/js/platform-marketing.js',
                 'resources/css/platform-admin.css',
                 'resources/css/tenant-admin.css',
+                'resources/css/booking-calendar.css',
+                'resources/js/booking-calendar.js',
             ],
             refresh: true,
         }),

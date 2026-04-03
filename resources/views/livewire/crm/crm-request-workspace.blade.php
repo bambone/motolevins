@@ -231,6 +231,25 @@
                 </div>
                 <p class="mb-4 text-sm leading-snug text-zinc-700 dark:text-zinc-300">{{ $bookingWorkspace->availabilitySummaryText }}</p>
 
+                @if($bookingWorkspace->hasBookingContext)
+                    @php
+                        $bwCalQuery = ['view' => 'week'];
+                        if (filled($bookingWorkspace->requestedStartDate)) {
+                            $bwCalQuery['date'] = $bookingWorkspace->requestedStartDate;
+                        }
+                        if ($bookingWorkspace->motorcycleId !== null) {
+                            $bwCalQuery['motorcycle_id'] = $bookingWorkspace->motorcycleId;
+                        }
+                        $bwCalUrl = \App\Filament\Tenant\Pages\BookingCalendarPage::getUrl().'?'.http_build_query($bwCalQuery);
+                    @endphp
+                    <p class="mb-4">
+                        <a
+                            href="{{ $bwCalUrl }}"
+                            class="text-sm font-medium text-amber-700 underline decoration-amber-700/40 underline-offset-2 hover:text-amber-800 dark:text-amber-300 dark:hover:text-amber-200"
+                        >Открыть в календаре парка</a>
+                    </p>
+                @endif
+
                 <div class="crm-op-bw-legend mb-4 flex flex-wrap gap-x-4 gap-y-2 text-xs text-zinc-600 dark:text-zinc-400" aria-hidden="true">
                     <span class="inline-flex items-center gap-1.5"><span class="crm-op-bw-legend-swatch crm-op-bw-legend-swatch--requested"></span> Запрос</span>
                     <span class="inline-flex items-center gap-1.5"><span class="crm-op-bw-legend-swatch crm-op-bw-legend-swatch--confirmed"></span> Подтверждено</span>

@@ -27,8 +27,9 @@
 
             <nav class="hidden flex-1 items-center justify-center gap-6 px-4 text-[15px] font-medium md:flex lg:gap-10 xl:gap-12 xl:text-base" aria-label="Основное меню">
                 <a href="#catalog" class="shrink-0 text-white/90 transition-colors hover:text-moto-amber">Автопарк</a>
-                <a href="{{ route('terms') }}" class="shrink-0 text-white/80 transition-colors hover:text-white">Правила аренды</a>
-                <a href="{{ route('contacts') }}" class="shrink-0 text-white/80 transition-colors hover:text-white">Контакты</a>
+                @foreach($tenantMainMenuPages ?? [] as $navItem)
+                    <a href="{{ $navItem['url'] }}" class="shrink-0 text-white/80 transition-colors hover:text-white">{{ $navItem['label'] }}</a>
+                @endforeach
             </nav>
 
             @if($contacts['phone'] ?? null)
@@ -67,8 +68,9 @@
              aria-label="Мобильное меню">
             <div class="flex flex-col gap-1">
                 <a href="#catalog" @click="mobileNavOpen = false" class="flex min-h-11 items-center rounded-lg px-3 py-2 text-base font-medium text-white/90 hover:bg-white/10">Автопарк</a>
-                <a href="{{ route('terms') }}" @click="mobileNavOpen = false" class="flex min-h-11 items-center rounded-lg px-3 py-2 text-base font-medium text-white/90 hover:bg-white/10">Правила аренды</a>
-                <a href="{{ route('contacts') }}" @click="mobileNavOpen = false" class="flex min-h-11 items-center rounded-lg px-3 py-2 text-base font-medium text-white/90 hover:bg-white/10">Контакты</a>
+                @foreach($tenantMainMenuPages ?? [] as $navItem)
+                    <a href="{{ $navItem['url'] }}" @click="mobileNavOpen = false" class="flex min-h-11 items-center rounded-lg px-3 py-2 text-base font-medium text-white/90 hover:bg-white/10">{{ $navItem['label'] }}</a>
+                @endforeach
                 @if($contacts['phone'] ?? null)
                 <a href="tel:{{ preg_replace('/\D/', '', $contacts['phone']) }}" @click="mobileNavOpen = false" class="mt-1 flex min-h-11 items-center gap-2 rounded-lg border border-white/15 px-3 py-2 text-base font-semibold text-moto-amber hover:bg-white/5">
                     <svg class="h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path></svg>

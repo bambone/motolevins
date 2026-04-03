@@ -49,6 +49,7 @@ class TemplateCloningService
         return [
             'home' => ['name' => 'Главная', 'template' => 'default', 'status' => 'published'],
             'contacts' => ['name' => 'Контакты', 'template' => 'default', 'status' => 'published'],
+            'usloviya-arenda' => ['name' => 'Правила аренды', 'template' => 'default', 'status' => 'published'],
         ];
     }
 
@@ -56,19 +57,33 @@ class TemplateCloningService
     {
         if ($pageSlug === 'home') {
             return [
-                ['section_key' => 'hero', 'title' => 'Hero', 'data_json' => [
+                ['section_key' => 'hero', 'section_type' => 'hero', 'title' => 'Hero', 'data_json' => [
                     'heading' => 'Аренда мотоциклов',
                     'subheading' => 'от 4 000 ₽/сутки',
                     'description' => 'Без скрытых платежей, экипировка и страховка включены',
                 ], 'sort_order' => 0],
-                ['section_key' => 'fleet_block', 'title' => 'Автопарк', 'data_json' => [
+                ['section_key' => 'fleet_block', 'section_type' => 'cards_teaser', 'title' => 'Автопарк', 'data_json' => [
                     'heading' => 'Наш автопарк',
                     'subheading' => 'Выберите технику',
                 ], 'sort_order' => 20],
-                ['section_key' => 'why_us', 'title' => 'Почему мы', 'data_json' => ['items' => []], 'sort_order' => 30],
-                ['section_key' => 'how_it_works', 'title' => 'Как это работает', 'data_json' => ['items' => []], 'sort_order' => 40],
-                ['section_key' => 'final_cta', 'title' => 'CTA', 'data_json' => [], 'sort_order' => 100],
+                ['section_key' => 'why_us', 'section_type' => 'features', 'title' => 'Почему мы', 'data_json' => ['items' => []], 'sort_order' => 30],
+                ['section_key' => 'how_it_works', 'section_type' => 'features', 'title' => 'Как это работает', 'data_json' => ['items' => []], 'sort_order' => 40],
+                ['section_key' => 'final_cta', 'section_type' => 'cta', 'title' => 'CTA', 'data_json' => [], 'sort_order' => 100],
             ];
+        }
+
+        if (in_array($pageSlug, ['contacts', 'usloviya-arenda'], true)) {
+            $label = $pageSlug === 'contacts' ? 'Контакты' : 'Правила аренды';
+
+            return [[
+                'section_key' => 'main',
+                'section_type' => 'rich_text',
+                'title' => 'Основной текст',
+                'data_json' => [
+                    'content' => '<p>Содержимое страницы «'.$label.'» — отредактируйте в кабинете: Контент → Страницы.</p>',
+                ],
+                'sort_order' => 0,
+            ]];
         }
 
         return [];

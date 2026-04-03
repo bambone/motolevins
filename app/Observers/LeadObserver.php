@@ -7,6 +7,8 @@ use App\Models\CrmRequestActivity;
 use App\Models\Lead;
 use App\Models\LeadActivityLog;
 use App\Models\LeadStatusHistory;
+use App\Product\CRM\TenantBookingFromCrmConverter;
+use Illuminate\Support\Facades\Auth;
 
 /**
  * Мост legacy → CRM для статуса Lead.
@@ -26,12 +28,12 @@ class LeadObserver
             'lead_id' => $lead->id,
             'old_status' => null,
             'new_status' => $lead->status,
-            'changed_by' => auth()->id(),
+            'changed_by' => Auth::id(),
         ]);
 
         LeadActivityLog::query()->create([
             'lead_id' => $lead->id,
-            'actor_id' => auth()->id(),
+            'actor_id' => Auth::id(),
             'type' => 'status_change',
             'payload' => [
                 'old_status' => null,
@@ -40,46 +42,58 @@ class LeadObserver
             ],
             'comment' => 'Заявка создана',
         ]);
+
+        if ($lead->status === 'confirmed') {
+            app(TenantBookingFromCrmConverter::class)->materializeConfirmedLeadBooking($lead);
+        }
     }
 
     public function updated(Lead $lead): void
     {
-        if (! $lead->wasChanged('status')) {
-            return;
-        }
-
-        LeadStatusHistory::query()->create([
-            'lead_id' => $lead->id,
-            'old_status' => $lead->getOriginal('status'),
-            'new_status' => $lead->status,
-            'changed_by' => auth()->id(),
-        ]);
-
-        LeadActivityLog::query()->create([
-            'lead_id' => $lead->id,
-            'actor_id' => auth()->id(),
-            'type' => 'status_change',
-            'payload' => [
+        if ($lead->wasChanged('status')) {
+            LeadStatusHistory::query()->create([
+                'lead_id' => $lead->id,
                 'old_status' => $lead->getOriginal('status'),
                 'new_status' => $lead->status,
-                'source' => auth()->check() ? 'manager' : 'system',
-            ],
-        ]);
+                'changed_by' => Auth::id(),
+            ]);
 
-        if ($lead->crm_request_id === null) {
-            return;
+            LeadActivityLog::query()->create([
+                'lead_id' => $lead->id,
+                'actor_id' => Auth::id(),
+                'type' => 'status_change',
+                'payload' => [
+                    'old_status' => $lead->getOriginal('status'),
+                    'new_status' => $lead->status,
+                    'source' => Auth::check() ? 'manager' : 'system',
+                ],
+            ]);
+
+            if ($lead->crm_request_id !== null) {
+                CrmRequestActivity::query()->create([
+                    'crm_request_id' => $lead->crm_request_id,
+                    'type' => CrmRequestActivity::TYPE_STATUS_CHANGED,
+                    'meta' => [
+                        'source' => 'lead_status_projection',
+                        'lead_id' => $lead->id,
+                        'old' => $lead->getOriginal('status'),
+                        'new' => $lead->status,
+                    ],
+                    'actor_user_id' => Auth::id(),
+                ]);
+            }
         }
 
-        CrmRequestActivity::query()->create([
-            'crm_request_id' => $lead->crm_request_id,
-            'type' => CrmRequestActivity::TYPE_STATUS_CHANGED,
-            'meta' => [
-                'source' => 'lead_status_projection',
-                'lead_id' => $lead->id,
-                'old' => $lead->getOriginal('status'),
-                'new' => $lead->status,
-            ],
-            'actor_user_id' => auth()->id(),
-        ]);
+        $shouldTryBooking = $lead->status === 'confirmed'
+            && (
+                $lead->wasChanged('status')
+                || $lead->wasChanged('motorcycle_id')
+                || $lead->wasChanged('rental_date_from')
+                || $lead->wasChanged('rental_date_to')
+            );
+
+        if ($shouldTryBooking) {
+            app(TenantBookingFromCrmConverter::class)->materializeConfirmedLeadBooking($lead->fresh());
+        }
     }
 }

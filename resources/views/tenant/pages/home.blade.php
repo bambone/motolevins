@@ -11,7 +11,7 @@
 
 @section('content')
     <!-- Alpine App State -->
-    <div x-data="globalBookingState()" data-bike-ids="{{ $bikeIdsJson }}" class="w-full min-w-0" x-init="$nextTick(() => { const s = Alpine.store('tenantBooking'); if (s.filters.start_date && s.filters.end_date) { s.applyCatalogSearch({ scrollToCatalog: false }); } })">
+    <div x-data="globalBookingState()" data-bike-ids="{{ $bikeIdsJson }}" class="w-full min-w-0" x-init="$nextTick(() => { const s = Alpine.store('tenantBooking'); if (s.filters.start_date && s.filters.end_date) { setTimeout(() => s.applyCatalogSearch({ scrollToCatalog: false }), 0); } })">
         
         <!-- Extracted Hero Component -->
         <x-hero :section="$sections['hero'] ?? null" />

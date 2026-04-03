@@ -41,9 +41,10 @@ storage/app/public/tenants/{tenant_id}/logo|favicon|hero|…
 
 ## Публичный сайт клиента
 
-- **Резолв шаблонов:** хелпер **`tenant_view($logical, $data)`** вызывает **`App\Services\Tenancy\TenantViewResolver`**. Логические имена: `pages.home`, `pages.page`, `pages.motorcycle`, `pages.contacts`, `pages.faq`, `pages.about`, `booking.index` и др.
-- **`TenantPublicPageController`** — allowlist для `/contacts`, `/faq`, `/about`.
-- Часть маршрутов (terms, prices, offline и т.д.) может оставаться на прямых `view()` без resolver — намеренно ограничивали объём изменений.
+- **Резолв шаблонов:** хелпер **`tenant_view($logical, $data)`** вызывает **`App\Services\Tenancy\TenantViewResolver`**. Логические имена: `pages.home`, `pages.page`, `pages.motorcycle`, `pages.faq`, `pages.about`, `booking.index` и др.
+- **`PageController`** (`/{slug}` и фиксированные `/contacts`, `/usloviya-arenda`) — опубликованные записи **`Page`** + блоки **`PageSection`** (шаблон `pages.page`).
+- **`TenantPublicPageController`** — allowlist для `/faq`, `/about` (статические Blade через `tenant_view`).
+- Часть маршрутов (prices, offline и т.д.) может оставаться на прямых `view()` без resolver — намеренно ограничивали объём изменений.
 - **`theme_key`:** колонка `tenants.theme_key`, whitelist в Platform `TenantResource`: `default`, `moto`, `auto`. Тема **не** выводится из slug клиента.
 - **Filament:** Tenant Admin → **Настройки** — `TenantSetting` + загрузки в storage; ключи вроде `branding.logo_path` (см. маппинг в `Settings` странице).
 

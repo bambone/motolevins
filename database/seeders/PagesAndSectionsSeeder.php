@@ -35,6 +35,7 @@ class PagesAndSectionsSeeder extends Seeder
         $sections = [
             [
                 'section_key' => 'hero',
+                'section_type' => 'hero',
                 'title' => 'Hero',
                 'data_json' => [
                     'heading' => 'Аренда мотоциклов на Чёрном море',
@@ -47,6 +48,7 @@ class PagesAndSectionsSeeder extends Seeder
             ],
             [
                 'section_key' => 'route_cards',
+                'section_type' => 'features',
                 'title' => 'Карточки маршрутов',
                 'data_json' => [
                     'items' => [
@@ -59,6 +61,7 @@ class PagesAndSectionsSeeder extends Seeder
             ],
             [
                 'section_key' => 'why_us',
+                'section_type' => 'features',
                 'title' => 'Почему мы',
                 'data_json' => [
                     'heading' => 'Почему выбирают нас',
@@ -74,6 +77,7 @@ class PagesAndSectionsSeeder extends Seeder
             ],
             [
                 'section_key' => 'how_it_works',
+                'section_type' => 'features',
                 'title' => 'Как это работает',
                 'data_json' => [
                     'lead' => 'Весь процесс занимает не более 15 минут. Четыре шага — и вы в пути.',
@@ -88,6 +92,7 @@ class PagesAndSectionsSeeder extends Seeder
             ],
             [
                 'section_key' => 'rental_conditions',
+                'section_type' => 'features',
                 'title' => 'Условия аренды',
                 'data_json' => [
                     'items' => [
@@ -102,6 +107,7 @@ class PagesAndSectionsSeeder extends Seeder
             ],
             [
                 'section_key' => 'reviews_block',
+                'section_type' => 'cards_teaser',
                 'title' => 'Блок отзывов',
                 'data_json' => [
                     'show_block' => true,
@@ -113,6 +119,7 @@ class PagesAndSectionsSeeder extends Seeder
             ],
             [
                 'section_key' => 'faq_block',
+                'section_type' => 'faq',
                 'title' => 'Блок FAQ',
                 'data_json' => [
                     'show_on_home' => true,
@@ -123,6 +130,7 @@ class PagesAndSectionsSeeder extends Seeder
             ],
             [
                 'section_key' => 'final_cta',
+                'section_type' => 'cta',
                 'title' => 'Финальный CTA',
                 'data_json' => [
                     'heading' => 'Забронируйте мотоцикл и отправляйтесь в поездку уже сегодня',
@@ -147,5 +155,59 @@ class PagesAndSectionsSeeder extends Seeder
                 ])
             );
         }
+
+        $this->seedCmsPage(
+            $tenant,
+            'contacts',
+            'Контакты',
+            'Основной контент',
+            '<p>Телефон, Telegram, WhatsApp, адрес и карту можно задать в разделе «Настройки» сайта; здесь — произвольный текст для страницы контактов.</p>'
+        );
+
+        $this->seedCmsPage(
+            $tenant,
+            'usloviya-arenda',
+            'Правила аренды',
+            'Условия',
+            '<p>Возраст, стаж, экипировка, залог, страхование и порядок бронирования. Редактируйте этот текст в кабинете: <strong>Контент → Страницы → Правила аренды</strong>.</p>'
+        );
+    }
+
+    private function seedCmsPage(
+        Tenant $tenant,
+        string $slug,
+        string $name,
+        string $sectionTitle,
+        string $htmlContent,
+    ): void {
+        $page = Page::withoutGlobalScopes()->updateOrCreate(
+            [
+                'tenant_id' => $tenant->id,
+                'slug' => $slug,
+            ],
+            [
+                'name' => $name,
+                'template' => 'default',
+                'status' => 'published',
+                'published_at' => now(),
+            ]
+        );
+
+        PageSection::withoutGlobalScopes()->updateOrCreate(
+            [
+                'tenant_id' => $tenant->id,
+                'page_id' => $page->id,
+                'section_key' => 'main',
+            ],
+            [
+                'tenant_id' => $tenant->id,
+                'title' => $sectionTitle,
+                'section_type' => 'rich_text',
+                'data_json' => ['content' => $htmlContent],
+                'sort_order' => 0,
+                'status' => 'published',
+                'is_visible' => true,
+            ]
+        );
     }
 }

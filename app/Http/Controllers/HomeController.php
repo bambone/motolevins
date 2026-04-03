@@ -7,9 +7,16 @@ use App\Models\Motorcycle;
 use App\Models\Page;
 use App\Models\Review;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\Cache;
 
 class HomeController extends Controller
 {
+    public static function forgetCachedPayloadForTenant(int $tenantId): void
+    {
+        Cache::forget(sprintf('tenant:%d:home:index:v2', $tenantId));
+        Cache::forget(sprintf('tenant:%d:home:index:v1', $tenantId));
+    }
+
     public function index()
     {
         $bikes = Motorcycle::where('show_in_catalog', true)

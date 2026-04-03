@@ -22,7 +22,16 @@ class LeadPolicy
 
     public function create(User $user): bool
     {
-        return $user->can('manage_leads');
+        if (! $user->can('manage_leads')) {
+            return false;
+        }
+
+        $tenant = currentTenant();
+        if ($tenant === null) {
+            return false;
+        }
+
+        return $user->tenants()->where('tenant_id', $tenant->id)->exists();
     }
 
     public function update(User $user, Lead $lead): bool

@@ -10,6 +10,9 @@
              alt=""
              role="presentation"
              class="h-full w-full object-cover brightness-110 contrast-[1.05]"
+             loading="lazy"
+             decoding="async"
+             fetchpriority="low"
              onerror="this.style.display='none'">
         <div class="absolute inset-0 bg-gradient-to-b from-black/55 via-black/45 to-black/70 md:from-black/50 md:via-black/40 md:to-black/65"></div>
     </div>
@@ -19,7 +22,7 @@
     </div>
 
     <div class="relative z-10 mx-auto max-w-4xl px-3 text-center sm:px-4 md:px-8">
-        <img src="{{ theme_platform_asset_url('marketing/logo-round-dark.png') }}" alt="" class="mx-auto mb-6 h-12 w-12 object-contain opacity-95 sm:mb-8 sm:h-14 sm:w-14" width="56" height="56" decoding="async" />
+        <img src="{{ theme_platform_asset_url('marketing/logo-round-dark.png') }}" alt="" class="mx-auto mb-6 h-12 w-12 object-contain opacity-95 sm:mb-8 sm:h-14 sm:w-14" width="56" height="56" loading="lazy" decoding="async" fetchpriority="low" />
         <h2 id="final-cta-heading" class="mx-auto mb-6 max-w-2xl text-balance text-3xl font-bold leading-tight tracking-tight text-white drop-shadow-[0_2px_24px_rgba(0,0,0,0.45)] md:text-4xl lg:text-5xl">
             {{ $heading }}
         </h2>

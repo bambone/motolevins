@@ -11,14 +11,14 @@
     $detailUrl = route('motorcycle.show', $bike->slug);
     $detailLabel = 'О модели: ' . $bike->name;
 @endphp
-<article class="group/card relative flex h-full flex-col overflow-hidden rounded-2xl border border-white/5 bg-carbon shadow-lg shadow-black/30 transition-[border-color,box-shadow,transform] duration-300 hover:-translate-y-0.5 hover:border-white/10 hover:shadow-xl hover:shadow-black/40 focus-within:border-white/12 focus-within:shadow-xl">
+<article class="group/card relative flex h-full flex-col overflow-hidden rounded-2xl border border-white/5 bg-carbon shadow-lg shadow-black/30 transition-[border-color,box-shadow,transform] duration-300 hover:-translate-y-0.5 hover:border-white/10 hover:shadow-xl hover:shadow-black/40 focus-within:border-white/12 focus-within:shadow-xl [content-visibility:auto] [contain-intrinsic-size:auto_36rem]">
     <div class="pointer-events-none absolute inset-0 -z-10 rounded-2xl bg-white/[0.02] opacity-0 blur-2xl transition-opacity duration-300 group-hover/card:opacity-100"></div>
 
     <a href="{{ $detailUrl }}"
        class="relative block h-52 shrink-0 overflow-hidden border-b border-white/[0.04] bg-[#0a0a0c] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moto-amber sm:h-60 md:h-64"
        aria-label="{{ $detailLabel }}">
         @if($imageUrl)
-            <img src="{{ $imageUrl }}" alt="{{ $bike->name }}" width="800" height="512" sizes="(max-width:640px) 100vw, (max-width:1024px) 50vw, 33vw" class="block h-full w-full object-cover transition-transform duration-700 ease-out group-hover/card:scale-[1.03] motion-reduce:transition-none motion-reduce:group-hover/card:scale-100" loading="lazy" decoding="async" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden')">
+            <img src="{{ $imageUrl }}" alt="{{ $bike->name }}" width="800" height="512" sizes="(max-width:640px) 100vw, (max-width:1024px) 50vw, 33vw" class="block h-full w-full object-cover transition-transform duration-700 ease-out group-hover/card:scale-[1.03] motion-reduce:transition-none motion-reduce:group-hover/card:scale-100" loading="lazy" decoding="async" fetchpriority="low" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden')">
         @endif
         <div class="img-fallback absolute inset-0 flex items-center justify-center text-sm text-silver {{ $imageUrl ? 'hidden' : '' }}">
             <svg class="h-12 w-12 text-white/5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>

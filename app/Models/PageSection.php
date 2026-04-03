@@ -10,6 +10,30 @@ class PageSection extends Model
 {
     use BelongsToTenant;
 
+    protected static function booted(): void
+    {
+        static::updating(function (PageSection $section): void {
+            if (! $section->isDirty('data_json')) {
+                return;
+            }
+            $incoming = $section->data_json;
+            if (! is_array($incoming)) {
+                return;
+            }
+            $type = $section->section_type;
+            $isMain = $section->section_key === 'main';
+            $legacyHtml = $type === null || $type === '' || $type === 'html';
+            if (! $isMain && ! $legacyHtml) {
+                return;
+            }
+            $original = $section->getOriginal('data_json');
+            if (! is_array($original) || $original === []) {
+                return;
+            }
+            $section->data_json = array_merge($original, $incoming);
+        });
+    }
+
     protected $fillable = [
         'tenant_id',
         'page_id',

@@ -81,10 +81,12 @@ Route::middleware([EnsureTenantContext::class])->group(function () {
     Route::get('/sitemap.xml', SitemapController::class)->name('sitemap');
     Route::get('/', [HomeController::class, 'index'])->name('home');
     Route::view('/offline', 'tenant.pages.offline')->name('offline');
-    Route::get('/contacts', [TenantPublicPageController::class, 'show'])
-        ->defaults('logical', 'pages.contacts')
+    Route::get('/contacts', [PageController::class, 'show'])
+        ->defaults('slug', 'contacts')
         ->name('contacts');
-    Route::view('/usloviya-arenda', 'tenant.pages.terms')->name('terms');
+    Route::get('/usloviya-arenda', [PageController::class, 'show'])
+        ->defaults('slug', 'usloviya-arenda')
+        ->name('terms');
     Route::view('/motorcycles', 'tenant.pages.motorcycles.index')->name('motorcycles.index');
     Route::view('/prices', 'tenant.pages.prices')->name('prices');
     Route::view('/order', 'tenant.pages.order')->name('order');

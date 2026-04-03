@@ -19,6 +19,10 @@ use Illuminate\Validation\ValidationException;
  */
 final class CrmRequestOperatorService
 {
+    public function __construct(
+        private readonly TenantBookingFromCrmConverter $tenantBookingFromCrmConverter,
+    ) {}
+
     public function changeStatus(User $actor, CrmRequest $crm, string $toStatus): void
     {
         Gate::forUser($actor)->authorize('update', $crm);
@@ -53,6 +57,10 @@ final class CrmRequestOperatorService
                 ],
                 'actor_user_id' => $actor->id,
             ]);
+
+            if ($toStatus === CrmRequest::STATUS_CONVERTED) {
+                $this->tenantBookingFromCrmConverter->createConfirmedBookingIfMissing($crm);
+            }
         });
     }
 

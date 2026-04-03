@@ -1,0 +1,67 @@
+# Runs when page builder / section paths change, or manually. Main "Tests" runs composer test (Feature excludes PageBuilderSmoke).
+
+name: Page builder smoke
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'app/PageBuilder/**'
+      - 'app/Services/PageBuilder/**'
+      - 'resources/views/tenant/themes/**/sections/**'
+      - 'app/Livewire/Tenant/PageSectionsBuilder.php'
+      - 'tests/Feature/PageBuilder/Smoke/**'
+      - 'tests/Support/PageBuilderSmokeFixtures.php'
+      - 'tests/Support/AssertsHtmlMarkerOrder.php'
+      - 'tests/Support/InteractsWithTenantSmokeHttp.php'
+      - 'phpunit.xml'
+  pull_request:
+    paths:
+      - 'app/PageBuilder/**'
+      - 'app/Services/PageBuilder/**'
+      - 'resources/views/tenant/themes/**/sections/**'
+      - 'app/Livewire/Tenant/PageSectionsBuilder.php'
+      - 'tests/Feature/PageBuilder/Smoke/**'
+      - 'tests/Support/PageBuilderSmokeFixtures.php'
+      - 'tests/Support/AssertsHtmlMarkerOrder.php'
+      - 'tests/Support/InteractsWithTenantSmokeHttp.php'
+      - 'phpunit.xml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: page-builder-smoke-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    name: page-builder-smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, dom, fileinfo, pdo, tokenizer, xml, ctype, json, bcmath, curl, intl, zip, sqlite, pdo_sqlite
+          coverage: none
+          tools: composer:v2
+          cache: composer
+          cache-dependency-path: composer.lock
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Prepare application key
+        run: |
+          cp .env.example .env
+          php artisan key:generate --no-interaction
+
+      - name: Run page builder smoke suite
+        env:
+          APP_ENV: testing
+        run: composer test:page-builder-smoke

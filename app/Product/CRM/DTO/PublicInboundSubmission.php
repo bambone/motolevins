@@ -28,5 +28,7 @@ final class PublicInboundSubmission
         public readonly ?string $landingPage = null,
         public readonly ?string $ip = null,
         public readonly ?string $userAgent = null,
+        public readonly ?string $leadInitialStatus = null,
+        public readonly ?string $leadMessenger = null,
     ) {}
 }

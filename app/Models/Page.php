@@ -18,10 +18,14 @@ class Page extends Model
         'template',
         'status',
         'published_at',
+        'show_in_main_menu',
+        'main_menu_sort_order',
     ];
 
     protected $casts = [
         'published_at' => 'datetime',
+        'show_in_main_menu' => 'boolean',
+        'main_menu_sort_order' => 'integer',
     ];
 
     public function sections(): HasMany

@@ -4,14 +4,19 @@ namespace App\Filament\Tenant\Resources;
 
 use App\Filament\Forms\Components\SeoMetaFields;
 use App\Filament\Tenant\Resources\PageResource\Pages;
-use App\Filament\Tenant\Resources\PageResource\RelationManagers\SectionsRelationManager;
+use App\Filament\Tenant\Resources\PageResource\RelationManagers\PageSectionsBuilderRelationManager;
 use App\Models\Page;
 use Filament\Actions\EditAction;
+use Filament\Forms\Components\RichEditor;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
+use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
@@ -39,35 +44,77 @@ class PageResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema
+            ->columns(1)
             ->components([
-                Section::make('Страница на сайте')
-                    ->description('Контентные страницы сайта для посетителей. Черновик не виден публично; опубликованная — доступна по URL.')
+                Grid::make(['default' => 1, 'lg' => 12])
                     ->schema([
-                        TextInput::make('name')
-                            ->label('Название в меню и списках')
-                            ->required()
-                            ->maxLength(255)
-                            ->live(onBlur: true)
-                            ->afterStateUpdated(fn ($set, ?string $state) => $set('slug', Str::slug($state ?? ''))),
-                        TextInput::make('slug')
-                            ->label('URL-идентификатор')
-                            ->required()
-                            ->maxLength(255)
-                            ->unique(ignoreRecord: true)
-                            ->helperText('Часть адреса страницы, например: about-us → /about-us'),
-                        Select::make('template')
-                            ->label('Макет')
-                            ->options(['default' => 'По умолчанию'])
-                            ->default('default')
-                            ->helperText('Определяет структуру отображения, если тема поддерживает несколько макетов.'),
-                        Select::make('status')
-                            ->label('Статус публикации')
-                            ->options(Page::statuses())
-                            ->required()
-                            ->default('draft')
-                            ->helperText('Черновик — только в кабинете. Опубликован — на сайте. Скрыт — не в меню, но может открываться по прямой ссылке (зависит от темы).'),
-                    ])->columns(2),
-                SeoMetaFields::make(),
+                        Section::make('Основной контент страницы')
+                            ->description('Основной текст, который увидит посетитель. Для главной (slug home) страница собирается из блоков на вкладке «Блоки страницы».')
+                            ->visible(fn (Get $get): bool => ($get('slug') ?: '') !== 'home')
+                            ->schema([
+                                RichEditor::make('primary_html')
+                                    ->label('Текст страницы')
+                                    ->toolbarButtons([
+                                        'bold',
+                                        'italic',
+                                        'underline',
+                                        'strike',
+                                        'link',
+                                        'bulletList',
+                                        'orderedList',
+                                        'h2',
+                                        'h3',
+                                        'blockquote',
+                                    ])
+                                    ->columnSpanFull()
+                                    ->extraInputAttributes(['class' => 'tenant-page-primary-html-editor'])
+                                    ->helperText('Этот текст выводится на публичной странице в основном блоке.'),
+                            ])
+                            ->columnSpan(['default' => 1, 'lg' => 8]),
+                        Grid::make(1)
+                            ->columnSpan(['default' => 1, 'lg' => 4])
+                            ->schema([
+                                Section::make('Параметры страницы')
+                                    ->description('Настройки URL, публикации и отображения в меню сайта.')
+                                    ->schema([
+                                        TextInput::make('name')
+                                            ->label('Название в меню и списках')
+                                            ->required()
+                                            ->maxLength(255)
+                                            ->live(onBlur: true)
+                                            ->afterStateUpdated(fn ($set, ?string $state) => $set('slug', Str::slug($state ?? ''))),
+                                        TextInput::make('slug')
+                                            ->label('URL-идентификатор')
+                                            ->required()
+                                            ->maxLength(255)
+                                            ->unique(ignoreRecord: true)
+                                            ->live(onBlur: true)
+                                            ->helperText('Путь на сайте: about-us → /about-us. Для «Контакты» / «Правила аренды» — slug contacts и usloviya-arenda. Системные пути (/booking, /admin, /faq …) зарезервированы.'),
+                                        Select::make('template')
+                                            ->label('Макет')
+                                            ->options(['default' => 'По умолчанию'])
+                                            ->default('default')
+                                            ->helperText('Структура отображения, если тема поддерживает несколько макетов.'),
+                                        Select::make('status')
+                                            ->label('Статус публикации')
+                                            ->options(Page::statuses())
+                                            ->required()
+                                            ->default('draft')
+                                            ->helperText('Черновик и скрытые страницы не открываются публично по правилам сайта. В верхнее меню попадают только опубликованные страницы с включённым флагом меню.'),
+                                        Toggle::make('show_in_main_menu')
+                                            ->label('Показывать в главном меню')
+                                            ->helperText('Показывать ссылку на эту страницу в верхнем меню сайта.')
+                                            ->default(false),
+                                        TextInput::make('main_menu_sort_order')
+                                            ->label('Порядок в меню')
+                                            ->numeric()
+                                            ->default(0)
+                                            ->required()
+                                            ->helperText('Чем меньше число, тем выше пункт в меню.'),
+                                    ]),
+                                SeoMetaFields::make('seoMeta', true),
+                            ]),
+                    ]),
             ]);
     }
 
@@ -92,6 +139,13 @@ class PageResource extends Resource
                         'hidden' => 'gray',
                         default => 'gray',
                     }),
+                IconColumn::make('show_in_main_menu')
+                    ->label('В меню')
+                    ->boolean(),
+                TextColumn::make('main_menu_sort_order')
+                    ->label('Порядок')
+                    ->sortable()
+                    ->toggleable(),
                 TextColumn::make('sections_count')
                     ->counts('sections')
                     ->label('Блоков'),
@@ -112,7 +166,7 @@ class PageResource extends Resource
     public static function getRelations(): array
     {
         return [
-            SectionsRelationManager::class,
+            PageSectionsBuilderRelationManager::class,
         ];
     }
 

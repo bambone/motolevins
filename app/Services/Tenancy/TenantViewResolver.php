@@ -29,6 +29,12 @@ final class TenantViewResolver
         $this->assertValidLogicalName($logicalName);
 
         $tenant ??= tenant();
+        $requestScopedKey = 'tenant_view_resolved:'.($tenant?->id ?? 0).':'.$logicalName;
+        $attrs = request()->attributes;
+        if ($attrs->has($requestScopedKey)) {
+            return $attrs->get($requestScopedKey);
+        }
+
         $themeKeyNormalized = $tenant === null ? 'default' : $tenant->themeKey();
         $themeKeyRaw = $tenant === null ? null : ($tenant->getAttributes()['theme_key'] ?? $tenant->theme_key);
 
@@ -69,6 +75,8 @@ final class TenantViewResolver
             ]);
         }
 
+        $attrs->set($requestScopedKey, $resolved);
+
         return $resolved;
     }
 
@@ -85,5 +93,35 @@ final class TenantViewResolver
         if (! preg_match('/^[a-z0-9][a-z0-9._-]*$/', $logicalName)) {
             throw new InvalidArgumentException('Invalid tenant view logical name.');
         }
+    }
+
+    /**
+     * Safely checks if a tenant view exists for the logical name without throwing an exception if not found.
+     */
+    public function exists(string $logicalName, ?Tenant $tenant = null): bool
+    {
+        try {
+            $this->assertValidLogicalName($logicalName);
+        } catch (InvalidArgumentException $e) {
+            return false;
+        }
+
+        $tenant ??= tenant();
+        $themeKeyNormalized = $tenant === null ? 'default' : $tenant->themeKey();
+
+        $candidates = [];
+        if ($themeKeyNormalized !== '') {
+            $candidates[] = "tenant.themes.{$themeKeyNormalized}.{$logicalName}";
+        }
+        $candidates[] = "tenant.themes.default.{$logicalName}";
+        $candidates[] = "tenant.{$logicalName}";
+
+        foreach (array_unique($candidates) as $view) {
+            if (View::exists($view)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

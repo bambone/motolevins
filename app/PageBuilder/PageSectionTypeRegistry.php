@@ -1,0 +1,180 @@
+<?php
+
+namespace App\PageBuilder;
+
+use App\Models\Page;
+use App\PageBuilder\Blueprints\CardsTeaserBlueprint;
+use App\PageBuilder\Blueprints\ContactsBlueprint;
+use App\PageBuilder\Blueprints\ContactsInfoSectionBlueprint;
+use App\PageBuilder\Blueprints\ContentFaqSectionBlueprint;
+use App\PageBuilder\Blueprints\CtaBlueprint;
+use App\PageBuilder\Blueprints\DataTableSectionBlueprint;
+use App\PageBuilder\Blueprints\FaqBlueprint;
+use App\PageBuilder\Blueprints\FeaturesBlueprint;
+use App\PageBuilder\Blueprints\GalleryBlueprint;
+use App\PageBuilder\Blueprints\HeroBlueprint;
+use App\PageBuilder\Blueprints\InfoCardsSectionBlueprint;
+use App\PageBuilder\Blueprints\ListBlockSectionBlueprint;
+use App\PageBuilder\Blueprints\NoticeBoxSectionBlueprint;
+use App\PageBuilder\Blueprints\RichTextBlueprint;
+use App\PageBuilder\Blueprints\StructuredTextSectionBlueprint;
+use App\PageBuilder\Blueprints\TextSectionBlueprint;
+use App\PageBuilder\Contracts\PageSectionBlueprintInterface;
+use InvalidArgumentException;
+
+final class PageSectionTypeRegistry
+{
+    /** @var array<string, PageSectionBlueprintInterface> */
+    private array $byId = [];
+
+    public function __construct()
+    {
+        foreach ($this->allBlueprintInstances() as $blueprint) {
+            $this->byId[$blueprint->id()] = $blueprint;
+        }
+    }
+
+    /**
+     * Landing / главная страница — каталог в builder.
+     *
+     * @return list<PageSectionBlueprintInterface>
+     */
+    public function landingBlueprintInstances(): array
+    {
+        return [
+            new HeroBlueprint,
+            new RichTextBlueprint,
+            new FeaturesBlueprint,
+            new CtaBlueprint,
+            new FaqBlueprint,
+            new ContactsBlueprint,
+            new GalleryBlueprint,
+            new CardsTeaserBlueprint,
+        ];
+    }
+
+    /**
+     * Обычные контентные страницы (slug != home) — каталог в builder.
+     *
+     * @return list<PageSectionBlueprintInterface>
+     */
+    public function contentPageBlueprintInstances(): array
+    {
+        return [
+            new StructuredTextSectionBlueprint,
+            new TextSectionBlueprint,
+            new ContentFaqSectionBlueprint,
+            new ListBlockSectionBlueprint,
+            new InfoCardsSectionBlueprint,
+            new ContactsInfoSectionBlueprint,
+            new DataTableSectionBlueprint,
+            new NoticeBoxSectionBlueprint,
+        ];
+    }
+
+    /**
+     * @return list<PageSectionBlueprintInterface>
+     */
+    private function allBlueprintInstances(): array
+    {
+        return array_merge($this->landingBlueprintInstances(), $this->contentPageBlueprintInstances());
+    }
+
+    public function get(string $id): PageSectionBlueprintInterface
+    {
+        return $this->byId[$id] ?? throw new InvalidArgumentException("Unknown page section type: {$id}");
+    }
+
+    public function has(string $id): bool
+    {
+        return isset($this->byId[$id]);
+    }
+
+    /**
+     * @return list<PageSectionBlueprintInterface>
+     */
+    public function all(): array
+    {
+        return array_values($this->byId);
+    }
+
+    /**
+     * Types available for the given theme (catalog + create).
+     *
+     * @return list<PageSectionBlueprintInterface>
+     */
+    public function forTheme(string $themeKey): array
+    {
+        return array_values(array_filter(
+            $this->all(),
+            fn (PageSectionBlueprintInterface $b): bool => $b->supportsTheme($themeKey)
+        ));
+    }
+
+    /**
+     * Каталог для вкладки builder с учётом страницы: home — landing, иначе — контентные блоки.
+     *
+     * @return list<PageSectionBlueprintInterface>
+     */
+    public function forPage(Page $page, string $themeKey): array
+    {
+        $source = $page->slug === 'home'
+            ? $this->landingBlueprintInstances()
+            : $this->contentPageBlueprintInstances();
+
+        return array_values(array_filter(
+            $source,
+            fn (PageSectionBlueprintInterface $b): bool => $b->supportsTheme($themeKey)
+        ));
+    }
+
+    /**
+     * @return array<string, list<PageSectionBlueprintInterface>>
+     */
+    public function groupedForPage(Page $page, string $themeKey): array
+    {
+        $categories = $page->slug === 'home'
+            ? PageSectionCategory::orderedForCatalog()
+            : PageSectionCategory::orderedForContentPageCatalog();
+
+        $out = [];
+        foreach ($categories as $cat) {
+            $out[$cat->value] = [];
+        }
+        foreach ($this->forPage($page, $themeKey) as $b) {
+            $out[$b->category()->value][] = $b;
+        }
+
+        return $out;
+    }
+
+    public function typeAllowedOnPage(string $typeId, Page $page, string $themeKey): bool
+    {
+        if (! $this->has($typeId)) {
+            return false;
+        }
+        foreach ($this->forPage($page, $themeKey) as $b) {
+            if ($b->id() === $typeId) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @return array<string, list<PageSectionBlueprintInterface>> category value => blueprints
+     */
+    public function groupedForTheme(string $themeKey): array
+    {
+        $out = [];
+        foreach (PageSectionCategory::orderedForCatalog() as $cat) {
+            $out[$cat->value] = [];
+        }
+        foreach ($this->forTheme($themeKey) as $b) {
+            $out[$b->category()->value][] = $b;
+        }
+
+        return $out;
+    }
+}

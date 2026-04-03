@@ -3,8 +3,15 @@
 namespace App\Filament\Tenant\Resources\LeadResource\Pages;
 
 use App\Filament\Exports\LeadExporter;
+use App\Filament\Tenant\Forms\ManualOperatorBookingForm;
 use App\Filament\Tenant\Resources\LeadResource;
+use App\Models\Booking;
+use App\Models\Lead;
+use App\Product\CRM\DTO\ManualLeadCreateData;
+use App\Product\CRM\ManualLeadBookingService;
+use Filament\Actions\Action;
 use Filament\Actions\ExportAction;
+use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ListRecords;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Facades\Gate;
@@ -30,6 +37,51 @@ class ListLeads extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
+            Action::make('create_manual_lead')
+                ->label('Добавить обращение')
+                ->icon('heroicon-o-plus')
+                ->visible(fn (): bool => Gate::allows('create', Lead::class))
+                ->form(ManualOperatorBookingForm::leadCreateComponents())
+                ->action(function (array $data): void {
+                    $tenant = currentTenant();
+                    if ($tenant === null) {
+                        return;
+                    }
+
+                    $createBooking = (bool) ($data['create_booking'] ?? false)
+                        && Gate::allows('create', Booking::class);
+                    $createCrm = ManualOperatorBookingForm::effectiveCreateCrm($data);
+
+                    $fromYmd = $createBooking
+                        ? ManualOperatorBookingForm::toYmd($data['booking_rental_date_from'] ?? null)
+                        : ManualOperatorBookingForm::toYmd($data['rental_date_from'] ?? null);
+                    $toYmd = $createBooking
+                        ? ManualOperatorBookingForm::toYmd($data['booking_rental_date_to'] ?? null)
+                        : ManualOperatorBookingForm::toYmd($data['rental_date_to'] ?? null);
+
+                    $motorcycleId = isset($data['motorcycle_id']) ? (int) $data['motorcycle_id'] : null;
+                    $rentalUnitId = isset($data['rental_unit_id']) ? (int) $data['rental_unit_id'] : null;
+
+                    app(ManualLeadBookingService::class)->createManualLead(new ManualLeadCreateData(
+                        tenantId: $tenant->id,
+                        name: (string) $data['name'],
+                        phone: (string) $data['phone'],
+                        email: $data['email'] ?? null,
+                        comment: $data['comment'] ?? null,
+                        messenger: $data['messenger'] ?? null,
+                        motorcycleId: $motorcycleId ?: null,
+                        rentalDateFromYmd: $fromYmd,
+                        rentalDateToYmd: $toYmd,
+                        createCrm: $createCrm,
+                        createBooking: $createBooking,
+                        rentalUnitId: $rentalUnitId ?: null,
+                    ));
+
+                    Notification::make()
+                        ->title('Обращение создано')
+                        ->success()
+                        ->send();
+                }),
             ExportAction::make()
                 ->exporter(LeadExporter::class)
                 ->visible(fn () => Gate::allows('export_leads')),

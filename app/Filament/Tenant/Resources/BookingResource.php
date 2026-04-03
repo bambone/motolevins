@@ -2,6 +2,7 @@
 
 namespace App\Filament\Tenant\Resources;
 
+use App\Bookings\Calendar\BookingStatusPresentation;
 use App\Enums\BookingStatus;
 use App\Filament\Tenant\Concerns\ResolvesDomainTermLabels;
 use App\Filament\Tenant\Resources\BookingResource\Pages;
@@ -66,7 +67,7 @@ class BookingResource extends Resource
                             ->label('Номер'),
                         TextEntry::make('status')
                             ->label('Статус')
-                            ->formatStateUsing(fn (BookingStatus $state): string => self::statusLabel($state)),
+                            ->formatStateUsing(fn (BookingStatus $state): string => BookingStatusPresentation::label($state)),
                         TextEntry::make('customer_name')
                             ->label('Клиент'),
                         TextEntry::make('phone')
@@ -132,13 +133,8 @@ class BookingResource extends Resource
                 TextColumn::make('status')
                     ->label('Статус')
                     ->badge()
-                    ->formatStateUsing(fn (BookingStatus $state): string => self::statusLabel($state))
-                    ->color(fn (BookingStatus $state): string => match ($state) {
-                        BookingStatus::CONFIRMED, BookingStatus::COMPLETED => 'success',
-                        BookingStatus::PENDING, BookingStatus::AWAITING_PAYMENT => 'warning',
-                        BookingStatus::CANCELLED, BookingStatus::NO_SHOW => 'danger',
-                        default => 'gray',
-                    }),
+                    ->formatStateUsing(fn (BookingStatus $state): string => BookingStatusPresentation::label($state))
+                    ->color(fn (BookingStatus $state): string => BookingStatusPresentation::filamentBadgeColor($state)),
                 TextColumn::make('total_price')
                     ->label('Сумма')
                     ->money('RUB')
@@ -171,18 +167,5 @@ class BookingResource extends Resource
     public static function canDelete(Model $record): bool
     {
         return false;
-    }
-
-    private static function statusLabel(BookingStatus $state): string
-    {
-        return match ($state) {
-            BookingStatus::DRAFT => 'Черновик',
-            BookingStatus::PENDING => 'Ожидает',
-            BookingStatus::AWAITING_PAYMENT => 'Ожидает оплаты',
-            BookingStatus::CONFIRMED => 'Подтверждено',
-            BookingStatus::CANCELLED => 'Отменено',
-            BookingStatus::COMPLETED => 'Завершено',
-            BookingStatus::NO_SHOW => 'Неявка',
-        };
     }
 }

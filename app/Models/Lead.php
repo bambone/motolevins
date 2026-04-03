@@ -101,6 +101,11 @@ class Lead extends Model
         return $this->belongsTo(CrmRequest::class);
     }
 
+    public function bookings(): HasMany
+    {
+        return $this->hasMany(Booking::class);
+    }
+
     public static function statuses(): array
     {
         return [
@@ -122,6 +127,8 @@ class Lead extends Model
             'phone' => 'Телефон',
             'whatsapp' => 'WhatsApp',
             'telegram' => 'Telegram',
+            'manual' => 'Вручную (кабинет)',
+            'office' => 'Офис / стойка',
             'other' => 'Другое',
         ];
     }

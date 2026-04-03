@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use App\Models\Redirect;
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response;
 
 class RedirectMiddleware
@@ -26,7 +27,7 @@ class RedirectMiddleware
 
         if ($redirect) {
             $toUrl = $redirect->to_url;
-            if (! str_starts_with($toUrl, ['http://', 'https://'])) {
+            if (! Str::startsWith($toUrl, ['http://', 'https://'])) {
                 $toUrl = url($toUrl);
             }
 

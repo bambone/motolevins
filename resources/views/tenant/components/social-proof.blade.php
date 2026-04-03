@@ -28,7 +28,7 @@
                         <div class="border-t border-white/5 pt-5 flex items-center gap-4">
                             <div class="w-12 h-12 rounded-full overflow-hidden border-2 border-white/10 shrink-0 shadow-lg flex items-center justify-center bg-moto-amber/20">
                                 @if($review->avatar_url)
-                                    <img src="{{ $review->avatar_url }}" alt="{{ $review->name }}" class="w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden')">
+                                    <img src="{{ $review->avatar_url }}" alt="{{ $review->name }}" class="w-full h-full object-cover" loading="lazy" decoding="async" fetchpriority="low" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden')">
                                 @endif
                                 @php $initials = strtoupper(collect(explode(' ', $review->name ?? '?'))->take(2)->map(fn($s) => mb_substr($s, 0, 1))->implode('')); @endphp
                                 <span class="text-moto-amber font-bold text-sm {{ $review->avatar_url ? 'hidden' : '' }}">{{ $initials ?: '?' }}</span>
@@ -55,7 +55,7 @@
                 </div>
                 <div class="border-t border-white/5 pt-5 flex items-center gap-4">
                     <div class="w-12 h-12 rounded-full overflow-hidden border-2 border-white/10 shrink-0 shadow-lg flex items-center justify-center bg-moto-amber/20">
-                        <img src="{{ theme_platform_asset_url('avatars/avatar-1.png') }}" alt="Алексей М." class="w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden')">
+                        <img src="{{ theme_platform_asset_url('avatars/avatar-1.png') }}" alt="Алексей М." class="w-full h-full object-cover" loading="lazy" decoding="async" fetchpriority="low" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden')">
                         <span class="text-moto-amber font-bold text-sm hidden">АМ</span>
                     </div>
                     <div>
@@ -79,7 +79,7 @@
                 </div>
                 <div class="border-t border-white/5 pt-5 flex items-center gap-4">
                     <div class="w-12 h-12 rounded-full overflow-hidden border-2 border-white/10 shrink-0 shadow-lg flex items-center justify-center bg-moto-amber/20">
-                        <img src="{{ theme_platform_asset_url('avatars/avatar-2.png') }}" alt="Игорь С." class="w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden')">
+                        <img src="{{ theme_platform_asset_url('avatars/avatar-2.png') }}" alt="Игорь С." class="w-full h-full object-cover" loading="lazy" decoding="async" fetchpriority="low" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden')">
                         <span class="text-moto-amber font-bold text-sm hidden">ИС</span>
                     </div>
                     <div>
@@ -103,7 +103,7 @@
                 </div>
                 <div class="border-t border-white/5 pt-5 flex items-center gap-4">
                     <div class="w-12 h-12 rounded-full overflow-hidden border-2 border-white/10 shrink-0 shadow-lg flex items-center justify-center bg-moto-amber/20">
-                        <img src="{{ theme_platform_asset_url('avatars/avatar-3.png') }}" alt="Анна В." class="w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden')">
+                        <img src="{{ theme_platform_asset_url('avatars/avatar-3.png') }}" alt="Анна В." class="w-full h-full object-cover" loading="lazy" decoding="async" fetchpriority="low" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden')">
                         <span class="text-moto-amber font-bold text-sm hidden">АВ</span>
                     </div>
                     <div>

@@ -5,17 +5,30 @@ namespace App\Providers;
 use App\Auth\AccessRoles;
 use App\Auth\TenantPivotPermissions;
 use App\Filesystem\WindowsSafeFilesystem;
+use App\Http\Controllers\HomeController;
 use App\Jobs\Mail\SendTenantMailableJob;
+use App\Models\Faq;
 use App\Models\Lead;
+use App\Models\Motorcycle;
+use App\Models\Page;
+use App\Models\PageSection;
+use App\Models\Review;
 use App\Models\Setting;
 use App\Models\TenantSetting;
 use App\Models\User;
 use App\Observers\LeadObserver;
+use App\PageBuilder\LegacySectionTypeResolver;
+use App\PageBuilder\PageSectionKeyGenerator;
+use App\PageBuilder\PageSectionTypeRegistry;
 use App\Product\Mail\ProductMailOrchestrator;
 use App\Product\Settings\MarketingContentResolver;
 use App\Product\Settings\ProductMailSettingsResolver;
 use App\Services\CurrentTenantManager;
 use App\Services\Mail\TenantMailer;
+use App\Services\PageBuilder\PageSectionOperationsService;
+use App\Services\PageBuilder\SectionViewResolver;
+use App\Services\Tenancy\TenantMainMenuPages;
+use App\Services\Tenancy\TenantPagePrimaryHtmlSync;
 use App\Services\Tenancy\TenantViewResolver;
 use App\Terminology\TenantTerminologyService;
 use App\Themes\ThemeRegistry;
@@ -42,6 +55,13 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(ProductMailOrchestrator::class);
         $this->app->singleton(TenantTerminologyService::class);
         $this->app->singleton(ThemeRegistry::class);
+        $this->app->singleton(TenantMainMenuPages::class);
+        $this->app->singleton(TenantPagePrimaryHtmlSync::class);
+        $this->app->singleton(PageSectionTypeRegistry::class);
+        $this->app->singleton(LegacySectionTypeResolver::class);
+        $this->app->singleton(PageSectionKeyGenerator::class);
+        $this->app->singleton(PageSectionOperationsService::class);
+        $this->app->singleton(SectionViewResolver::class);
     }
 
     /**
@@ -64,6 +84,58 @@ class AppServiceProvider extends ServiceProvider
         ]);
 
         Lead::observe(LeadObserver::class);
+
+        $forgetTenantHome = static function (int $tenantId): void {
+            if ($tenantId > 0) {
+                HomeController::forgetCachedPayloadForTenant($tenantId);
+            }
+        };
+
+        Page::saved(static function (Page $page) use ($forgetTenantHome): void {
+            if ($page->slug === 'home' && $page->tenant_id) {
+                $forgetTenantHome((int) $page->tenant_id);
+            }
+        });
+        Page::deleted(static function (Page $page) use ($forgetTenantHome): void {
+            if ($page->slug === 'home' && $page->tenant_id) {
+                $forgetTenantHome((int) $page->tenant_id);
+            }
+        });
+
+        $forgetIfHomeSection = static function (PageSection $section) use ($forgetTenantHome): void {
+            if (! $section->tenant_id) {
+                return;
+            }
+            $section->loadMissing('page');
+            if ($section->page && $section->page->slug === 'home') {
+                $forgetTenantHome((int) $section->tenant_id);
+            }
+        };
+        PageSection::saved($forgetIfHomeSection);
+        PageSection::deleted($forgetIfHomeSection);
+
+        Motorcycle::saved(static function (Motorcycle $m) use ($forgetTenantHome): void {
+            if ($m->tenant_id) {
+                $forgetTenantHome((int) $m->tenant_id);
+            }
+        });
+        Motorcycle::deleted(static function (Motorcycle $m) use ($forgetTenantHome): void {
+            if ($m->tenant_id) {
+                $forgetTenantHome((int) $m->tenant_id);
+            }
+        });
+
+        Faq::saved(static function (Faq $faq) use ($forgetTenantHome): void {
+            if ($faq->tenant_id) {
+                $forgetTenantHome((int) $faq->tenant_id);
+            }
+        });
+
+        Review::saved(static function (Review $review) use ($forgetTenantHome): void {
+            if ($review->tenant_id) {
+                $forgetTenantHome((int) $review->tenant_id);
+            }
+        });
 
         RateLimiter::for('tenant-mails', function (mixed $job) {
             if (! $job instanceof SendTenantMailableJob) {
@@ -111,32 +183,51 @@ class AppServiceProvider extends ServiceProvider
             return TenantPivotPermissions::pivotRoleAllows($role, $ability) ? true : false;
         });
 
+        // Composer on '*' runs for every Blade view (layout, @include, anonymous components).
+        // Build shared vars once per request: avoids repeated TenantSetting/cache + disk->exists on branding paths.
         View::composer('*', function ($view) {
+            $request = request();
+            $attrKey = '_tenant_public_layout_vars';
+            if ($request->attributes->has($attrKey)) {
+                $view->with($request->attributes->get($attrKey));
+
+                return;
+            }
+
             $tenant = currentTenant();
             if ($tenant) {
-                $view->with('contacts', [
-                    'phone' => TenantSetting::getForTenant($tenant->id, 'contacts.phone', '+7 (913) 060-86-89'),
-                    'phone_alt' => TenantSetting::getForTenant($tenant->id, 'contacts.phone_alt', ''),
-                    'whatsapp' => preg_replace('/\D/', '', TenantSetting::getForTenant($tenant->id, 'contacts.whatsapp', '79130608689')),
-                    'telegram' => ltrim(TenantSetting::getForTenant($tenant->id, 'contacts.telegram', 'motolevins'), '@'),
-                ]);
-                $view->with('branding', [
-                    'logo' => tenant_branding_logo_url(),
-                    'primary_color' => TenantSetting::getForTenant($tenant->id, 'branding.primary_color', '#f59e0b'),
-                    'favicon' => tenant_branding_favicon_url(),
-                    'hero_image' => tenant_branding_hero_url(),
-                ]);
-                $view->with('site_name', TenantSetting::getForTenant($tenant->id, 'general.site_name', $tenant->defaultPublicSiteName()));
+                $bundle = [
+                    'contacts' => [
+                        'phone' => TenantSetting::getForTenant($tenant->id, 'contacts.phone', '+7 (913) 060-86-89'),
+                        'phone_alt' => TenantSetting::getForTenant($tenant->id, 'contacts.phone_alt', ''),
+                        'whatsapp' => preg_replace('/\D/', '', TenantSetting::getForTenant($tenant->id, 'contacts.whatsapp', '79130608689')),
+                        'telegram' => ltrim(TenantSetting::getForTenant($tenant->id, 'contacts.telegram', 'motolevins'), '@'),
+                    ],
+                    'branding' => [
+                        'logo' => tenant_branding_logo_url(),
+                        'primary_color' => TenantSetting::getForTenant($tenant->id, 'branding.primary_color', '#f59e0b'),
+                        'favicon' => tenant_branding_favicon_url(),
+                        'hero_image' => tenant_branding_hero_url(),
+                    ],
+                    'site_name' => TenantSetting::getForTenant($tenant->id, 'general.site_name', $tenant->defaultPublicSiteName()),
+                    'tenantMainMenuPages' => app(TenantMainMenuPages::class)->menuItems($tenant),
+                ];
             } else {
-                $view->with('contacts', [
-                    'phone' => Setting::get('contacts.phone', '+7 (913) 060-86-89'),
-                    'phone_alt' => Setting::get('contacts.phone_alt', ''),
-                    'whatsapp' => preg_replace('/\D/', '', Setting::get('contacts.whatsapp', '79130608689')),
-                    'telegram' => ltrim(Setting::get('contacts.telegram', 'motolevins'), '@'),
-                ]);
-                $view->with('branding', ['logo' => '', 'primary_color' => '#f59e0b', 'favicon' => '']);
-                $view->with('site_name', config('app.name'));
+                $bundle = [
+                    'contacts' => [
+                        'phone' => Setting::get('contacts.phone', '+7 (913) 060-86-89'),
+                        'phone_alt' => Setting::get('contacts.phone_alt', ''),
+                        'whatsapp' => preg_replace('/\D/', '', Setting::get('contacts.whatsapp', '79130608689')),
+                        'telegram' => ltrim(Setting::get('contacts.telegram', 'motolevins'), '@'),
+                    ],
+                    'branding' => ['logo' => '', 'primary_color' => '#f59e0b', 'favicon' => '', 'hero_image' => ''],
+                    'site_name' => config('app.name'),
+                    'tenantMainMenuPages' => collect(),
+                ];
             }
+
+            $request->attributes->set($attrKey, $bundle);
+            $view->with($bundle);
         });
     }
 }
