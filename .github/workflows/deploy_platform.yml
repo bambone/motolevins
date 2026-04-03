@@ -209,13 +209,17 @@ jobs:
           rm -rf "$REL" "$PRES" 2>/dev/null || true
           EOF
 
-      # HTTP liveness only (final 2xx after redirects); no HTML inspection. Requires public HTTPS URLs:
-      # set Actions variables SMOKE_MARKETING_URL and SMOKE_PLATFORM_URL (full https://… URLs).
+      # HTTP liveness (2xx after redirects). Обязательные Variables — иначе шаг падает (явная настройка после деплоя).
+      # Repo → Settings → Secrets and variables → Actions → Variables:
+      #   SMOKE_MARKETING_URL = https://rentbase.su
+      #   SMOKE_PLATFORM_URL  = https://platform.rentbase.su
+      #   SMOKE_TENANT_URL    = https://<tenant>.rentbase.su (опционально)
       - name: Post-deploy smoke
         shell: bash
         env:
           SMOKE_MARKETING_URL: "${{ vars.SMOKE_MARKETING_URL }}"
           SMOKE_PLATFORM_URL: "${{ vars.SMOKE_PLATFORM_URL }}"
+          SMOKE_TENANT_URL: "${{ vars.SMOKE_TENANT_URL }}"
         run: |
           set -euo pipefail
 
@@ -241,5 +245,10 @@ jobs:
 
           check_url "Marketing" "${SMOKE_MARKETING_URL%/}/"
           check_url "Platform" "${SMOKE_PLATFORM_URL%/}/"
+          if [ -n "${SMOKE_TENANT_URL:-}" ]; then
+            check_url "Tenant landing" "${SMOKE_TENANT_URL%/}/"
+          else
+            echo "Post-deploy smoke: Tenant landing skipped (set SMOKE_TENANT_URL to enable)."
+          fi
 
           echo "Post-deploy smoke passed"
