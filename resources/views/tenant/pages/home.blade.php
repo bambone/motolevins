@@ -22,8 +22,14 @@
                 'reviews' => $reviews ?? collect(),
             ])
         @empty
-            {{-- Нет опубликованных секций главной (кроме main): запасной минимальный вид --}}
+            {{-- Нет опубликованных секций главной (кроме main): тот же минимальный набор, что и motorcycle_catalog из слота --}}
             <x-hero :section="$sections['hero'] ?? []" />
+            @include('tenant.partials.home-motorcycle-catalog', [
+                'bikes' => $bikes,
+                'badges' => $badges,
+                'heading' => 'Наш автопарк',
+                'subheading' => null,
+            ])
         @endforelse
 
         <x-booking-modal />

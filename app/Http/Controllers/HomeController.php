@@ -21,6 +21,28 @@ class HomeController extends Controller
 
     public function index()
     {
+        $tenant = tenant();
+        if ($tenant === null) {
+            abort(404);
+        }
+
+        $ttl = (int) config('tenancy.public_home_cache_ttl', 0);
+        $cacheKey = sprintf('tenant:%d:home:index:v2', $tenant->id);
+
+        if ($ttl > 0) {
+            $data = Cache::remember($cacheKey, $ttl, fn () => $this->buildHomeIndexData());
+
+            return tenant_view('pages.home', $data);
+        }
+
+        return tenant_view('pages.home', $this->buildHomeIndexData());
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function buildHomeIndexData(): array
+    {
         $bikes = Motorcycle::where('show_in_catalog', true)
             ->where('status', 'available')
             ->with(['category', 'media'])
@@ -37,9 +59,21 @@ class HomeController extends Controller
             'Лучший выбор',
         ];
 
-        $homeLayoutSections = $this->getHomeLayoutSections();
+        $page = Page::query()
+            ->where('slug', 'home')
+            ->where('status', 'published')
+            ->with('seoMeta')
+            ->with(['sections' => function ($q): void {
+                $q->where('status', 'published')
+                    ->where('is_visible', true)
+                    ->where('section_key', '!=', 'main')
+                    ->orderBy('sort_order')
+                    ->orderBy('id');
+            }])
+            ->first();
+
+        $homeLayoutSections = $page ? $page->sections : collect();
         $sections = $this->sectionsKeyedForLegacyComponents($homeLayoutSections);
-        $page = Page::where('slug', 'home')->where('status', 'published')->first();
         $seoMeta = $page?->seoMeta;
         $faqs = Faq::where('show_on_home', true)
             ->where('status', 'published')
@@ -47,7 +81,7 @@ class HomeController extends Controller
             ->get();
         $reviews = $this->getHomeReviews($homeLayoutSections);
 
-        return tenant_view('pages.home', compact(
+        return compact(
             'bikes',
             'badges',
             'sections',
@@ -55,26 +89,7 @@ class HomeController extends Controller
             'faqs',
             'reviews',
             'seoMeta',
-        ));
-    }
-
-    /**
-     * @return BaseCollection<int, PageSection>
-     */
-    private function getHomeLayoutSections(): BaseCollection
-    {
-        $page = Page::where('slug', 'home')->where('status', 'published')->first();
-        if (! $page) {
-            return collect();
-        }
-
-        return $page->sections()
-            ->where('status', 'published')
-            ->where('is_visible', true)
-            ->where('section_key', '!=', 'main')
-            ->orderBy('sort_order')
-            ->orderBy('id')
-            ->get();
+        );
     }
 
     /**

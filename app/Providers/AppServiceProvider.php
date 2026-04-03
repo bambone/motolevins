@@ -140,6 +140,18 @@ class AppServiceProvider extends ServiceProvider
             }
         });
 
+        $forgetHomeIfMotorcycleMedia = static function (Media $media) use ($forgetTenantHome): void {
+            if ($media->model_type !== Motorcycle::class || $media->model_id === null || $media->model_id === '') {
+                return;
+            }
+            $tid = Motorcycle::query()->whereKey((int) $media->model_id)->value('tenant_id');
+            if ($tid) {
+                $forgetTenantHome((int) $tid);
+            }
+        };
+        Media::saved($forgetHomeIfMotorcycleMedia);
+        Media::deleted($forgetHomeIfMotorcycleMedia);
+
         RateLimiter::for('tenant-mails', function (mixed $job) {
             if (! $job instanceof SendTenantMailableJob) {
                 return Limit::none();

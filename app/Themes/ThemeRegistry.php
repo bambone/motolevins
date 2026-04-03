@@ -47,9 +47,32 @@ final class ThemeRegistry
     }
 
     /**
-     * См. {@see assetUrl()} — порядок разрешения URL в теле метода.
+     * См. {@see resolveAssetUrlUncached()} — порядок разрешения URL в теле метода.
+     *
+     * Результат мемоизируется на время HTTP-запроса: иначе на объектном диске каждый вызов
+     * {@code exists()} — отдельный round-trip, а {@code theme_platform_asset_url()} дергается из Blade десятки раз.
      */
     public function assetUrl(string $themeKey, string $relativeWithinTheme, ?Tenant $tenant = null): string
+    {
+        $relativeWithinTheme = ltrim(str_replace('\\', '/', $relativeWithinTheme), '/');
+        $normalizedKey = $this->normalizeKey($themeKey);
+        $memoKey = $normalizedKey."\0".$relativeWithinTheme."\0".($tenant?->id ?? 0);
+
+        $request = request();
+        /** @var array<string, string> $bucket */
+        $bucket = $request->attributes->get('_theme_registry_asset_url', []);
+        if (isset($bucket[$memoKey])) {
+            return $bucket[$memoKey];
+        }
+
+        $url = $this->resolveAssetUrlUncached($themeKey, $relativeWithinTheme, $tenant);
+        $bucket[$memoKey] = $url;
+        $request->attributes->set('_theme_registry_asset_url', $bucket);
+
+        return $url;
+    }
+
+    private function resolveAssetUrlUncached(string $themeKey, string $relativeWithinTheme, ?Tenant $tenant = null): string
     {
         $relativeWithinTheme = ltrim(str_replace('\\', '/', $relativeWithinTheme), '/');
         $def = $this->get($this->normalizeKey($themeKey));
