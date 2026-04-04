@@ -94,14 +94,14 @@
     <div class="space-y-0" role="region" aria-label="Структура страницы на сайте">
 
         <p class="psb-outline-label mb-2 text-[10px] font-semibold uppercase tracking-wider psb-text-muted">Основной текст</p>
-        <div class="psb-main-card psb-main-surface p-4 sm:p-5">
-            <div class="flex flex-wrap items-start gap-3 sm:gap-4">
-                <div class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg psb-text-secondary ring-1 ring-inset ring-[var(--psb-border)]" style="background: var(--psb-bg-elevated)">
-                    <x-filament::icon icon="heroicon-o-document-text" class="h-5 w-5" />
+        <div class="psb-main-card psb-main-surface p-4 sm:p-5 dark:bg-white/[0.02]">
+            <div class="flex flex-wrap items-start gap-4">
+                <div class="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-white shadow-sm ring-1 ring-inset ring-gray-200 dark:bg-gray-800 dark:ring-white/10">
+                    <x-filament::icon icon="heroicon-o-document-text" class="h-5 w-5 psb-text-primary opacity-80" />
                 </div>
                 <div class="min-w-0 flex-1">
                     <div class="flex flex-wrap items-center gap-2">
-                        <h4 class="text-sm font-semibold psb-text-primary sm:text-base">
+                        <h4 class="text-[15px] font-semibold psb-text-primary">
                             @if($pageCtx->isHome)
                                 Главная — только блоки ниже
                             @else
@@ -109,27 +109,29 @@
                             @endif
                         </h4>
                         @if($mainCardSiteTooltip)
-                            <span class="inline-flex" title="{{ $mainCardSiteTooltip }}">
+                            <span class="inline-flex cursor-help" title="{{ $mainCardSiteTooltip }}">
                                 <x-filament::icon icon="heroicon-o-information-circle" class="h-4 w-4 psb-text-muted" />
                             </span>
                         @endif
                     </div>
                     @if($mainCard['mode'] === 'home')
-                        <p class="mt-1 text-xs psb-text-muted">Текст главной не хранится здесь.</p>
+                        <p class="mt-1 text-xs psb-text-muted">Текст главной не хранится здесь. Настройте его в свойствах страницы.</p>
                     @else
                         @if($mainCard['excerpt'] !== '')
-                            <p class="mt-1.5 text-sm leading-snug psb-text-secondary line-clamp-2">{{ $mainCard['excerpt'] }}</p>
+                            <p class="mt-2 text-sm leading-relaxed psb-text-secondary line-clamp-2">{{ $mainCard['excerpt'] }}</p>
                         @else
-                            <p class="mt-1.5 text-xs psb-text-muted">Пока пусто.</p>
+                            <p class="mt-1.5 text-xs psb-text-muted">Содержание пока не заполнено.</p>
                         @endif
                     @endif
-                    <a href="{{ $mainCard['edit_url'] }}" wire:navigate class="fi-btn fi-btn-color-primary mt-3 inline-flex min-h-9 items-center justify-center rounded-lg px-4 py-2 text-xs font-semibold text-white">
-                        @if($pageCtx->isHome)
-                            Настройки страницы
-                        @else
-                            Редактировать текст
-                        @endif
-                    </a>
+                    <div class="mt-4">
+                        <a href="{{ $mainCard['edit_url'] }}" wire:navigate class="inline-flex min-h-8 items-center justify-center rounded-lg bg-gray-900 px-4 py-1.5 text-xs font-semibold text-white shadow-sm ring-1 ring-inset ring-gray-900/10 transition hover:bg-gray-800 dark:bg-white dark:text-gray-900 dark:ring-white/10 dark:hover:bg-gray-100">
+                            @if($pageCtx->isHome)
+                                Настройки страницы
+                            @else
+                                Редактировать текст
+                            @endif
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>
@@ -278,35 +280,35 @@
                                 </p>
                             </div>
 
-                            <div class="flex flex-shrink-0 flex-col justify-center gap-1.5 border-t pt-2.5 sm:w-[7.5rem] sm:border-t-0 sm:pt-0 sm:pl-1" style="border-color: var(--psb-border)" wire:click.stop>
-                                <button type="button" wire:click="startEdit({{ $row['id'] }})" class="fi-btn fi-btn-color-primary inline-flex min-h-9 w-full items-center justify-center rounded-lg px-3 py-2 text-xs font-semibold text-white">
-                                    Изменить
+                            <div class="flex flex-shrink-0 flex-col justify-center gap-1.5 border-t pt-3 sm:w-[8rem] sm:border-t-0 sm:pt-0 sm:pl-3" style="border-color: var(--psb-border)" wire:click.stop>
+                                <button type="button" wire:click="startEdit({{ $row['id'] }})" class="inline-flex min-h-8 w-full items-center justify-center rounded-lg bg-gray-900 px-3 py-1.5 text-[11.5px] font-semibold text-white shadow-sm ring-1 ring-inset ring-gray-900/10 transition hover:bg-gray-800 dark:bg-white dark:text-gray-900 dark:ring-white/10 dark:hover:bg-gray-100">
+                                    Редактировать
                                 </button>
-                                <div class="flex items-center justify-center gap-0.5">
+                                <div class="flex items-center justify-center gap-0.5 mt-0.5">
                                     <button
                                         type="button"
                                         wire:click="toggleVisibility({{ $row['id'] }})"
-                                        class="psb-btn-icon"
+                                        class="flex h-7 flex-1 flex-shrink-0 items-center justify-center rounded-md text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-white/10 dark:hover:text-white"
                                         title="{{ $row['is_visible'] ? 'Скрыть' : 'Показать' }}"
                                         aria-label="{{ $row['is_visible'] ? 'Скрыть на сайте' : 'Показать на сайте' }}"
                                     >
-                                        <x-filament::icon :icon="$row['is_visible'] ? 'heroicon-o-eye-slash' : 'heroicon-o-eye'" class="h-5 w-5" />
+                                        <x-filament::icon :icon="$row['is_visible'] ? 'heroicon-o-eye-slash' : 'heroicon-o-eye'" class="h-4 w-4" />
                                     </button>
                                     <div
-                                        class="psb-menu-anchor flex-1"
+                                        class="psb-menu-anchor flex-1 flex-shrink-0"
                                         x-data="{ open: false }"
                                         @keydown.escape.window="open = false"
                                         @click.outside="open = false"
                                     >
                                         <button
                                             type="button"
-                                            class="psb-btn-icon w-full"
+                                            class="flex w-full h-7 items-center justify-center rounded-md text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-white/10 dark:hover:text-white"
                                             @click.prevent="open = !open"
                                             :aria-expanded="open"
                                             aria-haspopup="true"
                                             aria-label="Ещё"
                                         >
-                                            <x-filament::icon icon="heroicon-o-ellipsis-vertical" class="h-5 w-5" />
+                                            <x-filament::icon icon="heroicon-o-ellipsis-vertical" class="h-4 w-4" />
                                         </button>
                                         <div
                                             x-show="open"
@@ -332,79 +334,95 @@
                             </div>
                         </div>
                         @if($expanded)
-                            <div class="border-t px-2.5 py-3 sm:px-3" style="border-color: var(--psb-border)">
-                                @if(($row['card_site_tooltip'] ?? '') !== '')
-                                    <details class="psb-site-details mb-3 rounded-lg border px-2.5 py-2 sm:px-3" style="border-color: var(--psb-border)">
-                                        <summary class="cursor-pointer select-none text-[11px] font-medium psb-text-muted">Как на сайте</summary>
-                                        <p class="mt-2 whitespace-pre-line text-[11px] leading-relaxed psb-text-secondary">{{ $row['card_site_tooltip'] }}</p>
-                                    </details>
-                                @endif
-
-                                <div class="psb-expanded-preview psb-readonly-preview">
-                                    @if(!empty($channels))
-                                        <div class="mb-2 flex flex-wrap gap-2">
-                                            @foreach($channels as $ch)
-                                                <span class="{{ ($ch['on'] ?? false) ? 'psb-text-secondary' : 'psb-text-muted opacity-35' }}" title="{{ $ch['label'] }}">
-                                                    <x-filament::icon :icon="$ch['icon']" class="h-4 w-4" />
-                                                </span>
-                                            @endforeach
+                            <div class="border-t sm:px-1" style="border-color: var(--psb-border)">
+                                <div class="px-2.5 py-4 sm:px-3 space-y-4">
+                                    <!-- 1. PREVIEW ZONE -->
+                                    <div class="psb-expanded-preview border-l-2 rounded-r-lg" style="background-color: var(--psb-bg-page); border-top-color: var(--psb-border); border-right-color: var(--psb-border); border-bottom-color: var(--psb-border); border-left-color: rgba(100, 116, 139, 0.4);">
+                                        <div class="mb-2 flex items-center justify-between">
+                                            <p class="text-[10px] font-bold uppercase tracking-wider psb-text-muted">Отображается на сайте</p>
+                                            @if(($row['card_site_tooltip'] ?? '') !== '')
+                                                <div class="group relative flex items-center">
+                                                    <x-filament::icon icon="heroicon-o-information-circle" class="h-4 w-4 psb-text-muted cursor-help" />
+                                                    <div class="pointer-events-none absolute bottom-full right-0 mb-2 w-56 opacity-0 transition-opacity group-hover:opacity-100 dark:bg-gray-800 bg-white shadow-lg border rounded-lg p-2.5 text-[11px] leading-relaxed psb-text-secondary z-10" style="border-color: var(--psb-border)">
+                                                        {{ $row['card_site_tooltip'] }}
+                                                    </div>
+                                                </div>
+                                            @endif
                                         </div>
-                                    @endif
-                                    <p class="text-sm font-semibold psb-text-primary">{{ $row['card_title'] }}</p>
-                                    @if(($row['card_preview'] ?? '') !== '')
-                                        <p class="mt-1.5 text-xs psb-text-secondary">{{ $row['card_preview'] }}</p>
-                                    @endif
-                                    @if($warn !== '')
-                                        <p class="mt-2 text-xs text-amber-800 dark:text-amber-300">{{ $warn }}</p>
-                                    @endif
-                                </div>
+                                        @if(!empty($channels))
+                                            <div class="mb-2 flex flex-wrap gap-2">
+                                                @foreach($channels as $ch)
+                                                    <span class="{{ ($ch['on'] ?? false) ? 'psb-text-secondary' : 'psb-text-muted opacity-35' }}" title="{{ $ch['label'] }}">
+                                                        <x-filament::icon :icon="$ch['icon']" class="h-4 w-4" />
+                                                    </span>
+                                                @endforeach
+                                            </div>
+                                        @endif
+                                        <p class="text-[15px] font-bold psb-text-primary tracking-tight">{{ $row['card_title'] }}</p>
+                                        @if(($row['card_preview'] ?? '') !== '')
+                                            <p class="mt-1.5 text-sm psb-text-secondary leading-snug">{{ $row['card_preview'] }}</p>
+                                        @endif
+                                        @if($warn !== '')
+                                            <p class="mt-2 text-xs text-amber-800 dark:text-amber-300 font-medium">{{ $warn }}</p>
+                                        @endif
+                                    </div>
 
-                                <div class="psb-quick-zone psb-edit-surface mt-3 rounded-lg border p-3" style="border-color: var(--psb-border)">
-                                    <p class="mb-2 text-[10px] font-semibold uppercase tracking-wide psb-text-muted">Быстро</p>
-                                    <div class="space-y-3">
-                                        <div>
-                                            <label class="mb-0.5 block text-[10px] font-medium psb-text-secondary" for="sec-title-{{ $row['id'] }}">Подпись в списке</label>
-                                            <input
-                                                id="sec-title-{{ $row['id'] }}"
-                                                type="text"
-                                                value="{{ $row['title'] }}"
-                                                placeholder="Подпись"
-                                                x-on:blur="$wire.patchSectionMeta({{ $row['id'] }}, { title: $event.target.value })"
-                                                class="psb-input-field"
-                                            />
+                                    <!-- 2. QUICK EDIT ZONE -->
+                                    <div class="psb-quick-zone border-t border-dashed pt-4" style="border-color: var(--psb-border);">
+                                        <div class="mb-3 flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider psb-text-muted">
+                                            <x-filament::icon icon="heroicon-s-bolt" class="h-4 w-4 text-emerald-500/80 dark:text-emerald-400/80" />
+                                            Быстрые правки
                                         </div>
-                                        @if($row['has_block_title_quick'])
+                                        <div class="space-y-4">
                                             <div>
-                                                <label class="mb-0.5 block text-[10px] font-medium psb-text-secondary" for="sec-block-title-{{ $row['id'] }}">Заголовок в блоке</label>
+                                                <label class="mb-1.5 block text-[11px] font-medium psb-text-secondary" for="sec-title-{{ $row['id'] }}">Подпись в списке</label>
                                                 <input
-                                                    id="sec-block-title-{{ $row['id'] }}"
+                                                    id="sec-title-{{ $row['id'] }}"
                                                     type="text"
-                                                    value="{{ $row['block_title_quick_value'] }}"
-                                                    placeholder="Заголовок"
-                                                    x-on:blur="$wire.patchSectionMeta({{ $row['id'] }}, { block_title: $event.target.value })"
+                                                    value="{{ $row['title'] }}"
+                                                    placeholder="Подпись"
+                                                    x-on:blur="$wire.patchSectionMeta({{ $row['id'] }}, { title: $event.target.value })"
                                                     class="psb-input-field"
                                                 />
                                             </div>
-                                        @endif
-                                        <div>
-                                            <label class="mb-0.5 block text-[10px] font-medium psb-text-secondary" for="sec-status-{{ $row['id'] }}">Статус</label>
-                                            <select
-                                                id="sec-status-{{ $row['id'] }}"
-                                                class="psb-input-field psb-select-field"
-                                                wire:change="patchSectionMeta({{ $row['id'] }}, { status: $event.target.value })"
-                                            >
-                                                @foreach(PageSection::statuses() as $statusKey => $statusLabel)
-                                                    <option value="{{ $statusKey }}" {{ $row['status'] === $statusKey ? 'selected' : '' }}>{{ $statusLabel }}</option>
-                                                @endforeach
-                                            </select>
+                                            @if($row['has_block_title_quick'])
+                                                <div>
+                                                    <label class="mb-1.5 block text-[11px] font-medium psb-text-secondary" for="sec-block-title-{{ $row['id'] }}">Заголовок в блоке</label>
+                                                    <input
+                                                        id="sec-block-title-{{ $row['id'] }}"
+                                                        type="text"
+                                                        value="{{ $row['block_title_quick_value'] }}"
+                                                        placeholder="Заголовок"
+                                                        x-on:blur="$wire.patchSectionMeta({{ $row['id'] }}, { block_title: $event.target.value })"
+                                                        class="psb-input-field"
+                                                    />
+                                                </div>
+                                            @endif
+                                            <div>
+                                                <label class="mb-1.5 block text-[11px] font-medium psb-text-secondary" for="sec-status-{{ $row['id'] }}">Статус видимости</label>
+                                                <select
+                                                    id="sec-status-{{ $row['id'] }}"
+                                                    class="psb-input-field psb-select-field"
+                                                    wire:change="patchSectionMeta({{ $row['id'] }}, { status: $event.target.value })"
+                                                >
+                                                    @foreach(PageSection::statuses() as $statusKey => $statusLabel)
+                                                        <option value="{{ $statusKey }}" {{ $row['status'] === $statusKey ? 'selected' : '' }}>{{ $statusLabel }}</option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
 
-                                <div class="mt-3 flex flex-wrap items-center gap-2">
-                                    <button type="button" wire:click="startEdit({{ $row['id'] }})" class="text-xs font-semibold text-primary-600 hover:underline dark:text-primary-400">
-                                        Все поля…
-                                    </button>
+                                    <!-- 3. ACTIONS ZONE (FULL EDITOR CTA) -->
+                                    <div class="mt-5 flex flex-col sm:flex-row items-center justify-between gap-3 rounded-lg bg-gray-50/80 p-4 dark:bg-[#1a1f2c] ring-1 ring-inset ring-gray-200 dark:ring-white/5">
+                                        <div class="w-full sm:w-auto text-left">
+                                            <p class="text-sm font-semibold psb-text-primary tracking-tight">Откройте полный редактор</p>
+                                            <p class="text-[11px] mt-0.5 psb-text-secondary">Описание, фото, карточки и детальные настройки блока.</p>
+                                        </div>
+                                        <button type="button" wire:click="startEdit({{ $row['id'] }})" class="inline-flex min-h-8 w-full sm:w-auto items-center justify-center rounded-lg bg-gray-900 px-5 py-1.5 text-xs font-semibold text-white shadow-sm ring-1 ring-inset ring-gray-900/10 transition hover:bg-gray-800 dark:bg-white dark:text-gray-900 dark:ring-white/10 dark:hover:bg-gray-100">
+                                            Полный редактор
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         @endif

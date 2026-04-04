@@ -42,12 +42,12 @@ class TenantViewResolverTest extends TestCase
         $this->assertSame('tenant.themes.default.pages.home', $resolved);
     }
 
-    public function test_page_logical_name_falls_through_to_engine_when_no_theme_overrides(): void
+    public function test_logical_name_falls_through_to_engine_when_no_theme_overrides(): void
     {
         $tenant = new Tenant(['theme_key' => 'moto']);
-        $resolved = app(TenantViewResolver::class)->resolve('pages.page', $tenant);
+        $resolved = app(TenantViewResolver::class)->resolve('pages.motorcycle', $tenant);
 
-        $this->assertSame('tenant.pages.page', $resolved);
+        $this->assertSame('tenant.pages.motorcycle', $resolved);
     }
 
     public function test_null_tenant_uses_default_theme_chain(): void
