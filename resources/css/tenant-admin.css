@@ -643,6 +643,26 @@ html.dark .page-sections-builder-root.psb-root {
     --psb-menu-hover: #1f2937;
 }
 
+.page-sections-builder-root .psb-context-badge {
+    border-color: var(--psb-border);
+    background-color: var(--psb-bg-elevated);
+    color: var(--psb-text-secondary);
+}
+
+.page-sections-builder-root .psb-outline-label {
+    letter-spacing: 0.04em;
+}
+
+.page-sections-builder-root .psb-menu-group-label {
+    margin: 0;
+    padding: 0.35rem 0.75rem 0.15rem;
+    font-size: 0.625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--psb-text-muted);
+}
+
 .page-sections-builder-root.psb-root .psb-header {
     border-bottom: 1px solid var(--psb-border);
     background-color: transparent;
@@ -910,6 +930,11 @@ html.dark .page-sections-builder-root .psb-menu-panel .psb-menu-item-danger {
 .page-sections-builder-root .psb-input-minimal:focus {
     outline: none;
     border-bottom-color: var(--psb-text-secondary);
+}
+
+.page-sections-builder-root .psb-on-site-box {
+    background-color: var(--psb-bg-elevated);
+    border: 1px solid var(--psb-border);
 }
 
 .page-sections-builder-root .psb-expanded-preview {

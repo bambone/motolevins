@@ -131,6 +131,8 @@ final class ContactsInfoSectionBlueprint extends AbstractPageSectionBlueprint
         $email = trim((string) ($data['email'] ?? ''));
         $addr = trim((string) ($data['address'] ?? ''));
         $hours = trim((string) ($data['working_hours'] ?? ''));
+        $mapEmbed = trim((string) ($data['map_embed'] ?? ''));
+        $mapLink = trim((string) ($data['map_link'] ?? ''));
         $lines = [];
         if ($addr !== '') {
             $lines[] = 'Адрес: '.$this->stringPreview($data, 'address', 140);
@@ -141,14 +143,16 @@ final class ContactsInfoSectionBlueprint extends AbstractPageSectionBlueprint
         $key = trim((string) ($section->section_key ?? ''));
         $displaySubtitle = $key !== '' ? $key.' · '.$label : $label;
         $hasChannel = $phone !== '' || $wa !== '' || $tg !== '' || $email !== '';
-        $isEmpty = ! $hasChannel && $addr === '';
-        $warning = $isEmpty ? 'Нет телефона, мессенджеров и email' : null;
+        $hasMap = $mapEmbed !== '' || $mapLink !== '';
+        $isEmpty = ! $hasChannel && $addr === '' && ! $hasMap && $hours === '';
+        $warning = $isEmpty ? 'Нет контактов, адреса и карты' : (! $hasChannel && $addr === '' ? 'Нет способов связи и адреса' : null);
         $channels = [
             ['icon' => 'heroicon-o-phone', 'label' => 'Телефон', 'on' => $phone !== ''],
             ['icon' => 'heroicon-o-chat-bubble-left-ellipsis', 'label' => 'WhatsApp', 'on' => $wa !== ''],
             ['icon' => 'heroicon-o-paper-airplane', 'label' => 'Telegram', 'on' => $tg !== ''],
             ['icon' => 'heroicon-o-envelope', 'label' => 'Email', 'on' => $email !== ''],
             ['icon' => 'heroicon-o-map-pin', 'label' => 'Адрес', 'on' => $addr !== ''],
+            ['icon' => 'heroicon-o-map', 'label' => 'Карта', 'on' => $hasMap],
         ];
         $primaryHeadline = $blockTitle !== '' ? $blockTitle : null;
 

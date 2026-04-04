@@ -10,8 +10,7 @@ use Filament\Forms\Components\RichEditor;
 /**
  * Единые настройки RichEditor для контента страниц тенанта: TipTap toolbar, таблицы, вложения.
  *
- * Вложения пишутся на диск {@see TenantStorageDisks::publicDiskName()} (S3/R2 — через TENANT_STORAGE_PUBLIC_DISK),
- * ключи вида {@code tenants/{id}/public/site/page-content/…} — см. {@see TenantStorage::publicPathInArea()}.
+ * Файлы вложений уходят в публичную зону хранилища тенанта (см. {@see TenantStorage} / настройки диска).
  */
 final class TenantPageRichEditor
 {
@@ -50,8 +49,8 @@ final class TenantPageRichEditor
 
         if ($withAttachmentHelp) {
             $editor = $editor->helperText(
-                'Изображения: публичный диск тенанта (TENANT_STORAGE_PUBLIC_DISK, обычно S3/R2), путь tenants/{id}/public/site/page-content/. '.
-                'Выделите картинку → «Прикрепить файл» — alt и замена файла; угол рамки — размер (если включено в теме админки).'
+                'Картинки и вложения сохраняются в файлах вашего сайта. Поставьте курсор в нужное место → «Прикрепить файл». '.
+                'Для изображения можно указать подпись (alt) и размер рамки.'
             );
         }
 

@@ -148,7 +148,7 @@ final class HeroBlueprint extends AbstractPageSectionBlueprint
         $key = trim((string) ($section->section_key ?? ''));
         $displaySubtitle = $key !== '' ? $key.' · '.$label : $label;
         $isEmpty = $h === '' && $sub === '' && $btn === '';
-        $warning = $isEmpty ? 'Hero без заголовка и кнопки' : null;
+        $warning = $isEmpty ? 'Баннер без заголовка и призыва к действию' : null;
         $bodyLines = [];
         if ($sub !== '') {
             $bodyLines[] = $sub;
@@ -156,17 +156,36 @@ final class HeroBlueprint extends AbstractPageSectionBlueprint
         if ($btn !== '') {
             $bodyLines[] = 'Кнопка: '.$btn;
         }
+        $desc = trim((string) ($data['description'] ?? ''));
+        if ($desc !== '' && count($bodyLines) < 2) {
+            $bodyLines[] = strlen($desc) > 140 ? substr($desc, 0, 137).'…' : $desc;
+        }
+        $videoSrc = trim((string) ($data['video_src'] ?? ''));
+        $videoPoster = trim((string) ($data['video_poster'] ?? ''));
+        $bg = trim((string) ($data['background_image'] ?? ''));
+        $chips = $data['chips'] ?? [];
+        $chipCount = is_array($chips) ? count(array_filter($chips, fn ($c): bool => is_array($c) && trim((string) ($c['text'] ?? '')) !== '')) : 0;
+        $channels = [
+            ['icon' => 'heroicon-o-play-circle', 'label' => 'Видео', 'on' => $videoSrc !== '' || $videoPoster !== ''],
+            ['icon' => 'heroicon-o-photo', 'label' => 'Фон', 'on' => $bg !== ''],
+            ['icon' => 'heroicon-o-cursor-arrow-rays', 'label' => 'Кнопка', 'on' => $btn !== ''],
+            ['icon' => 'heroicon-o-sparkles', 'label' => 'Чипы', 'on' => $chipCount > 0],
+        ];
+        $badges = [$variantLabel];
+        if ($chipCount > 0) {
+            $badges[] = 'Чипов: '.$chipCount;
+        }
 
         return new SectionAdminSummary(
             displayTitle: $displayTitle,
             displaySubtitle: $displaySubtitle,
-            summaryLines: $bodyLines !== [] ? $bodyLines : ($isEmpty ? ['Пустой hero'] : []),
-            badges: [$variantLabel],
+            summaryLines: $bodyLines !== [] ? $bodyLines : ($isEmpty ? ['Пустой баннер'] : []),
+            badges: $badges,
             meta: ['variant' => $variant],
             isEmpty: $isEmpty,
             warning: $warning,
             primaryHeadline: $h !== '' ? $h : null,
-            channels: [],
+            channels: $channels,
         );
     }
 }

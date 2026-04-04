@@ -13,24 +13,29 @@
     $deleteRow = $this->deleteTargetRow;
     $insertAfterId = $this->insertAfterSectionId;
     $insertAfterLabel = $this->insertAfterSectionLabel;
+    $pageCtx = $this->pageContext;
+    $tenantThemeKey = $this->tenantThemeKey;
+    $mainSite = $this->mainBlockSitePresentation;
 @endphp
 
-<div class="page-sections-builder-root psb-root fi-section p-4 sm:p-6">
-    <header class="psb-header sticky top-0 z-10 mb-4 pb-3">
-        <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+<div class="page-sections-builder-root psb-root fi-section p-4 sm:p-6" wire:key="psb-page-{{ $record->getKey() }}">
+    <header class="psb-header sticky top-0 z-10 mb-3 pb-3">
+        <div class="flex flex-col gap-2.5 lg:flex-row lg:items-start lg:justify-between">
             <div class="min-w-0">
-                <h3 class="text-lg font-semibold tracking-tight psb-text-primary">{{ $record->name }}</h3>
-                <p class="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs psb-text-secondary">
-                    <span>Структура страницы</span>
+                <div class="flex flex-wrap items-center gap-2">
+                    <h3 class="text-base font-semibold tracking-tight psb-text-primary sm:text-lg">{{ $record->name }}</h3>
+                    <span class="rounded-md border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide psb-context-badge">{{ $pageCtx->modeLabel }}</span>
+                </div>
+                <p class="mt-1 text-[11px] leading-snug psb-text-secondary">{{ $pageCtx->modeHint }}</p>
+                <p class="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] psb-text-muted">
                     @if($record->slug)
-                        <span class="psb-text-muted">·</span>
-                        <code class="font-mono text-[11px] psb-text-secondary">{{ $record->slug }}</code>
+                        <code class="font-mono text-[10px] psb-text-secondary">{{ $record->slug === 'home' ? '/' : '/'.ltrim((string) $record->slug, '/') }}</code>
+                        <span aria-hidden="true">·</span>
                     @endif
-                    <span class="psb-text-muted">·</span>
                     <span>{{ $metrics['total'] }} блоков</span>
                     <span>{{ $metrics['status_published'] }} опубл.</span>
                     @if($metrics['hidden_on_site'] > 0)
-                        <span>{{ $metrics['hidden_on_site'] }} скрыто</span>
+                        <span>{{ $metrics['hidden_on_site'] }} скрыто на сайте</span>
                     @endif
                 </p>
             </div>
@@ -49,57 +54,78 @@
             </div>
         </div>
 
-        <div class="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+        <div class="mt-2.5 flex flex-col gap-2 rounded-lg border px-3 py-2 sm:flex-row sm:flex-wrap sm:items-center" style="border-color: var(--psb-border); background: var(--psb-bg-surface)">
             <div class="min-w-0 flex-1 sm:max-w-md">
                 <input
                     id="page-section-search-{{ $this->getId() }}"
                     type="search"
                     wire:model.live.debounce.300ms="sectionSearch"
-                    placeholder="Найти блок…"
+                    placeholder="Найти по названию или содержимому…"
                     aria-label="Поиск по блокам"
-                    class="psb-search block w-full"
+                    class="psb-search block w-full py-2 text-sm"
                 />
             </div>
-            <label class="inline-flex cursor-pointer items-center gap-2 text-xs psb-text-secondary">
+            <label class="inline-flex cursor-pointer items-center gap-2 text-[11px] psb-text-secondary">
                 <input type="checkbox" wire:model.live="showOnlyHidden" class="rounded border-gray-300 text-primary-600 dark:border-white/20" />
                 Только скрытые
             </label>
-            <select wire:model.live="listDensity" class="psb-search w-auto py-1.5 text-xs" aria-label="Плотность списка">
+            <select wire:model.live="listDensity" class="psb-search w-auto py-2 text-[11px]" aria-label="Плотность списка">
                 <option value="comfort">Комфорт</option>
                 <option value="compact">Компакт</option>
             </select>
             <span class="hidden h-4 w-px sm:inline-block" style="background: var(--psb-border)"></span>
-            <button type="button" wire:click="expandAllSections" class="text-xs font-medium psb-text-secondary hover:underline">Развернуть всё</button>
-            <button type="button" wire:click="collapseAllSections" class="text-xs font-medium psb-text-secondary hover:underline">Свернуть</button>
+            <button type="button" wire:click="expandAllSections" class="text-[11px] font-medium psb-text-secondary hover:underline">Развернуть всё</button>
+            <button type="button" wire:click="collapseAllSections" class="text-[11px] font-medium psb-text-secondary hover:underline">Свернуть всё</button>
         </div>
         @if(!$sortableEnabled)
-            <p class="mt-2 text-[11px] psb-text-secondary">Перетаскивание доступно без поиска и фильтра «только скрытые».</p>
+            <p class="mt-2 text-[11px] psb-text-muted">Перетаскивание отключено при поиске или фильтре «только скрытые» — так проще не перепутать порядок.</p>
         @endif
     </header>
 
     <div class="space-y-0" role="region" aria-label="Структура страницы на сайте">
 
+        <p class="psb-outline-label mb-2 text-[10px] font-semibold uppercase tracking-wider psb-text-muted">1. Основной контент</p>
         <div class="psb-main-card p-4 sm:p-5">
             <div class="flex flex-wrap items-start gap-4">
                 <div class="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg psb-text-secondary" style="background: var(--psb-bg-elevated)">
                     <x-filament::icon icon="heroicon-o-document-text" class="h-6 w-6" />
                 </div>
                 <div class="min-w-0 flex-1">
-                    <h4 class="text-base font-semibold psb-text-primary">Основной контент страницы</h4>
-                    <p class="mt-0.5 text-xs psb-text-muted">Системный блок · редактируется отдельно</p>
+                    <h4 class="text-base font-semibold psb-text-primary">
+                        @if($pageCtx->isHome)
+                            Главная без отдельного «основного текста»
+                        @else
+                            Основной текст страницы «{{ $record->name }}»
+                        @endif
+                    </h4>
+                    <p class="mt-0.5 text-xs psb-text-muted">Системный блок · не перетаскивается · не в списке секций ниже</p>
                     @if($mainCard['mode'] === 'home')
                         <p class="mt-2 text-sm leading-relaxed psb-text-secondary">
-                            На главной основной текст не задаётся здесь — только блоки ниже. SEO и страница — в настройках.
+                            Текст страницы для главной здесь не хранится — только блоки в разделе ниже. Публикация и SEO — во вкладке «Контент и настройки».
                         </p>
                     @else
                         @if($mainCard['excerpt'] !== '')
                             <p class="mt-2 text-sm leading-relaxed psb-text-secondary line-clamp-3">{{ $mainCard['excerpt'] }}</p>
                         @else
-                            <p class="mt-2 text-sm psb-text-secondary">Текст пока пустой или очень короткий.</p>
+                            <p class="mt-2 text-sm psb-text-secondary">Текст ещё не заполнен — на сайте блок может выглядеть пустым.</p>
+                        @endif
+                        @if(($mainSite['on_site_line'] ?? '') !== '')
+                            <p class="mt-2 text-xs font-medium leading-snug psb-text-secondary">{{ $mainSite['on_site_line'] }}</p>
+                        @endif
+                        @if(!empty($mainSite['notes']))
+                            <ul class="mt-1.5 list-disc space-y-0.5 pl-4 text-[11px] leading-snug psb-text-muted">
+                                @foreach($mainSite['notes'] as $note)
+                                    <li>{{ $note }}</li>
+                                @endforeach
+                            </ul>
                         @endif
                     @endif
                     <a href="{{ $mainCard['edit_url'] }}" wire:navigate class="psb-btn-edit mt-3 !inline-flex !w-auto">
-                        Редактировать основной текст
+                        @if($pageCtx->isHome)
+                            Перейти к настройкам страницы
+                        @else
+                            Редактировать основной текст
+                        @endif
                     </a>
                 </div>
             </div>
@@ -109,9 +135,7 @@
             <div class="h-4 w-px psb-text-muted" style="background: var(--psb-border)"></div>
         </div>
 
-        <div class="mb-2 mt-1">
-            <h4 class="text-[11px] font-semibold uppercase tracking-wide psb-text-muted">Дополнительные блоки</h4>
-        </div>
+        <p class="psb-outline-label mb-2 mt-1 text-[10px] font-semibold uppercase tracking-wider psb-text-muted">2. Блоки на странице (порядок = на сайте)</p>
 
         @if($sectionCount === 0)
             <div class="psb-empty p-6 text-center sm:p-8">
@@ -212,7 +236,7 @@
                                 aria-expanded="{{ $expanded ? 'true' : 'false' }}"
                             >
                                 <div class="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] psb-text-muted">
-                                    <span class="font-medium uppercase tracking-wide">{{ $row['type_label'] }}</span>
+                                    <span class="font-medium uppercase tracking-wide">{{ $row['type_label_ui'] ?? $row['type_label'] }}</span>
                                     <span>·</span>
                                     <span>{{ PageSection::statuses()[$row['status']] ?? $row['status'] }}</span>
                                     <span>·</span>
@@ -245,6 +269,9 @@
                                 @if($badgeSlice !== [])
                                     <p class="mt-1.5 text-[11px] psb-text-muted">{{ implode(' · ', $badgeSlice) }}</p>
                                 @endif
+                                @if(!empty($s['onSiteLine']))
+                                    <p class="mt-1.5 text-[11px] font-medium leading-snug psb-text-secondary">{{ $s['onSiteLine'] }}</p>
+                                @endif
                                 @if(!empty($s['summaryLines']))
                                     <p class="mt-1.5 text-sm leading-relaxed psb-text-secondary line-clamp-2">{{ implode(' ', $s['summaryLines']) }}</p>
                                 @endif
@@ -255,6 +282,22 @@
                             </button>
                             {{-- Right: главное действие + видимость + меню --}}
                             <div class="flex flex-shrink-0 flex-col items-stretch justify-center gap-1.5 border-t pt-3 sm:min-w-[9rem] sm:w-[9rem] sm:border-t-0 sm:pt-0 sm:pl-1" style="border-color: var(--psb-border)" wire:click.stop>
+                                @if($publicUrl)
+                                    @php
+                                        $psbSiteHref = $publicUrl;
+                                        if ($tenantThemeKey === 'moto' && in_array($row['type_id'], ['structured_text', 'text_section'], true)) {
+                                            $psbSiteHref = $publicUrl.'#section-'.$row['id'];
+                                        }
+                                    @endphp
+                                    <a
+                                        href="{{ $psbSiteHref }}"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        class="order-first text-center text-[10px] font-semibold text-primary-600 hover:underline dark:text-primary-400 sm:order-none"
+                                    >
+                                        На сайте ↗
+                                    </a>
+                                @endif
                                 <button type="button" wire:click="startEdit({{ $row['id'] }})" class="psb-btn-edit">
                                     Редактировать
                                 </button>
@@ -289,10 +332,11 @@
                                         class="psb-menu-panel"
                                         style="display: none;"
                                     >
-                                        <button type="button" @click="open = false" wire:click="toggleExpanded({{ $row['id'] }})">{{ $expanded ? 'Свернуть' : 'Развернуть' }}</button>
+                                        <p class="psb-menu-group-label">Структура</p>
                                         <button type="button" @click="open = false" wire:click="startAddBelow({{ $row['id'] }})">Добавить ниже</button>
                                         <button type="button" @click="open = false" wire:click="moveUp({{ $row['id'] }})">Выше</button>
                                         <button type="button" @click="open = false" wire:click="moveDown({{ $row['id'] }})">Ниже</button>
+                                        <p class="psb-menu-group-label">Копирование</p>
                                         <button type="button" @click="open = false" wire:click="duplicate({{ $row['id'] }})">Дублировать</button>
                                         <div class="psb-menu-sep" aria-hidden="true"></div>
                                         <button type="button" @click="open = false" wire:click="openDeleteModal({{ $row['id'] }})" class="psb-menu-item-danger">Удалить…</button>
@@ -302,6 +346,22 @@
                         </div>
                         @if($expanded)
                             <div class="border-t px-3 py-4 sm:px-4" style="border-color: var(--psb-border)">
+                                <div class="psb-on-site-box mb-4 rounded-lg px-3 py-3 sm:px-4">
+                                    <p class="text-[10px] font-semibold uppercase tracking-wide psb-text-muted">Как на сайте</p>
+                                    @if(!empty($s['onSiteLine']))
+                                        <p class="mt-1.5 text-sm leading-snug psb-text-secondary">{{ $s['onSiteLine'] }}</p>
+                                    @else
+                                        <p class="mt-1.5 text-xs psb-text-muted">Тип блока и тема задают оформление на витрине; детали — в полном редакторе.</p>
+                                    @endif
+                                    @if(!empty($s['builderNotes']))
+                                        <ul class="mt-2 list-disc space-y-1 pl-4 text-[11px] leading-snug psb-text-muted">
+                                            @foreach($s['builderNotes'] as $note)
+                                                <li>{{ $note }}</li>
+                                            @endforeach
+                                        </ul>
+                                    @endif
+                                </div>
+                                <p class="mb-2 text-[10px] font-semibold uppercase tracking-wide psb-text-muted">Превью в конструкторе</p>
                                 <div class="psb-expanded-preview">
                                     @if(!empty($channels))
                                         <div class="mb-2 flex flex-wrap gap-2">
@@ -326,7 +386,7 @@
                                     @endif
                                 </div>
                                 <div class="psb-quick-zone">
-                                    <p class="text-[11px] font-medium psb-text-muted">Быстрые правки</p>
+                                    <p class="text-[11px] font-medium psb-text-muted">Быстрые правки (остальное — в полном редакторе)</p>
                                     <div class="mt-2 space-y-2">
                                         <input
                                             id="sec-title-{{ $row['id'] }}"
@@ -375,27 +435,31 @@
         @if($sectionCount > 0)
             <div class="mt-4 flex flex-wrap gap-2">
                 <button type="button" wire:click="startAddToEnd" class="fi-btn fi-btn-color-primary inline-flex min-h-11 items-center justify-center rounded-lg px-5 py-2.5 text-sm font-semibold text-white">
-                    Добавить блок в конец
+                    Добавить блок в конец списка
                 </button>
             </div>
         @endif
     </div>
 
     @if($catalog->isNotEmpty())
-        <div id="page-section-catalog" class="psb-catalog-wrap mt-10 p-5 sm:p-6" x-data="{ q: '' }">
+        <p class="psb-outline-label mb-2 mt-10 text-[10px] font-semibold uppercase tracking-wider psb-text-muted">3. Каталог типов блоков</p>
+        <div id="page-section-catalog" class="psb-catalog-wrap mt-2 p-4 sm:p-5" x-data="{ q: '' }">
             <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                 <div class="min-w-0">
-                    <h4 class="text-lg font-semibold tracking-tight psb-text-primary">Добавить блок</h4>
-                    <p class="mt-1 max-w-xl text-sm psb-text-secondary">Выберите тип — блок появится на странице, порядок можно изменить перетаскиванием.</p>
+                    <h4 class="text-base font-semibold tracking-tight psb-text-primary sm:text-lg">Добавить блок</h4>
+                    <p class="mt-1 max-w-xl text-sm psb-text-secondary">Новый блок появится на этой странице; порядок меняется перетаскиванием.</p>
                     @if($insertAfterId !== null)
-                        <p class="mt-2 text-xs psb-text-secondary">
-                            Вставка после:
-                            @if($insertAfterLabel)
-                                <span class="font-medium psb-text-primary">«{{ $insertAfterLabel }}»</span>
-                            @else
-                                <span>#{{ $insertAfterId }}</span>
-                            @endif
-                        </p>
+                        <div class="psb-insert-banner mt-3 flex flex-wrap items-center gap-2 rounded-lg border px-3 py-2 text-xs" style="border-color: var(--psb-border); background: var(--psb-bg-elevated)">
+                            <span class="psb-text-secondary">
+                                Вставка <strong class="psb-text-primary">после</strong>
+                                @if($insertAfterLabel)
+                                    «{{ $insertAfterLabel }}»
+                                @else
+                                    #{{ $insertAfterId }}
+                                @endif
+                            </span>
+                            <button type="button" wire:click="clearInsertAfter" class="text-[11px] font-semibold text-primary-600 underline dark:text-primary-400">Сбросить</button>
+                        </div>
                     @endif
                 </div>
                 <div class="w-full lg:max-w-sm">
@@ -450,7 +514,7 @@
             >
                 <div class="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl bg-white p-5 shadow-xl dark:bg-gray-900 sm:p-6" wire:click.stop>
                     <h4 class="text-lg font-semibold text-gray-950 dark:text-white">Удалить блок с сайта?</h4>
-                    <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">Тип блока: <strong>{{ $deleteRow['type_label'] }}</strong></p>
+                    <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">Тип блока: <strong>{{ $deleteRow['type_label_ui'] ?? $deleteRow['type_label'] }}</strong></p>
                     <p class="text-sm text-gray-600 dark:text-gray-400">Подпись в редакторе: <strong>{{ $deleteRow['summary']['displayTitle'] }}</strong></p>
                     @if(!empty($deleteRow['summary']['summaryLines']))
                         <p class="mt-2 text-xs font-medium text-gray-500 dark:text-gray-400">Содержимое (кратко):</p>
@@ -489,9 +553,12 @@
                     wire:click.stop
                 >
                     <div class="flex items-center justify-between gap-2 border-b border-gray-100 px-4 py-3 dark:border-white/10 sm:px-6">
-                        <h4 class="text-lg font-semibold text-gray-950 dark:text-white">
-                            {{ $editingSectionId ? 'Редактирование блока' : 'Новый блок' }}
-                        </h4>
+                        <div class="min-w-0">
+                            <p class="truncate text-xs text-gray-500 dark:text-gray-400">{{ $record->name }}</p>
+                            <h4 class="truncate text-lg font-semibold text-gray-950 dark:text-white">
+                                {{ $editingSectionId ? 'Редактирование блока' : 'Новый блок на странице' }}
+                            </h4>
+                        </div>
                         <button type="button" wire:click="closeEditor" class="rounded-lg p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-white/10">
                             <span class="sr-only">Закрыть</span>
                             <x-filament::icon icon="heroicon-o-x-mark" class="h-5 w-5" />

@@ -97,9 +97,21 @@ final class ContentFaqSectionBlueprint extends AbstractPageSectionBlueprint
         $displayTitle = $listTitle !== '' ? $listTitle : ($secTitle !== '' ? $secTitle : $label);
         $items = $data['items'] ?? [];
         $n = is_array($items) ? count($items) : 0;
+        $filled = 0;
+        if (is_array($items)) {
+            foreach ($items as $item) {
+                if (! is_array($item)) {
+                    continue;
+                }
+                $q = trim((string) ($item['question'] ?? ''));
+                if ($q !== '') {
+                    $filled++;
+                }
+            }
+        }
         $lines = [];
-        if ($n > 0) {
-            $lines[] = $n.' '.self::pluralQuestions($n);
+        if ($filled > 0) {
+            $lines[] = $filled.' '.self::pluralQuestions($filled);
             $shown = 0;
             foreach ($items as $item) {
                 if (! is_array($item)) {
@@ -115,20 +127,22 @@ final class ContentFaqSectionBlueprint extends AbstractPageSectionBlueprint
                     break;
                 }
             }
+        } elseif ($n > 0) {
+            $lines[] = $n.' пустых пунктов';
         } else {
             $lines[] = 'Нет вопросов';
         }
         $key = trim((string) ($section->section_key ?? ''));
         $displaySubtitle = $key !== '' ? $key.' · '.$label : $label;
-        $isEmpty = $n === 0;
-        $warning = $isEmpty ? 'Нет ни одного вопроса' : null;
+        $isEmpty = $filled === 0;
+        $warning = $isEmpty ? 'Нет ни одного заполненного вопроса' : ($filled < $n ? 'Есть пустые вопросы' : null);
 
         return new SectionAdminSummary(
             displayTitle: $displayTitle,
             displaySubtitle: $displaySubtitle,
             summaryLines: array_slice($lines, 0, 5),
-            badges: $n > 0 ? ['FAQ'] : [],
-            meta: ['faq_count' => (string) $n],
+            badges: $filled > 0 ? ['FAQ · '.$filled] : [],
+            meta: ['faq_count' => (string) $filled],
             isEmpty: $isEmpty,
             warning: $warning,
             primaryHeadline: $secTitle !== '' ? $secTitle : null,

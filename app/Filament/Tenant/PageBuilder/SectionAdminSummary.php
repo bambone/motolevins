@@ -17,7 +17,10 @@ use App\Models\PageSection;
  *     isEmpty: bool,
  *     warning: ?string,
  *     primaryHeadline: ?string,
- *     channels: list<ChannelHint>
+ *     channels: list<ChannelHint>,
+ *     onSiteLine: string,
+ *     builderNotes: list<string>,
+ *     presentationMeta: array<string, string>
  * }
  */
 final readonly class SectionAdminSummary
@@ -27,6 +30,8 @@ final readonly class SectionAdminSummary
      * @param  list<string>  $badges
      * @param  array<string, string>  $meta
      * @param  list<ChannelHint>  $channels
+     * @param  list<string>  $builderNotes
+     * @param  array<string, string>  $presentationMeta render_mode, width_mode, page_mode, theme_key — для согласованности с публичным выводом
      */
     public function __construct(
         public string $displayTitle,
@@ -38,6 +43,9 @@ final readonly class SectionAdminSummary
         public ?string $warning,
         public ?string $primaryHeadline = null,
         public array $channels = [],
+        public string $onSiteLine = '',
+        public array $builderNotes = [],
+        public array $presentationMeta = [],
     ) {}
 
     /**
@@ -55,7 +63,34 @@ final readonly class SectionAdminSummary
             'warning' => $this->warning,
             'primaryHeadline' => $this->primaryHeadline,
             'channels' => array_values($this->channels),
+            'onSiteLine' => $this->onSiteLine,
+            'builderNotes' => array_values($this->builderNotes),
+            'presentationMeta' => $this->presentationMeta,
         ];
+    }
+
+    /**
+     * @param  list<string>  $extraNotes
+     * @param  array<string, string>  $extraPresentation
+     */
+    public function withPublicLayer(string $onSiteLine, array $extraNotes = [], array $extraPresentation = []): self
+    {
+        $line = trim($onSiteLine) !== '' ? trim($onSiteLine) : $this->onSiteLine;
+
+        return new self(
+            displayTitle: $this->displayTitle,
+            displaySubtitle: $this->displaySubtitle,
+            summaryLines: $this->summaryLines,
+            badges: $this->badges,
+            meta: $this->meta,
+            isEmpty: $this->isEmpty,
+            warning: $this->warning,
+            primaryHeadline: $this->primaryHeadline,
+            channels: $this->channels,
+            onSiteLine: $line,
+            builderNotes: array_values(array_merge($this->builderNotes, $extraNotes)),
+            presentationMeta: array_merge($this->presentationMeta, $extraPresentation),
+        );
     }
 
     public function searchBlob(string $typeLabel): string
@@ -65,8 +100,10 @@ final readonly class SectionAdminSummary
             $this->displaySubtitle,
             $this->primaryHeadline ?? '',
             $typeLabel,
+            $this->onSiteLine,
             ...$this->summaryLines,
             ...$this->badges,
+            ...$this->builderNotes,
             ...array_column($this->channels, 'label'),
         ];
 
@@ -92,6 +129,9 @@ final readonly class SectionAdminSummary
             warning: 'Тип секции без детального превью',
             primaryHeadline: null,
             channels: [],
+            onSiteLine: '',
+            builderNotes: [],
+            presentationMeta: ['render_mode' => 'unknown'],
         );
     }
 }

@@ -117,8 +117,12 @@ final class StructuredTextSectionBlueprint extends AbstractPageSectionBlueprint
         $key = trim((string) ($section->section_key ?? ''));
         $displaySubtitle = $key !== '' ? $key.' · '.$label : $label;
         $plainExcerpt = PageRichContent::toPlainTextExcerpt($data['content'] ?? '', 400);
-        $isEmpty = trim($plainExcerpt) === '' && $blockTitle === '';
+        $plainLen = strlen(trim($plainExcerpt));
+        $isEmpty = $plainLen === 0 && $blockTitle === '';
         $warning = $isEmpty ? 'Почти нет текста в блоке' : null;
+        if ($warning === null && $blockTitle === '' && $plainLen > 0 && $plainLen < 50) {
+            $warning = 'Очень короткий текст без заголовка в блоке';
+        }
         $primaryHeadline = $blockTitle !== '' ? $blockTitle : null;
 
         return new SectionAdminSummary(

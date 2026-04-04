@@ -65,7 +65,8 @@ class PageSectionsBuilderScopeTest extends TestCase
         ]);
 
         Livewire::test(PageSectionsBuilder::class, ['record' => $rules->fresh()])
-            ->assertSee('Основной контент страницы', escape: false)
+            ->assertSee('Контентная страница', escape: false)
+            ->assertSee('Основной текст страницы', escape: false)
             ->assertSee('Правила аренды', escape: false)
             ->assertSee('Нет дополнительных секций', escape: false)
             ->assertSee('Добавить блок', escape: false)

@@ -3,11 +3,13 @@
 namespace App\Livewire\Tenant;
 
 use App\Filament\Tenant\PageBuilder\PageSectionAdminSummaryPresenter;
+use App\Filament\Tenant\PageBuilder\PageSectionBuilderPresentationEnricher;
 use App\Filament\Tenant\Resources\PageResource;
 use App\Livewire\Concerns\InteractsWithTenantPublicFilePicker;
 use App\Models\Page;
 use App\Models\PageSection;
 use App\PageBuilder\LegacySectionTypeResolver;
+use App\PageBuilder\PageBuilderPageContext;
 use App\PageBuilder\PageSectionCategory;
 use App\PageBuilder\PageSectionTypeRegistry;
 use App\Services\PageBuilder\PageSectionOperationsService;
@@ -64,6 +66,7 @@ class PageSectionsBuilder extends Component implements HasActions, HasSchemas
     public function mount(Page $record): void
     {
         $this->record = $record;
+        $this->resetTransientBuilderState();
         $this->expandedSectionIds = array_values(array_map(
             'intval',
             session()->get($this->builderSessionKey('expanded'), []) ?: []
@@ -72,6 +75,21 @@ class PageSectionsBuilder extends Component implements HasActions, HasSchemas
             ? 'compact'
             : 'comfort';
         $this->sectionSearch = (string) session()->get($this->builderSessionKey('search'), '');
+        $this->showOnlyHidden = (bool) session()->get($this->builderSessionKey('only_hidden'), false);
+    }
+
+    /**
+     * Сброс модалок/редактора/вставки при входе на экран (не переносим между страницами).
+     */
+    private function resetTransientBuilderState(): void
+    {
+        $this->showEditor = false;
+        $this->activeTypeId = null;
+        $this->editingSectionId = null;
+        $this->sectionFormData = [];
+        $this->insertAfterSectionId = null;
+        $this->showDeleteModal = false;
+        $this->deleteTargetId = null;
     }
 
     private function builderSessionKey(string $suffix): string
@@ -86,6 +104,17 @@ class PageSectionsBuilder extends Component implements HasActions, HasSchemas
         session()->put($this->builderSessionKey('expanded'), $this->expandedSectionIds);
         session()->put($this->builderSessionKey('density'), $this->listDensity);
         session()->put($this->builderSessionKey('search'), $this->sectionSearch);
+        session()->put($this->builderSessionKey('only_hidden'), $this->showOnlyHidden);
+    }
+
+    public function getPageContextProperty(): PageBuilderPageContext
+    {
+        return PageBuilderPageContext::fromPage($this->record);
+    }
+
+    public function clearInsertAfter(): void
+    {
+        $this->insertAfterSectionId = null;
     }
 
     private function tenantIdForOps(): ?int
@@ -133,6 +162,7 @@ class PageSectionsBuilder extends Component implements HasActions, HasSchemas
         $tenant = currentTenant();
         $themeKey = $tenant?->themeKey() ?? 'default';
         $registry = app(PageSectionTypeRegistry::class);
+        $ctx = $this->pageContext;
 
         $categories = $this->record->slug === 'home'
             ? PageSectionCategory::orderedForCatalog()
@@ -147,8 +177,8 @@ class PageSectionsBuilder extends Component implements HasActions, HasSchemas
                 }
                 $items[] = [
                     'id' => $bp->id(),
-                    'label' => $bp->label(),
-                    'description' => $bp->description(),
+                    'label' => $ctx->typeLabelForUi($bp->id(), $bp->label()),
+                    'description' => $ctx->catalogDescriptionForType($bp->id(), $bp->description()),
                     'icon' => $bp->icon(),
                     'category' => $cat->value,
                     'category_label' => $cat->label(),
@@ -212,7 +242,7 @@ class PageSectionsBuilder extends Component implements HasActions, HasSchemas
      */
     public function getMainCardProperty(): ?array
     {
-        if ($this->record->slug === 'home') {
+        if ($this->pageContext->isHome) {
             return [
                 'excerpt' => '',
                 'edit_url' => $this->contentTabUrl,
@@ -220,7 +250,10 @@ class PageSectionsBuilder extends Component implements HasActions, HasSchemas
             ];
         }
 
-        $main = $this->record->sections()->where('section_key', 'main')->first();
+        $main = $this->record->sections()
+            ->where('page_id', $this->record->getKey())
+            ->where('section_key', 'main')
+            ->first();
         $raw = is_array($main?->data_json) ? ($main->data_json['content'] ?? '') : '';
 
         return [
@@ -243,9 +276,51 @@ class PageSectionsBuilder extends Component implements HasActions, HasSchemas
             return null;
         }
 
-        return $this->record->slug === 'home'
+        return $this->pageContext->isHome
             ? url('/')
             : url('/'.ltrim((string) $this->record->slug, '/'));
+    }
+
+    public function getTenantThemeKeyProperty(): string
+    {
+        return currentTenant()?->themeKey() ?? 'default';
+    }
+
+    /**
+     * Как основной текст страницы читается на публичной странице (без дублирования рендера).
+     *
+     * @return array{on_site_line: string, notes: list<string>}
+     */
+    public function getMainBlockSitePresentationProperty(): array
+    {
+        if ($this->pageContext->isHome) {
+            return ['on_site_line' => '', 'notes' => []];
+        }
+
+        $theme = $this->tenantThemeKey;
+        $slug = (string) ($this->record->slug ?? '');
+        $notes = [
+            'Выводится вверху страницы, до дополнительных блоков. Не участвует в перетаскивании.',
+        ];
+
+        if ($theme === 'moto' && $slug === 'contacts') {
+            return [
+                'on_site_line' => 'На сайте: вводный текст под заголовком; ссылки выделяются как кнопки призыва.',
+                'notes' => $notes,
+            ];
+        }
+
+        if ($theme === 'moto' && $slug === 'usloviya-arenda') {
+            return [
+                'on_site_line' => 'На сайте: вступительный абзац перед разделами и боковым оглавлением.',
+                'notes' => $notes,
+            ];
+        }
+
+        return [
+            'on_site_line' => 'На сайте: основной текст страницы в теле до блоков ниже.',
+            'notes' => $notes,
+        ];
     }
 
     /**
@@ -257,15 +332,23 @@ class PageSectionsBuilder extends Component implements HasActions, HasSchemas
         $registry = app(PageSectionTypeRegistry::class);
         $legacy = app(LegacySectionTypeResolver::class);
         $presenter = app(PageSectionAdminSummaryPresenter::class);
+        $presentationEnricher = app(PageSectionBuilderPresentationEnricher::class);
+        $themeKey = currentTenant()?->themeKey() ?? 'default';
 
+        $ctx = $this->pageContext;
         $rows = [];
         $position = 0;
         foreach ($ops->listBuilderSections($this->record) as $section) {
+            if ((int) $section->page_id !== (int) $this->record->getKey()) {
+                continue;
+            }
             $position++;
             $typeId = $legacy->effectiveTypeId($section);
             $typeLabel = $registry->has($typeId) ? $registry->get($typeId)->label() : $typeId;
+            $typeLabelUi = $ctx->typeLabelForUi($typeId, $typeLabel);
             $icon = $registry->has($typeId) ? $registry->get($typeId)->icon() : 'heroicon-o-squares-2x2';
             $summary = $presenter->summarize($section, $registry, $legacy);
+            $summary = $presentationEnricher->enrich($summary, $this->record, $section, $typeId, $themeKey);
             $summaryArr = $summary->toArray();
 
             $dataJson = is_array($section->data_json) ? $section->data_json : [];
@@ -281,13 +364,14 @@ class PageSectionsBuilder extends Component implements HasActions, HasSchemas
                 'section_key' => (string) $section->section_key,
                 'type_id' => $typeId,
                 'type_label' => $typeLabel,
+                'type_label_ui' => $typeLabelUi,
                 'icon' => $icon,
                 'title' => (string) ($section->title ?? ''),
                 'preview' => $registry->has($typeId)
                     ? $registry->get($typeId)->previewSummary($dataJson)
                     : '',
                 'summary' => $summaryArr,
-                'search_blob' => $summary->searchBlob($typeLabel).' '.mb_strtolower($section->section_key),
+                'search_blob' => $summary->searchBlob($typeLabelUi).' '.mb_strtolower($section->section_key),
                 'sort_order' => (int) $section->sort_order,
                 'position' => $position,
                 'is_visible' => (bool) $section->is_visible,
@@ -334,7 +418,7 @@ class PageSectionsBuilder extends Component implements HasActions, HasSchemas
 
     public function updatedShowOnlyHidden(): void
     {
-        // no session for checkbox — optional; could add
+        $this->persistUiSession();
     }
 
     public function isExpanded(int $sectionId): bool
@@ -669,7 +753,7 @@ class PageSectionsBuilder extends Component implements HasActions, HasSchemas
 
                 return is_array($s) && isset($s['displayTitle']) && (string) $s['displayTitle'] !== ''
                     ? (string) $s['displayTitle']
-                    : ($row['title'] ?? $row['type_label'] ?? null);
+                    : ($row['title'] ?? $row['type_label_ui'] ?? $row['type_label'] ?? null);
             }
         }
 
