@@ -15,6 +15,15 @@
     --color-obsidian: #0a0a0c;
     --color-silver: #a1a1a6;
 
+    /* Публичные карточки контактов (именованные цвета — стабильнее arbitrary в PHP @match для Tailwind v4) */
+    --color-cc-wa: #25d366;
+    --color-cc-tg: #2aabee;
+    --color-cc-vk: #0077ff;
+    --color-cc-ig: #e4405f;
+    --color-cc-msg: #0084ff;
+    --color-cc-viber: #7360f2;
+    --color-cc-max: #7c3aed;
+
     /* Custom colors */
     --color-slate-50: #f8fafc;
     --color-indigo-600: #4f46e5;

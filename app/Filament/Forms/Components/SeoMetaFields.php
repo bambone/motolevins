@@ -2,6 +2,7 @@
 
 namespace App\Filament\Forms\Components;
 
+use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -9,6 +10,9 @@ use Filament\Schemas\Components\Component;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Tabs\Tab;
+use Filament\Schemas\Components\Utilities\Get;
+use Illuminate\Support\HtmlString;
+use Illuminate\Validation\ValidationException;
 
 class SeoMetaFields
 {
@@ -43,12 +47,15 @@ class SeoMetaFields
                 ->helperText('Коротко и по делу, до ~60 символов. Показывается во вкладке браузера и в выдаче Google.')
                 ->maxLength(255)
                 ->columnSpanFull()
+                ->live(onBlur: true)
                 ->placeholder('Например: Аренда мотоциклов в Сочи — MotoLevins'),
             Textarea::make('meta_description')
                 ->label('Описание в поиске')
                 ->helperText('1–2 предложения под заголовком в выдаче. Не влияет на «ключевые слова», но влияет на кликабельность.')
                 ->rows(3)
-                ->columnSpanFull(),
+                ->columnSpanFull()
+                ->live(onBlur: true),
+            self::snippetPreviewPlaceholder(),
             TextInput::make('meta_keywords')
                 ->label('Ключевые слова (опционально)')
                 ->helperText('Многие поисковики это игнорируют; можно оставить пустым.')
@@ -92,6 +99,7 @@ class SeoMetaFields
                 ])
                 ->columns(2)
                 ->collapsible(),
+            self::jsonLdTextarea(),
             Toggle::make('is_indexable')
                 ->label('Разрешить индексацию')
                 ->helperText('Выключите, чтобы страница не попала в поиск (noindex по смыслу).')
@@ -114,13 +122,16 @@ class SeoMetaFields
                             ->id('seo-meta-title')
                             ->helperText('До ~60 символов; виден в выдаче и во вкладке браузера.')
                             ->maxLength(255)
-                            ->columnSpanFull(),
+                            ->columnSpanFull()
+                            ->live(onBlur: true),
                         Textarea::make('meta_description')
                             ->label('Описание в поиске')
                             ->id('seo-meta-description')
                             ->helperText('Кратко опишите страницу для сниппета.')
                             ->rows(5)
-                            ->columnSpanFull(),
+                            ->columnSpanFull()
+                            ->live(onBlur: true),
+                        self::snippetPreviewPlaceholder(),
                         TextInput::make('meta_keywords')
                             ->label('Ключевые слова (опционально)')
                             ->id('seo-meta-keywords')
@@ -156,6 +167,7 @@ class SeoMetaFields
                             ->placeholder('index, follow')
                             ->maxLength(100)
                             ->columnSpanFull(),
+                        self::jsonLdTextarea(),
                         Toggle::make('is_indexable')->label('Разрешить индексацию')->id('seo-is-indexable')->default(true),
                         Toggle::make('is_followable')->label('Разрешить обход ссылок')->id('seo-is-followable')->default(true),
                     ])
@@ -164,5 +176,72 @@ class SeoMetaFields
             ->contained(true)
             ->id('motorcycle-seo-tabs')
             ->persistTabInQueryString('seo-tab');
+    }
+
+    private static function snippetPreviewPlaceholder(): Placeholder
+    {
+        return Placeholder::make('seo_snippet_preview')
+            ->label('Подсказка по сниппету')
+            ->content(function (Get $get): HtmlString {
+                $title = (string) $get('meta_title');
+                $desc = (string) $get('meta_description');
+                $tLen = mb_strlen($title);
+                $dLen = mb_strlen($desc);
+                $tWarn = $tLen > 60;
+                $dWarn = $dLen > 160;
+                $safeTitle = e($title !== '' ? $title : '—');
+                $safeDesc = e($desc !== '' ? $desc : '—');
+
+                return new HtmlString(
+                    '<div class="space-y-2 text-sm">'
+                    .'<p class="'.($tWarn ? 'text-danger-600 dark:text-danger-400' : 'text-gray-600 dark:text-gray-400').'">Title: '.$tLen.' симв. (ориентир ~60)</p>'
+                    .'<p class="'.($dWarn ? 'text-danger-600 dark:text-danger-400' : 'text-gray-600 dark:text-gray-400').'">Description: '.$dLen.' симв. (ориентир ~160)</p>'
+                    .'<div class="rounded-lg border border-gray-200 p-3 dark:border-gray-700 bg-white dark:bg-gray-950">'
+                    .'<div class="text-base text-blue-700 dark:text-blue-400">'.$safeTitle.'</div>'
+                    .'<div class="mt-1 text-sm text-green-800 dark:text-green-400 line-clamp-3">'.$safeDesc.'</div>'
+                    .'</div></div>'
+                );
+            })
+            ->columnSpanFull();
+    }
+
+    private static function jsonLdTextarea(): Textarea
+    {
+        return Textarea::make('json_ld')
+            ->label('JSON-LD override (продвинуто)')
+            ->rows(10)
+            ->columnSpanFull()
+            ->helperText('Необязательно. Валидный JSON (объект или массив с @graph). Дополняет авто-разметку на сайте; не дублируйте поля, которых нет на странице.')
+            ->formatStateUsing(function ($state): string {
+                if ($state === null || $state === '' || $state === []) {
+                    return '';
+                }
+                if (is_array($state)) {
+                    return json_encode($state, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) ?: '';
+                }
+
+                return (string) $state;
+            })
+            ->dehydrateStateUsing(function ($state): ?array {
+                if ($state === null) {
+                    return null;
+                }
+                if (is_array($state)) {
+                    return $state === [] ? null : $state;
+                }
+                $s = trim((string) $state);
+                if ($s === '') {
+                    return null;
+                }
+                json_decode($s, true);
+                if (json_last_error() !== JSON_ERROR_NONE) {
+                    throw ValidationException::withMessages([
+                        'json_ld' => 'Некорректный JSON для JSON-LD.',
+                    ]);
+                }
+                $decoded = json_decode($s, true);
+
+                return is_array($decoded) ? $decoded : null;
+            });
     }
 }

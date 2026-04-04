@@ -12,11 +12,13 @@ use App\Http\Controllers\PlatformMarketingSitemapController;
 use App\Http\Controllers\PublicBookingController;
 use App\Http\Controllers\RobotsController;
 use App\Http\Controllers\SitemapController;
+use App\Http\Controllers\TenantLlmsTxtController;
 use App\Http\Controllers\TenantPublicBookingAvailabilityController;
 use App\Http\Controllers\TenantPublicPageController;
 use App\Http\Controllers\TenantPublicStorageFileController;
 use App\Http\Controllers\ThemePlatformAssetController;
 use App\Http\Middleware\EnsureTenantContext;
+use App\Http\Middleware\ResolveTenantPublicSeo;
 use App\Models\TenantDomain;
 use Illuminate\Support\Facades\Route;
 
@@ -69,7 +71,7 @@ if ($marketingHosts !== []) {
     }
 }
 
-Route::middleware([EnsureTenantContext::class])->group(function () {
+Route::middleware([EnsureTenantContext::class, ResolveTenantPublicSeo::class])->group(function () {
     Route::get('/theme/build/{theme}/{path}', [ThemePlatformAssetController::class, 'show'])
         ->where('path', '.*')
         ->name('theme.platform.asset');
@@ -79,6 +81,7 @@ Route::middleware([EnsureTenantContext::class])->group(function () {
         ->name('tenant.public.storage');
     Route::get('/robots.txt', RobotsController::class)->name('robots');
     Route::get('/sitemap.xml', SitemapController::class)->name('sitemap');
+    Route::get('/llms.txt', TenantLlmsTxtController::class)->name('llms');
     Route::get('/', [HomeController::class, 'index'])->name('home');
     Route::view('/offline', 'tenant.pages.offline')->name('offline');
     Route::get('/contacts', [PageController::class, 'show'])

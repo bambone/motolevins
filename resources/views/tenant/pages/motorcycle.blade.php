@@ -1,5 +1,4 @@
 @php
-    $seoMeta = $seoMeta ?? null;
     /** @var array{audience: string, use_case: array, advantages: array, rental_notes: string} $detailContent */
     $detailContent = $detailContent ?? ['audience' => '', 'use_case' => [], 'advantages' => [], 'rental_notes' => ''];
     $galleryUrls = $galleryUrls ?? [];
@@ -36,7 +35,7 @@
             <div class="w-full min-w-0 flex-1 space-y-7">
                 {{-- Product hero --}}
                 <header class="w-full min-w-0 rounded-2xl border border-white/[0.08] bg-gradient-to-b from-white/[0.04] to-transparent p-5 sm:p-6 md:p-7">
-                    <h1 class="w-full min-w-0 text-3xl font-bold leading-tight tracking-tight text-white sm:text-4xl md:text-[2.5rem]">{{ $motorcycle->name }}</h1>
+                    <h1 class="w-full min-w-0 text-3xl font-bold leading-tight tracking-tight text-white sm:text-4xl md:text-[2.5rem]">{{ ($resolvedSeo ?? null)?->h1 ?? $motorcycle->name }}</h1>
                     @if(filled($heroTagline))
                         <p class="mt-3 max-w-3xl text-lg font-medium leading-snug text-zinc-200 sm:text-xl">{{ $heroTagline }}</p>
                     @endif

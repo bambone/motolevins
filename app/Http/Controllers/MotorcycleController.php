@@ -51,7 +51,6 @@ class MotorcycleController extends Controller
 
         return tenant_view('pages.motorcycle', [
             'motorcycle' => $motorcycle,
-            'seoMeta' => $motorcycle->seoMeta,
             'galleryUrls' => $galleryUrls,
             'relatedMotorcycles' => $related,
             'specGroups' => $motorcycle->specGroupsForPublic(),

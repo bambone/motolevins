@@ -35,7 +35,9 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="apple-touch-icon" href="{{ theme_platform_asset_url('icons/icon-192.png') }}">
 
-    <x-seo-meta :meta="$seoMeta ?? null" />
+    <x-seo-meta />
+
+    @stack('tenant-jsonld')
 
     @stack('tenant-preload')
 
@@ -52,7 +54,11 @@
         <script src="https://cdn.tailwindcss.com"></script>
         <script>
             tailwind.config = { theme: { extend: {
-                colors: { obsidian: '#0A0A0C', carbon: '#141417', silver: '#A1A1A6', 'moto-amber': '#E85D04' }
+                colors: {
+                    obsidian: '#0A0A0C', carbon: '#141417', silver: '#A1A1A6', 'moto-amber': '#E85D04',
+                    'cc-wa': '#25D366', 'cc-tg': '#2AABEE', 'cc-vk': '#0077FF', 'cc-ig': '#E4405F',
+                    'cc-msg': '#0084FF', 'cc-viber': '#7360f2', 'cc-max': '#7C3AED',
+                }
             }}};
         </script>
     @endif

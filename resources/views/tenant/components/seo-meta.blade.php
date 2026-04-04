@@ -1,47 +1,48 @@
-@props(['meta' => null])
 @php
-    $m = $meta;
-    $title = $m?->meta_title ?? config('app.name', 'Moto Levins');
-    $description = $m?->meta_description ?? null;
-    $keywords = $m?->meta_keywords ?? null;
-    $canonical = $m?->canonical_url ?? null;
-    $robots = $m?->robots ?? null;
-    $isIndexable = $m?->is_indexable ?? true;
-    $isFollowable = $m?->is_followable ?? true;
-    $ogTitle = $m?->og_title ?? $title;
-    $ogDescription = $m?->og_description ?? $description;
-    $ogImage = $m?->og_image ?? null;
-    $ogType = $m?->og_type ?? 'website';
-    $twitterCard = $m?->twitter_card ?? 'summary_large_image';
+    /** @var \App\Services\Seo\SeoResolvedData|null $r */
+    $r = $resolvedSeo ?? null;
+    $fallbackTitle = trim($site_name ?? '') !== '' ? $site_name : 'Rent';
 @endphp
-<title>{{ $title }}</title>
-@if($description)
-<meta name="description" content="{{ $description }}">
+@if($r instanceof \App\Services\Seo\SeoResolvedData)
+<title>{{ $r->title }}</title>
+@if($r->description !== '')
+<meta name="description" content="{{ $r->description }}">
 @endif
-@if($keywords)
-<meta name="keywords" content="{{ $keywords }}">
+@if($r->metaKeywords)
+<meta name="keywords" content="{{ $r->metaKeywords }}">
 @endif
-@if($canonical)
-<link rel="canonical" href="{{ $canonical }}">
+<link rel="canonical" href="{{ $r->canonical }}">
+<meta name="robots" content="{{ $r->robots }}">
+<meta property="og:title" content="{{ $r->ogTitle }}">
+@if($r->ogDescription !== '')
+<meta property="og:description" content="{{ $r->ogDescription }}">
 @endif
-@if($robots || !$isIndexable || !$isFollowable)
-<meta name="robots" content="{{ $robots ?? ($isIndexable ? 'index' : 'noindex') . ', ' . ($isFollowable ? 'follow' : 'nofollow') }}">
+@if($r->ogImage)
+<meta property="og:image" content="{{ $r->ogImage }}">
 @endif
-<meta property="og:title" content="{{ $ogTitle }}">
-@if($ogDescription)
-<meta property="og:description" content="{{ $ogDescription }}">
+<meta property="og:type" content="{{ $r->ogType }}">
+<meta property="og:site_name" content="{{ $r->ogSiteName }}">
+<meta property="og:url" content="{{ $r->ogUrl }}">
+<meta name="twitter:card" content="{{ $r->twitterCard }}">
+<meta name="twitter:title" content="{{ $r->ogTitle }}">
+@if($r->ogDescription !== '')
+<meta name="twitter:description" content="{{ $r->ogDescription }}">
 @endif
-@if($ogImage)
-<meta property="og:image" content="{{ $ogImage }}">
+@if($r->ogImage)
+<meta name="twitter:image" content="{{ $r->ogImage }}">
 @endif
-<meta property="og:type" content="{{ $ogType }}">
-<meta property="og:site_name" content="{{ config('app.name', 'Moto Levins') }}">
+@if($r->jsonLd !== [])
+@push('tenant-jsonld')
+<script type="application/ld+json">{!! json_encode(['@context' => 'https://schema.org', '@graph' => $r->jsonLd], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!}</script>
+@endpush
+@endif
+@else
+<title>{{ $fallbackTitle }}</title>
+<link rel="canonical" href="{{ url()->current() }}">
+<meta property="og:title" content="{{ $fallbackTitle }}">
+<meta property="og:site_name" content="{{ $fallbackTitle }}">
 <meta property="og:url" content="{{ url()->current() }}">
-<meta name="twitter:card" content="{{ $twitterCard }}">
-<meta name="twitter:title" content="{{ $ogTitle }}">
-@if($ogDescription)
-<meta name="twitter:description" content="{{ $ogDescription }}">
-@endif
-@if($ogImage)
-<meta name="twitter:image" content="{{ $ogImage }}">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{{ $fallbackTitle }}">
 @endif

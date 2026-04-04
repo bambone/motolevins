@@ -14,6 +14,8 @@ class SeoMeta extends Model
 
     protected $fillable = [
         'tenant_id',
+        'seoable_type',
+        'seoable_id',
         'meta_title',
         'meta_description',
         'meta_keywords',

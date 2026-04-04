@@ -69,21 +69,24 @@ final class ContactChannelRegistry
         };
     }
 
+    /**
+     * Ключи для Blade-компонента app-icon → resources/icons/ (поштучные SVG).
+     */
     public function icon(ContactChannelType $type): string
     {
         return match ($type) {
-            ContactChannelType::Phone => 'heroicon-o-phone',
-            ContactChannelType::Email => 'heroicon-o-envelope',
-            ContactChannelType::Telegram => 'heroicon-o-paper-airplane',
-            ContactChannelType::Vk => 'heroicon-o-chat-bubble-left-right',
-            ContactChannelType::SiteForm => 'heroicon-o-clipboard-document-check',
-            ContactChannelType::Whatsapp => 'heroicon-o-chat-bubble-left-ellipsis',
-            ContactChannelType::Viber => 'heroicon-o-chat-bubble-oval-left',
-            ContactChannelType::Instagram => 'heroicon-o-camera',
-            ContactChannelType::FacebookMessenger => 'heroicon-o-chat-bubble-oval-left-ellipsis',
-            ContactChannelType::Sms => 'heroicon-o-device-phone-mobile',
-            ContactChannelType::Max => 'heroicon-o-link',
-            ContactChannelType::GenericUrl => 'heroicon-o-link',
+            ContactChannelType::Phone => 'phone',
+            ContactChannelType::Email => 'mail',
+            ContactChannelType::Telegram => 'telegram',
+            ContactChannelType::Vk => 'vk',
+            ContactChannelType::SiteForm => 'clipboard-check',
+            ContactChannelType::Whatsapp => 'whatsapp',
+            ContactChannelType::Viber => 'viber',
+            ContactChannelType::Instagram => 'instagram',
+            ContactChannelType::FacebookMessenger => 'messenger',
+            ContactChannelType::Sms => 'smartphone',
+            ContactChannelType::Max => 'max',
+            ContactChannelType::GenericUrl => 'link',
         };
     }
 

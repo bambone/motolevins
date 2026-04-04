@@ -1,7 +1,6 @@
 @php
     use App\Services\PageBuilder\SectionViewResolver;
 
-    $seoMeta = $seoMeta ?? null;
     $sectionResolver = app(SectionViewResolver::class);
     $sections = $page->sections()
         ->where('status', 'published')
@@ -16,7 +15,7 @@
 
 @section('content')
     <div class="mx-auto max-w-4xl px-3 pb-12 pt-24 sm:px-4 sm:pb-16 sm:pt-28 md:px-8">
-        <h1 class="mb-6 text-balance text-2xl font-bold leading-tight text-white sm:mb-8 sm:text-3xl md:text-4xl">{{ $page->name }}</h1>
+        <h1 class="mb-6 text-balance text-2xl font-bold leading-tight text-white sm:mb-8 sm:text-3xl md:text-4xl">{{ ($resolvedSeo ?? null)?->h1 ?? $page->name }}</h1>
 
         @if($mainSection && is_array($mainSection->data_json) && filled($mainSection->data_json['content'] ?? null))
             <x-tenant.rich-prose variant="default" class="mb-12" :content="$mainSection->data_json['content']" />

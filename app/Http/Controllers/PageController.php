@@ -17,7 +17,6 @@ class PageController extends Controller
 
         return tenant_view($viewName, [
             'page' => $page,
-            'seoMeta' => $page->seoMeta,
         ]);
     }
 }

@@ -1,10 +1,8 @@
 @extends('tenant.layouts.app')
 
-@section('title', 'Бронирование')
-
 @section('content')
 <section class="mx-auto max-w-6xl px-3 pb-12 pt-24 sm:px-4 sm:pb-16 sm:pt-28 md:px-8">
-    <h1 class="mb-2 text-balance text-2xl font-bold leading-tight text-white sm:text-3xl">Онлайн-бронирование</h1>
+    <h1 class="mb-2 text-balance text-2xl font-bold leading-tight text-white sm:text-3xl">{{ ($resolvedSeo ?? null)?->h1 ?? 'Онлайн-бронирование' }}</h1>
     <p class="mb-8 text-sm text-silver sm:mb-10 sm:text-base">Выберите транспорт и даты аренды</p>
 
     <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 lg:gap-6">

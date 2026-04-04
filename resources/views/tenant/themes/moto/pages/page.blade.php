@@ -3,7 +3,6 @@
     use App\Support\PageRichContent;
     use App\Services\PageBuilder\SectionViewResolver;
 
-    $seoMeta = $seoMeta ?? null;
     $sectionResolver = app(SectionViewResolver::class);
     $typeResolver = app(LegacySectionTypeResolver::class);
     $sections = $page->sections()

@@ -56,7 +56,6 @@ class HomeController extends Controller
         $page = Page::query()
             ->where('slug', 'home')
             ->where('status', 'published')
-            ->with('seoMeta')
             ->with(['sections' => function ($q): void {
                 $q->where('status', 'published')
                     ->where('is_visible', true)
@@ -68,7 +67,6 @@ class HomeController extends Controller
 
         $homeLayoutSections = $page ? $page->sections : collect();
         $sections = $this->sectionsKeyedForLegacyComponents($homeLayoutSections);
-        $seoMeta = $page?->seoMeta;
         $faqs = Faq::where('show_on_home', true)
             ->where('status', 'published')
             ->orderBy('sort_order')
@@ -82,7 +80,6 @@ class HomeController extends Controller
             'homeLayoutSections',
             'faqs',
             'reviews',
-            'seoMeta',
         );
     }
 

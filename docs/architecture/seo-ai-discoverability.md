@@ -15,7 +15,7 @@
 - Каждая значимая страница: свой **canonical** (сам на себя), осмысленный **200**; не вешать **noindex** на основной маркетинг без причины.
 - **robots.txt**: отдача с **200**, строка `Sitemap:`; не редиректить robots на HTML.
 - **Central marketing** (`tenancy.central_domains`, не тенант): `GET /robots.txt`, `/sitemap.xml`, `/llms.txt` — `PlatformMarketingRobotsController`, `PlatformMarketingSitemapController`, `PlatformLlmsTxtController` в `routes/web.php` (группа `$marketingHosts`).
-- **Тенантские домены:** по-прежнему `RobotsController` / `SitemapController` в группе с `EnsureTenantContext`.
+- **Тенантские домены:** по-прежнему `RobotsController` / `SitemapController` в группе с `EnsureTenantContext`; экспериментальный `GET /llms.txt` — `TenantLlmsTxtController` (не заменяет sitemap).
 
 ## Матрица: тип страницы → JSON-LD (платформа)
 

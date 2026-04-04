@@ -1,7 +1,5 @@
 @extends('tenant.layouts.app')
 
-@section('title', 'Бронирование — ' . $motorcycle->name)
-
 @section('content')
 <section class="mx-auto max-w-4xl px-3 pb-12 pt-24 sm:px-4 sm:pb-16 sm:pt-28 md:px-8">
     <a href="{{ route('booking.index') }}" class="mb-6 inline-flex min-h-10 items-center gap-2 text-sm text-silver transition-colors hover:text-white sm:mb-8 sm:text-base focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moto-amber">
@@ -16,7 +14,7 @@
             @endif
         </div>
         <div class="min-w-0">
-            <h1 class="mb-2 text-balance text-xl font-bold text-white sm:text-2xl">{{ $motorcycle->name }}</h1>
+            <h1 class="mb-2 text-balance text-xl font-bold text-white sm:text-2xl">{{ ($resolvedSeo ?? null)?->h1 ?? $motorcycle->name }}</h1>
             <p class="mb-6 text-sm leading-relaxed text-silver sm:text-base">{{ $motorcycle->short_description }}</p>
             <div class="break-words text-lg font-bold text-moto-amber sm:text-xl">{{ number_format($motorcycle->price_per_day ?? 0) }} ₽ / сутки</div>
         </div>
