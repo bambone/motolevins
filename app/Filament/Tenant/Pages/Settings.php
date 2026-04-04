@@ -20,6 +20,7 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
+use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Illuminate\Support\Facades\Auth;
@@ -56,7 +57,6 @@ class Settings extends Page
         'contacts_telegram' => 'contacts.telegram',
         'contacts_address' => 'contacts.address',
         'contacts_hours' => 'contacts.hours',
-        'seo_robots_txt' => 'seo.robots_txt',
     ];
 
     protected static ?string $navigationLabel = 'Настройки';
@@ -106,7 +106,6 @@ class Settings extends Page
                 'contacts_telegram' => TenantSetting::getForTenant($tenant->id, 'contacts.telegram', ''),
                 'contacts_address' => TenantSetting::getForTenant($tenant->id, 'contacts.address', ''),
                 'contacts_hours' => TenantSetting::getForTenant($tenant->id, 'contacts.hours', ''),
-                'seo_robots_txt' => TenantSetting::getForTenant($tenant->id, 'seo.robots_txt', ''),
                 ...AnalyticsSettingsFormMapper::toFormState(
                     app(AnalyticsSettingsPersistence::class)->load((int) $tenant->id)
                 ),
@@ -126,7 +125,6 @@ class Settings extends Page
             'contacts_telegram' => Setting::get('contacts.telegram', ''),
             'contacts_address' => Setting::get('contacts.address', ''),
             'contacts_hours' => Setting::get('contacts.hours', ''),
-            'seo_robots_txt' => Setting::get('seo.robots_txt', ''),
             ...AnalyticsSettingsFormMapper::toFormState(AnalyticsSettingsData::defaultEmpty()),
         ];
     }
@@ -150,43 +148,55 @@ class Settings extends Page
                     ])->columns(2),
 
                 Section::make('Брендинг')
-                    ->description('Файлы сохраняются в storage (путь привязан к ID клиента). URL-поля — для внешних ссылок; если загружен файл, он имеет приоритет.')
+                    ->description('Файлы сохраняются в storage (путь привязан к ID клиента). Обычно достаточно загрузки слева; справа — запасной внешний URL (редко). Если загружен файл, он имеет приоритет над URL.')
                     ->schema([
-                        TenantPublicImagePicker::make('branding_logo_path')
-                            ->label('Логотип (файл)')
-                            ->uploadSlotSelector('[data-settings-tenant-upload-input]')
-                            ->uploadPublicSiteSubdirectory('site/logo')
-                            ->helperText('PNG, JPG, WebP. До 4 МБ при загрузке через кнопку; также можно выбрать файл из каталога.'),
-                        TextInput::make('branding_logo')
-                            ->label('URL логотипа (legacy)')
-                            ->url()
-                            ->placeholder('https://...')
-                            ->helperText('Используется, если файл не загружен.'),
+                        Grid::make(2)
+                            ->schema([
+                                TenantPublicImagePicker::make('branding_logo_path')
+                                    ->label('Логотип (файл)')
+                                    ->uploadSlotSelector('[data-settings-tenant-upload-input]')
+                                    ->uploadPublicSiteSubdirectory('site/logo')
+                                    ->helperText('PNG, JPG, WebP. До 4 МБ; можно выбрать из каталога.'),
+                                TextInput::make('branding_logo')
+                                    ->label('Логотип (URL, запасной)')
+                                    ->url()
+                                    ->placeholder('https://...')
+                                    ->helperText('Только если файл не задан.'),
+                            ]),
                         TextInput::make('branding_primary_color')
                             ->label('Основной цвет')
                             ->type('color')
-                            ->helperText('Акцентные кнопки и ссылки на сайте. Рядом — текущий выбранный цвет (стандартный виджет браузера).'),
-                        TenantPublicImagePicker::make('branding_favicon_path')
-                            ->label('Favicon (файл)')
-                            ->uploadSlotSelector('[data-settings-tenant-upload-input]')
-                            ->uploadPublicSiteSubdirectory('site/favicon')
-                            ->helperText('PNG, ICO, SVG. Размер загрузки до 4 МБ; для очень маленьких иконок предпочтительно оптимизировать файл заранее.'),
-                        TextInput::make('branding_favicon')
-                            ->label('URL favicon (legacy)')
-                            ->url()
-                            ->placeholder('https://...')
-                            ->helperText('Используется, если файл не загружен.'),
-                        TenantPublicImagePicker::make('branding_hero_path')
-                            ->label('Hero / OG-изображение (файл)')
-                            ->uploadSlotSelector('[data-settings-tenant-upload-input]')
-                            ->uploadPublicSiteSubdirectory('site/hero')
-                            ->helperText('Крупное изображение для шапки или соцсетей; вывод задаётся темой.'),
-                        TextInput::make('branding_hero')
-                            ->label('URL hero (legacy)')
-                            ->url()
-                            ->nullable()
-                            ->helperText('Внешняя ссылка, если файл не загружен.'),
-                    ])->columns(2)->visible(fn () => \currentTenant() !== null),
+                            ->columnSpanFull()
+                            ->helperText('Акцентные кнопки и ссылки на сайте.'),
+                        Grid::make(2)
+                            ->schema([
+                                TenantPublicImagePicker::make('branding_favicon_path')
+                                    ->label('Favicon (файл)')
+                                    ->uploadSlotSelector('[data-settings-tenant-upload-input]')
+                                    ->uploadPublicSiteSubdirectory('site/favicon')
+                                    ->helperText('PNG, ICO, SVG. До 4 МБ; для иконки лучше заранее оптимизировать файл.'),
+                                TextInput::make('branding_favicon')
+                                    ->label('Favicon (URL, запасной)')
+                                    ->url()
+                                    ->placeholder('https://...')
+                                    ->helperText('Только если файл не задан.'),
+                            ]),
+                        Grid::make(2)
+                            ->schema([
+                                TenantPublicImagePicker::make('branding_hero_path')
+                                    ->label('Hero / OG-изображение (файл)')
+                                    ->uploadSlotSelector('[data-settings-tenant-upload-input]')
+                                    ->uploadPublicSiteSubdirectory('site/hero')
+                                    ->helperText('Крупное изображение для шапки или соцсетей; вывод задаёт тема.'),
+                                TextInput::make('branding_hero')
+                                    ->label('Hero / OG (URL, запасной)')
+                                    ->url()
+                                    ->nullable()
+                                    ->helperText('Только если файл не задан.'),
+                            ]),
+                    ])
+                    ->columns(1)
+                    ->visible(fn () => \currentTenant() !== null),
 
                 Section::make('Контакты')
                     ->description('Телефоны и мессенджеры обычно выводятся в шапке, подвале и на странице контактов.')
@@ -211,15 +221,6 @@ class Settings extends Page
                         Textarea::make('contacts_address')->label('Адрес')->rows(2),
                         Textarea::make('contacts_hours')->label('Часы работы')->rows(2)->placeholder('Например: Пн–Вс 9:00–21:00'),
                     ])->columns(2),
-
-                Section::make('SEO')
-                    ->description('Файл robots.txt сообщает поисковикам, что можно индексировать. Если оставить пустым, платформа может сформировать его автоматически.')
-                    ->schema([
-                        Textarea::make('seo_robots_txt')
-                            ->label('Содержимое robots.txt')
-                            ->rows(10)
-                            ->placeholder("User-agent: *\nAllow: /\nDisallow: /admin\nSitemap: https://ваш-сайт/sitemap.xml"),
-                    ]),
 
                 TenantAnalyticsFormSchema::section(fn (): bool => \currentTenant() !== null),
             ]);

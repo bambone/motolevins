@@ -33,7 +33,6 @@ class TenantSettingsFormMappingTest extends TestCase
             'contacts_telegram' => 'contacts.telegram',
             'contacts_address' => 'contacts.address',
             'contacts_hours' => 'contacts.hours',
-            'seo_robots_txt' => 'seo.robots_txt',
         ];
 
         $this->assertSame($expected, Settings::formFieldToSettingKeyMap());

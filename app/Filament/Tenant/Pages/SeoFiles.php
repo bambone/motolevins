@@ -122,7 +122,7 @@ class SeoFiles extends Page
                     ])->columns(2),
 
                 Section::make('Настройки SEO')
-                    ->description('Полный текст пользовательских правил robots — в разделе «Настройки сайта» (seo.robots_txt).')
+                    ->description('Всё в одном месте: индексация, шаблон allow/disallow, опционально полный свой robots.txt. Пустой текст и выключенный переключатель — тогда используется автоматический шаблон. Предпросмотр — кнопка «Предпросмотр robots».')
                     ->schema([
                         Toggle::make('seo_indexing_enabled')
                             ->label('Индексация включена')
@@ -132,7 +132,13 @@ class SeoFiles extends Page
                             ->helperText('seo.sitemap_enabled'),
                         Toggle::make('seo_custom_robots_enabled')
                             ->label('Использовать пользовательские правила robots')
-                            ->helperText('seo.custom_robots_enabled + seo.robots_txt'),
+                            ->helperText('seo.custom_robots_enabled: при включении и непустом поле ниже отдаётся именно этот текст (иначе — шаблон из allow/disallow).'),
+                        Textarea::make('seo_robots_txt')
+                            ->label('Полный текст robots.txt (при пользовательском режиме)')
+                            ->rows(10)
+                            ->columnSpanFull()
+                            ->placeholder("User-agent: *\nAllow: /\nDisallow: /admin\nSitemap: https://…/sitemap.xml")
+                            ->helperText('Ключ в БД: seo.robots_txt. Имеет эффект только если включено «Использовать пользовательские правила» и поле не пустое.'),
                         Toggle::make('seo_robots_include_sitemap')
                             ->label('В шаблоне robots добавлять строку Sitemap:')
                             ->helperText('seo.robots_include_sitemap'),
@@ -185,6 +191,12 @@ class SeoFiles extends Page
         TenantSetting::setForTenant($tenant->id, 'seo.indexing_enabled', ! empty($state['seo_indexing_enabled']), 'boolean');
         TenantSetting::setForTenant($tenant->id, 'seo.sitemap_enabled', ! empty($state['seo_sitemap_enabled']), 'boolean');
         TenantSetting::setForTenant($tenant->id, 'seo.custom_robots_enabled', ! empty($state['seo_custom_robots_enabled']), 'boolean');
+        TenantSetting::setForTenant(
+            $tenant->id,
+            'seo.robots_txt',
+            trim((string) ($state['seo_robots_txt'] ?? '')),
+            'string',
+        );
         TenantSetting::setForTenant($tenant->id, 'seo.robots_include_sitemap', ! empty($state['seo_robots_include_sitemap']), 'boolean');
         TenantSetting::setForTenant($tenant->id, 'seo.sitemap_stale_after_days', max(1, min(365, (int) ($state['seo_sitemap_stale_after_days'] ?? 7))), 'integer');
         TenantSetting::setForTenant($tenant->id, 'seo.sitemap_auto_regenerate_on_schedule', ! empty($state['seo_sitemap_auto_schedule']), 'boolean');
@@ -385,6 +397,7 @@ class SeoFiles extends Page
             'seo_indexing_enabled' => (bool) TenantSetting::getForTenant($id, 'seo.indexing_enabled', true),
             'seo_sitemap_enabled' => (bool) TenantSetting::getForTenant($id, 'seo.sitemap_enabled', true),
             'seo_custom_robots_enabled' => (bool) TenantSetting::getForTenant($id, 'seo.custom_robots_enabled', false),
+            'seo_robots_txt' => (string) TenantSetting::getForTenant($id, 'seo.robots_txt', ''),
             'seo_robots_include_sitemap' => (bool) TenantSetting::getForTenant($id, 'seo.robots_include_sitemap', true),
             'seo_sitemap_stale_after_days' => (int) TenantSetting::getForTenant($id, 'seo.sitemap_stale_after_days', (int) config('seo.sitemap_stale_after_days_default', 7)),
             'seo_sitemap_auto_schedule' => (bool) TenantSetting::getForTenant($id, 'seo.sitemap_auto_regenerate_on_schedule', false),

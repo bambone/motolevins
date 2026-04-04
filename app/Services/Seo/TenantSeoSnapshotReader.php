@@ -18,7 +18,8 @@ final class TenantSeoSnapshotReader
             ->where('type', $type)
             ->first();
 
-        if ($row === null || ! $row->exists || $row->storage_path === null || $row->storage_path === '') {
+        // Column `exists` must be read via getAttribute: Eloquent's public $exists is the "persisted" flag.
+        if ($row === null || ! (bool) $row->getAttribute('exists') || $row->storage_path === null || $row->storage_path === '') {
             return null;
         }
 
