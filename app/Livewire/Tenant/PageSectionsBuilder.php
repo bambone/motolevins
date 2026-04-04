@@ -168,22 +168,62 @@ class PageSectionsBuilder extends Component implements HasActions, HasSchemas
             ? PageSectionCategory::orderedForCatalog()
             : PageSectionCategory::orderedForContentPageCatalog();
 
-        $out = collect();
+        /** @var array<string, list<array<string, mixed>>> $byCat */
+        $byCat = [];
         foreach ($categories as $cat) {
-            $items = [];
-            foreach ($registry->forPage($this->record, $themeKey) as $bp) {
-                if ($bp->category() !== $cat) {
-                    continue;
-                }
-                $items[] = [
-                    'id' => $bp->id(),
-                    'label' => $ctx->typeLabelForUi($bp->id(), $bp->label()),
-                    'description' => $ctx->catalogDescriptionForType($bp->id(), $bp->description()),
-                    'icon' => $bp->icon(),
-                    'category' => $cat->value,
-                    'category_label' => $cat->label(),
-                ];
+            $byCat[$cat->value] = [];
+        }
+
+        foreach ($registry->forPage($this->record, $themeKey) as $bp) {
+            $cat = $bp->category();
+            if (! isset($byCat[$cat->value])) {
+                continue;
             }
+            $desc = $ctx->catalogDescriptionForType($bp->id(), $bp->description());
+            $byCat[$cat->value][] = [
+                'id' => $bp->id(),
+                'label' => $ctx->typeLabelForUi($bp->id(), $bp->label()),
+                'description' => $this->shortCatalogDescription($desc),
+                'icon' => $bp->icon(),
+                'category' => $cat->value,
+                'category_label' => $cat->label(),
+            ];
+        }
+
+        $priority = $ctx->isHome
+            ? ['hero', 'info_cards', 'cards_teaser', 'motorcycle_catalog', 'content_faq', 'gallery', 'contacts_info']
+            : ['hero', 'structured_text', 'text_section', 'rich_text', 'gallery', 'content_faq', 'contacts_info'];
+
+        $frequent = [];
+        $pulledIds = [];
+        foreach ($priority as $wantId) {
+            foreach ($byCat as $catVal => $items) {
+                foreach ($items as $idx => $item) {
+                    if (($item['id'] ?? '') === $wantId) {
+                        $frequent[] = $item;
+                        unset($byCat[$catVal][$idx]);
+                        $pulledIds[$wantId] = true;
+                        break 2;
+                    }
+                }
+            }
+        }
+
+        foreach ($byCat as $k => $items) {
+            $byCat[$k] = array_values($items);
+        }
+
+        $out = collect();
+        if ($frequent !== []) {
+            $out->push([
+                'category' => '_frequent',
+                'label' => 'Часто используемые',
+                'items' => $frequent,
+            ]);
+        }
+
+        foreach ($categories as $cat) {
+            $items = $byCat[$cat->value] ?? [];
             if ($items !== []) {
                 $out->push([
                     'category' => $cat->value,
@@ -194,6 +234,19 @@ class PageSectionsBuilder extends Component implements HasActions, HasSchemas
         }
 
         return $out;
+    }
+
+    private function shortCatalogDescription(string $description): string
+    {
+        $t = trim($description);
+        if ($t === '') {
+            return '';
+        }
+        if (mb_strlen($t) <= 64) {
+            return $t;
+        }
+
+        return mb_substr($t, 0, 61).'…';
     }
 
     /**
@@ -287,40 +340,27 @@ class PageSectionsBuilder extends Component implements HasActions, HasSchemas
     }
 
     /**
-     * Как основной текст страницы читается на публичной странице (без дублирования рендера).
-     *
-     * @return array{on_site_line: string, notes: list<string>}
+     * Краткая подсказка для иконки у блока основного текста (вторичный слой, не поток абзацев).
      */
-    public function getMainBlockSitePresentationProperty(): array
+    public function getMainCardSiteTooltipProperty(): ?string
     {
         if ($this->pageContext->isHome) {
-            return ['on_site_line' => '', 'notes' => []];
+            return null;
         }
 
         $theme = $this->tenantThemeKey;
         $slug = (string) ($this->record->slug ?? '');
-        $notes = [
-            'Выводится вверху страницы, до дополнительных блоков. Не участвует в перетаскивании.',
-        ];
+        $base = 'Показывается над списком блоков; не перетаскивается.';
 
         if ($theme === 'moto' && $slug === 'contacts') {
-            return [
-                'on_site_line' => 'На сайте: вводный текст под заголовком; ссылки выделяются как кнопки призыва.',
-                'notes' => $notes,
-            ];
+            return $base.' Под заголовком; ссылки оформляются как кнопки.';
         }
 
         if ($theme === 'moto' && $slug === 'usloviya-arenda') {
-            return [
-                'on_site_line' => 'На сайте: вступительный абзац перед разделами и боковым оглавлением.',
-                'notes' => $notes,
-            ];
+            return $base.' Вступление перед разделами и оглавлением.';
         }
 
-        return [
-            'on_site_line' => 'На сайте: основной текст страницы в теле до блоков ниже.',
-            'notes' => $notes,
-        ];
+        return $base;
     }
 
     /**
@@ -359,6 +399,50 @@ class PageSectionsBuilder extends Component implements HasActions, HasSchemas
             };
             $hasBlockTitleQuick = $blockTitleQuick !== null;
 
+            $blueprintPreview = $registry->has($typeId)
+                ? trim((string) $registry->get($typeId)->previewSummary($dataJson))
+                : '';
+
+            $cardTitle = trim((string) ($summaryArr['primaryHeadline'] ?? ''));
+            if ($cardTitle === '') {
+                $cardTitle = trim((string) ($summaryArr['displayTitle'] ?? ''));
+            }
+            if ($cardTitle === '') {
+                $cardTitle = $typeLabelUi;
+            }
+
+            $titleNorm = mb_strtolower($cardTitle);
+            $cardPreview = $blueprintPreview;
+            if ($cardPreview !== '' && mb_strtolower($cardPreview) === $titleNorm) {
+                $cardPreview = '';
+            }
+            $summaryLines = $summaryArr['summaryLines'] ?? [];
+            if ($cardPreview === '' && $summaryLines !== []) {
+                foreach ($summaryLines as $line) {
+                    $t = trim((string) $line);
+                    if ($t === '' || mb_strtolower($t) === $titleNorm) {
+                        continue;
+                    }
+                    $cardPreview = $t;
+                    break;
+                }
+            }
+            if ($cardPreview === '' && ! empty($summaryArr['badges'])) {
+                $cardPreview = trim((string) ($summaryArr['badges'][0] ?? ''));
+            }
+            if (mb_strlen($cardPreview) > 120) {
+                $cardPreview = mb_substr($cardPreview, 0, 117).'…';
+            }
+
+            $tipParts = array_filter(
+                array_merge(
+                    [trim((string) ($summaryArr['onSiteLine'] ?? ''))],
+                    $summaryArr['builderNotes'] ?? []
+                ),
+                static fn (string $p): bool => $p !== ''
+            );
+            $cardSiteTooltip = $tipParts !== [] ? implode("\n\n", $tipParts) : '';
+
             $rows[] = [
                 'id' => $section->id,
                 'section_key' => (string) $section->section_key,
@@ -367,9 +451,10 @@ class PageSectionsBuilder extends Component implements HasActions, HasSchemas
                 'type_label_ui' => $typeLabelUi,
                 'icon' => $icon,
                 'title' => (string) ($section->title ?? ''),
-                'preview' => $registry->has($typeId)
-                    ? $registry->get($typeId)->previewSummary($dataJson)
-                    : '',
+                'preview' => $blueprintPreview,
+                'card_title' => $cardTitle,
+                'card_preview' => $cardPreview,
+                'card_site_tooltip' => $cardSiteTooltip,
                 'summary' => $summaryArr,
                 'search_blob' => $summary->searchBlob($typeLabelUi).' '.mb_strtolower($section->section_key),
                 'sort_order' => (int) $section->sort_order,

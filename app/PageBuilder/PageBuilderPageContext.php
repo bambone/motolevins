@@ -29,7 +29,7 @@ final readonly class PageBuilderPageContext
                 slug: $slug,
                 mode: 'landing',
                 modeLabel: 'Главная',
-                modeHint: 'Лендинг: блоки ниже формируют публичную главную. Основной текст страницы здесь не задаётся.',
+                modeHint: 'Содержимое главной — блоки ниже.',
             );
         }
 
@@ -37,8 +37,8 @@ final readonly class PageBuilderPageContext
             isHome: false,
             slug: $slug,
             mode: 'content',
-            modeLabel: 'Контентная страница',
-            modeHint: 'Блоки дополняют основной текст этой страницы. Порядок = порядок на сайте.',
+            modeLabel: 'Страница',
+            modeHint: 'Порядок блоков совпадает с сайтом.',
         );
     }
 
@@ -60,7 +60,7 @@ final readonly class PageBuilderPageContext
     public function catalogDescriptionForType(string $typeId, string $defaultDescription): string
     {
         if ($typeId === 'hero' && ! $this->isHome) {
-            return 'Вводный баннер вверху этой страницы: тексты, медиа, кнопка. Не путать с главной — это только текущий URL.';
+            return 'Баннер вверху страницы: текст, фон, кнопка.';
         }
 
         return $defaultDescription;

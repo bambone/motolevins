@@ -757,7 +757,6 @@ html:not(.dark) .page-sections-builder-root .psb-card.psb-card-hero:hover {
 
 .page-sections-builder-root .psb-catalog-tile:hover {
     background-color: var(--psb-bg-elevated);
-    transform: scale(1.02);
 }
 
 .page-sections-builder-root .psb-catalog-wrap {
@@ -974,4 +973,115 @@ html.dark .page-sections-builder-root .psb-menu-panel .psb-menu-item-danger {
 
 .page-sections-builder-root .psb-text-muted {
     color: var(--psb-text-muted);
+}
+
+.page-sections-builder-root .psb-btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.25rem;
+    border-radius: 0.5rem;
+    border: 1px solid var(--psb-border);
+    background-color: var(--psb-bg-surface);
+    color: var(--psb-text-secondary);
+    font-size: 0.75rem;
+    font-weight: 600;
+    transition:
+        background-color 0.12s ease,
+        border-color 0.12s ease;
+}
+
+.page-sections-builder-root .psb-btn-secondary:hover {
+    background-color: var(--psb-bg-elevated);
+    color: var(--psb-text);
+}
+
+.page-sections-builder-root .psb-main-surface {
+    border: 2px dashed var(--psb-border);
+    background-color: var(--psb-bg-surface);
+}
+
+.page-sections-builder-root .psb-drag-handle {
+    border: 1px solid transparent;
+    background: transparent;
+}
+
+.page-sections-builder-root .psb-drag-handle:hover {
+    border-color: var(--psb-border);
+    background-color: var(--psb-bg-elevated);
+}
+
+.page-sections-builder-root .psb-btn-icon {
+    display: inline-flex;
+    width: 2.25rem;
+    min-height: 2.25rem;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.5rem;
+    border: none;
+    background: transparent;
+    color: var(--psb-text-secondary);
+    cursor: pointer;
+    transition:
+        background-color 0.12s ease,
+        color 0.12s ease;
+}
+
+.page-sections-builder-root .psb-btn-icon:hover {
+    background-color: var(--psb-bg-elevated);
+    color: var(--psb-text);
+}
+
+.page-sections-builder-root .psb-input-field {
+    display: block;
+    width: 100%;
+    border-radius: 0.5rem;
+    border: 1px solid var(--psb-border);
+    background-color: var(--psb-bg-surface);
+    color: var(--psb-text);
+    padding: 0.5rem 0.625rem;
+    font-size: 0.8125rem;
+    line-height: 1.4;
+}
+
+.page-sections-builder-root .psb-input-field:focus {
+    outline: none;
+    border-color: rgb(59 130 246);
+    box-shadow: 0 0 0 1px rgb(59 130 246 / 0.35);
+}
+
+html.dark .page-sections-builder-root .psb-input-field:focus {
+    border-color: rgb(96 165 250);
+    box-shadow: 0 0 0 1px rgb(96 165 250 / 0.35);
+}
+
+.page-sections-builder-root select.psb-input-field.psb-select-field {
+    appearance: auto;
+    cursor: pointer;
+}
+
+.page-sections-builder-root .psb-readonly-preview {
+    background-color: var(--psb-bg-page);
+}
+
+.page-sections-builder-root .psb-expanded-preview.psb-readonly-preview {
+    background-color: var(--psb-bg-page);
+    border-style: solid;
+}
+
+.page-sections-builder-root .psb-edit-surface {
+    background-color: var(--psb-bg-elevated);
+}
+
+.page-sections-builder-root .psb-site-details summary {
+    list-style: none;
+}
+
+.page-sections-builder-root .psb-site-details summary::-webkit-details-marker {
+    display: none;
+}
+
+.page-sections-builder-root .psb-menu-panel a {
+    text-decoration: none;
 }

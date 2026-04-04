@@ -70,14 +70,14 @@ class PageBuilderAdminRenderSmokeTest extends TestCase
         ]);
 
         $html = Livewire::test(PageSectionsBuilder::class, ['record' => $page->fresh()])
-            ->assertSee('Добавить блок', escape: false)
-            ->assertSee('Контентная страница', escape: false)
+            ->assertSee('Блок', escape: false)
+            ->assertSee('Страница', escape: false)
             ->assertSee('Основной текст страницы', escape: false)
             ->assertSee('PB_ADMIN_SMOKE_SECTION_ROW_9K2M', escape: false)
             ->assertSee("startAdd('structured_text', null)", false)
             ->assertSee("startAdd('content_faq', null)", false)
             ->assertSee("startAdd('hero', null)", false)
-            ->assertSee('Базовые', escape: false)
+            ->assertSee('Часто используемые', escape: false)
             ->html();
 
         $this->assertStringContainsString('#1', $html);
