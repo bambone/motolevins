@@ -7,7 +7,7 @@ use App\Models\PageSection;
 /**
  * Admin-only summary for page section cards, delete confirm, and similar UI.
  *
- * @phpstan-type ChannelHint array{icon: string, label: string, on: bool}
+ * @phpstan-type ChannelHint array{icon: string, label: string, on: bool, primary?: bool}
  * @phpstan-type SummaryArray array{
  *     displayTitle: string,
  *     displaySubtitle: string,

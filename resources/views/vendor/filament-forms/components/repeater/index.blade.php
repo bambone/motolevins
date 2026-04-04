@@ -38,6 +38,20 @@
     $itemLabelHeadingTag = $getHeadingTag();
     $isItemLabelTruncated = $isItemLabelTruncated();
     $labelBetweenItems = $getLabelBetweenItems();
+
+    // x-sortable + Livewire morph (wire:partial / wire:ignore.self on items) can prevent new rows from appearing
+    // after "Add" while requests succeed. Only mount sortable when drag-reorder is actually enabled.
+    $dragSortableEnabled = $isReorderableWithDragAndDrop && $reorderAction->isVisible();
+
+    // `wire:ignore.self` on each <li> preserves Alpine (collapse / sortable item). When drag-sort is off and the
+    // repeater is not collapsible, omitting it fixes missing new rows after "Add" (morph can skip inserting siblings).
+    $ignoreSelfOnRepeaterItem = $dragSortableEnabled || $isCollapsible;
+
+    $ulAttributeMerge = [];
+    if ($dragSortableEnabled) {
+        $ulAttributeMerge['data-sortable-animation-duration'] = $getReorderAnimationDuration();
+        $ulAttributeMerge['x-on:end.stop'] = '$wire.mountAction(\'reorder\', { items: $event.target.sortable.toArray() }, { schemaComponent: \'' . $key . '\' })';
+    }
 @endphp
 
 <x-dynamic-component :component="$fieldWrapperView" :field="$field">
@@ -78,14 +92,13 @@
 
         @if (count($items))
             <ul
-                x-sortable
+                @if ($dragSortableEnabled)
+                    x-sortable
+                @endif
                 {{
                     (new ComponentAttributeBag)
                         ->grid($getGridColumns())
-                        ->merge([
-                            'data-sortable-animation-duration' => $getReorderAnimationDuration(),
-                            'x-on:end.stop' => '$wire.mountAction(\'reorder\', { items: $event.target.sortable.toArray() }, { schemaComponent: \'' . $key . '\' })',
-                        ], escape: false)
+                        ->merge($ulAttributeMerge, escape: false)
                         ->class(['fi-fo-repeater-items'])
                 }}
             >
@@ -109,7 +122,9 @@
                     @endphp
 
                     <li
-                        wire:ignore.self
+                        @if ($ignoreSelfOnRepeaterItem)
+                            wire:ignore.self
+                        @endif
                         wire:key="{{ $item->getLivewireKey() }}.item"
                         x-data="{
                             isCollapsed: @if ($persistCollapsed) $persist(@js($isCollapsed($item))).as(`repeater-${@js($key)}-${@js($itemKey)}-isCollapsed`) @else @js($isCollapsed($item)) @endif,
@@ -117,7 +132,9 @@
                         x-on:repeater-expand.window="$event.detail === '{{ $statePath }}' && (isCollapsed = false)"
                         x-on:repeater-collapse.window="$event.detail === '{{ $statePath }}' && (isCollapsed = true)"
                         x-on:expand="isCollapsed = false"
-                        x-sortable-item="{{ $itemKey }}"
+                        @if ($dragSortableEnabled)
+                            x-sortable-item="{{ $itemKey }}"
+                        @endif
                         @class([
                             'fi-fo-repeater-item',
                             'fi-fo-repeater-item-has-header' => $hasItemHeader,

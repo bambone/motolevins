@@ -4,6 +4,7 @@ namespace App\Services\PageBuilder;
 
 use App\Models\Page;
 use App\Models\PageSection;
+use App\PageBuilder\Contacts\ContactsInfoDataService;
 use App\PageBuilder\LegacySectionTypeResolver;
 use App\PageBuilder\PageSectionKeyGenerator;
 use App\PageBuilder\PageSectionTypeRegistry;
@@ -34,6 +35,9 @@ final class PageSectionOperationsService
         $blueprint = $this->registry->get($typeId);
         $key = $this->keyGenerator->next($page, $typeId);
         $dataJson = $this->normalizeDataJson($blueprint->defaultData(), $payload['data_json'] ?? []);
+        if ($typeId === 'contacts_info') {
+            $dataJson = app(ContactsInfoDataService::class)->finalizeForPersistence($dataJson);
+        }
 
         $sortOrder = $this->nextSortOrder($page);
         if ($insertAfterSectionId !== null) {
@@ -137,7 +141,10 @@ final class PageSectionOperationsService
             };
             if ($dataKey !== null && $this->registry->has($typeId)) {
                 $data = is_array($section->data_json) ? $section->data_json : [];
-                $data = array_replace_recursive($this->registry->get($typeId)->defaultData(), $data);
+                $data = ContactsInfoDataService::mergeDataJsonPreservingChannelList(
+                    $this->registry->get($typeId)->defaultData(),
+                    $data,
+                );
                 $raw = trim((string) $payload['block_title']);
                 $data[$dataKey] = $raw === '' ? null : mb_substr($raw, 0, 255);
                 $updates['data_json'] = $data;
@@ -162,8 +169,11 @@ final class PageSectionOperationsService
         }
         $blueprint = $this->registry->get($typeId);
         $existing = is_array($section->data_json) ? $section->data_json : [];
-        $base = array_replace_recursive($blueprint->defaultData(), $existing);
+        $base = ContactsInfoDataService::mergeDataJsonPreservingChannelList($blueprint->defaultData(), $existing);
         $dataJson = $this->normalizeDataJson($base, $payload['data_json'] ?? []);
+        if ($typeId === 'contacts_info') {
+            $dataJson = app(ContactsInfoDataService::class)->finalizeForPersistence($dataJson);
+        }
 
         $section->update([
             'title' => $payload['title'] ?? $section->title,

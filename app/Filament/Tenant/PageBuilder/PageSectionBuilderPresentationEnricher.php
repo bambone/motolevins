@@ -4,6 +4,7 @@ namespace App\Filament\Tenant\PageBuilder;
 
 use App\Models\Page;
 use App\Models\PageSection;
+use App\PageBuilder\Contacts\ContactChannelsResolver;
 
 /**
  * Слой согласования карточки секции в админке с тем, как блок реально выводится на публичной странице
@@ -231,6 +232,14 @@ final class PageSectionBuilderPresentationEnricher
         $notes = [];
         if ($mapEmbed === '' && $mapLink === '') {
             $notes[] = 'Карта на сайте не покажется, пока не заполнены вставка или ссылка на карту.';
+        }
+
+        $analysis = app(ContactChannelsResolver::class)->analyze($data);
+        foreach ($analysis->warnings as $w) {
+            $notes[] = $w;
+        }
+        if ($analysis->usableCount > 0) {
+            $notes[] = 'На витрине сейчас '.$analysis->usableCount.' активных канал(ов) связи; адрес, часы и карта — по заполнению полей блока.';
         }
 
         $line = $slug === 'contacts'

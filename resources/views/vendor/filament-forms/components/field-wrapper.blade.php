@@ -39,8 +39,11 @@
         $shouldShowAllValidationMessages ??= $field->shouldShowAllValidationMessages();
     }
 
-    $omitLabelForAttribute = $field instanceof \Filament\Forms\Components\Select
-        && ($field->isSearchable() || $field->isMultiple() || ! $field->isNative());
+    // Select: custom/non-native UI often has no input id matching `for` (see motolevins-core / filament-livewire).
+    // Toggle: switch is a <button>; some browsers flag label[for] when ids drift after Livewire partials — omit `for` like Select.
+    $omitLabelForAttribute = ($field instanceof \Filament\Forms\Components\Select
+        && ($field->isSearchable() || $field->isMultiple() || ! $field->isNative()))
+        || $field instanceof \Filament\Forms\Components\Toggle;
 
     $aboveLabelSchema = $field?->getChildSchema($field::ABOVE_LABEL_SCHEMA_KEY)?->toHtmlString();
     $belowLabelSchema = $field?->getChildSchema($field::BELOW_LABEL_SCHEMA_KEY)?->toHtmlString();

@@ -8,6 +8,7 @@ use App\Filament\Tenant\Resources\PageResource;
 use App\Livewire\Concerns\InteractsWithTenantPublicFilePicker;
 use App\Models\Page;
 use App\Models\PageSection;
+use App\PageBuilder\Contacts\ContactsInfoDataService;
 use App\PageBuilder\LegacySectionTypeResolver;
 use App\PageBuilder\PageBuilderPageContext;
 use App\PageBuilder\PageSectionCategory;
@@ -620,11 +621,18 @@ class PageSectionsBuilder extends Component implements HasActions, HasSchemas
         $this->activeTypeId = $typeId;
         $this->editingSectionId = $section->id;
         $this->insertAfterSectionId = null;
+        $blueprint = app(PageSectionTypeRegistry::class)->get($typeId);
+        $existing = is_array($section->data_json) ? $section->data_json : [];
+        $dataJson = ContactsInfoDataService::mergeDataJsonPreservingChannelList($blueprint->defaultData(), $existing);
+        if ($typeId === 'contacts_info') {
+            $dataJson = app(ContactsInfoDataService::class)->hydrateForEditor($dataJson);
+            $dataJson['channels'] = ContactsInfoDataService::normalizeChannelsForRepeater($dataJson['channels'] ?? []);
+        }
         $this->sectionFormData = [
             'title' => $section->title ?? '',
             'status' => $section->status,
             'is_visible' => $section->is_visible,
-            'data_json' => is_array($section->data_json) ? $section->data_json : app(PageSectionTypeRegistry::class)->get($typeId)->defaultData(),
+            'data_json' => $dataJson,
         ];
         $this->showEditor = true;
         $this->cacheSchema('sectionEditor', null);
