@@ -124,7 +124,7 @@
                         @endif
                     @endif
                     <div class="mt-4">
-                        <a href="{{ $mainCard['edit_url'] }}" wire:navigate class="inline-flex min-h-8 items-center justify-center rounded-lg bg-gray-900 px-4 py-1.5 text-xs font-semibold text-white shadow-sm ring-1 ring-inset ring-gray-900/10 transition hover:bg-gray-800 dark:bg-white dark:text-gray-900 dark:ring-white/10 dark:hover:bg-gray-100">
+                        <a href="{{ $mainCard['edit_url'] }}" wire:navigate class="fi-btn fi-color-custom fi-btn-color-primary inline-flex min-h-8 items-center justify-center rounded-lg px-4 py-1.5 text-xs font-semibold text-white shadow-sm transition" style="background-color: var(--primary-600); --fi-color: var(--primary-600)">
                             @if($pageCtx->isHome)
                                 Настройки страницы
                             @else
@@ -216,7 +216,7 @@
                         @if($sortableEnabled) x-sortable-item="{{ $row['id'] }}" @endif
                         class="{{ $cardClass }}"
                     >
-                        <div class="flex flex-col gap-2 p-2.5 sm:flex-row sm:items-stretch sm:gap-3 sm:p-3">
+                        <div class="flex flex-col gap-2 p-2.5 sm:flex-row sm:items-stretch sm:gap-3 sm:p-3 cursor-pointer transition hover:bg-black/[0.02] dark:hover:bg-white/[0.02]" wire:click="toggleExpanded({{ $row['id'] }})">
                             <div class="flex flex-shrink-0 items-start gap-2 sm:w-[3.5rem] sm:flex-col sm:items-center sm:pt-0.5">
                                 @if($sortableEnabled)
                                     <button
@@ -224,6 +224,7 @@
                                         x-sortable-handle
                                         class="psb-drag-handle cursor-grab touch-manipulation rounded-md p-1.5 psb-text-muted transition active:cursor-grabbing"
                                         title="Перетащить"
+                                        wire:click.stop
                                     >
                                         <x-filament::icon icon="heroicon-o-bars-3" class="h-4 w-4" />
                                     </button>
@@ -265,7 +266,7 @@
                                     </div>
                                     <button
                                         type="button"
-                                        wire:click="toggleExpanded({{ $row['id'] }})"
+                                        wire:click.stop="toggleExpanded({{ $row['id'] }})"
                                         class="flex-shrink-0 rounded-md p-1 psb-text-muted hover:bg-black/5 dark:hover:bg-white/10"
                                         aria-expanded="{{ $expanded ? 'true' : 'false' }}"
                                         title="{{ $expanded ? 'Свернуть' : 'Подробнее' }}"
@@ -281,7 +282,7 @@
                             </div>
 
                             <div class="flex flex-shrink-0 flex-col justify-center gap-1.5 border-t pt-3 sm:w-[8rem] sm:border-t-0 sm:pt-0 sm:pl-3" style="border-color: var(--psb-border)" wire:click.stop>
-                                <button type="button" wire:click="startEdit({{ $row['id'] }})" class="inline-flex min-h-8 w-full items-center justify-center rounded-lg bg-gray-900 px-3 py-1.5 text-[11.5px] font-semibold text-white shadow-sm ring-1 ring-inset ring-gray-900/10 transition hover:bg-gray-800 dark:bg-white dark:text-gray-900 dark:ring-white/10 dark:hover:bg-gray-100">
+                                <button type="button" wire:click.stop="startEdit({{ $row['id'] }})" class="fi-btn fi-color-custom fi-btn-color-primary inline-flex min-h-8 w-full items-center justify-center rounded-lg px-3 py-1.5 text-[11.5px] font-semibold text-white shadow-sm transition" style="background-color: var(--primary-600); --fi-color: var(--primary-600)">
                                     Редактировать
                                 </button>
                                 <div class="flex items-center justify-center gap-0.5 mt-0.5">
@@ -368,14 +369,14 @@
                                     </div>
 
                                     <!-- 2. QUICK EDIT ZONE -->
-                                    <div class="psb-quick-zone border-t border-dashed pt-4" style="border-color: var(--psb-border);">
+                                    <div class="psb-quick-zone border-t border-dashed pt-4 border-gray-200 dark:border-gray-800">
                                         <div class="mb-3 flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider psb-text-muted">
-                                            <x-filament::icon icon="heroicon-s-bolt" class="h-4 w-4 text-emerald-500/80 dark:text-emerald-400/80" />
-                                            Быстрые правки
+                                            <x-filament::icon icon="heroicon-s-adjustments-horizontal" class="h-4 w-4 psb-text-secondary" />
+                                            Настройки списка
                                         </div>
-                                        <div class="space-y-4">
+                                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                             <div>
-                                                <label class="mb-1.5 block text-[11px] font-medium psb-text-secondary" for="sec-title-{{ $row['id'] }}">Подпись в списке</label>
+                                                <label class="mb-1.5 block text-[11px] font-medium psb-text-secondary" for="sec-title-{{ $row['id'] }}">Подпись для навигации</label>
                                                 <input
                                                     id="sec-title-{{ $row['id'] }}"
                                                     type="text"
@@ -387,7 +388,7 @@
                                             </div>
                                             @if($row['has_block_title_quick'])
                                                 <div>
-                                                    <label class="mb-1.5 block text-[11px] font-medium psb-text-secondary" for="sec-block-title-{{ $row['id'] }}">Заголовок в блоке</label>
+                                                    <label class="mb-1.5 block text-[11px] font-medium psb-text-secondary" for="sec-block-title-{{ $row['id'] }}">Заголовок в самом блоке</label>
                                                     <input
                                                         id="sec-block-title-{{ $row['id'] }}"
                                                         type="text"
@@ -411,17 +412,6 @@
                                                 </select>
                                             </div>
                                         </div>
-                                    </div>
-
-                                    <!-- 3. ACTIONS ZONE (FULL EDITOR CTA) -->
-                                    <div class="mt-5 flex flex-col sm:flex-row items-center justify-between gap-3 rounded-lg bg-gray-50/80 p-4 dark:bg-[#1a1f2c] ring-1 ring-inset ring-gray-200 dark:ring-white/5">
-                                        <div class="w-full sm:w-auto text-left">
-                                            <p class="text-sm font-semibold psb-text-primary tracking-tight">Откройте полный редактор</p>
-                                            <p class="text-[11px] mt-0.5 psb-text-secondary">Описание, фото, карточки и детальные настройки блока.</p>
-                                        </div>
-                                        <button type="button" wire:click="startEdit({{ $row['id'] }})" class="inline-flex min-h-8 w-full sm:w-auto items-center justify-center rounded-lg bg-gray-900 px-5 py-1.5 text-xs font-semibold text-white shadow-sm ring-1 ring-inset ring-gray-900/10 transition hover:bg-gray-800 dark:bg-white dark:text-gray-900 dark:ring-white/10 dark:hover:bg-gray-100">
-                                            Полный редактор
-                                        </button>
                                     </div>
                                 </div>
                             </div>
