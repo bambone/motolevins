@@ -9,6 +9,7 @@
 - **Маркетинг (лендинг платформы):** https://rentbase.su и https://www.rentbase.su — хосты из `TENANCY_CENTRAL_DOMAINS`, отдельно от `PLATFORM_HOST`.
 - **Platform Console:** https://platform.rentbase.su/ (хост из `PLATFORM_HOST` в `.env`; вход `/login`, дашборд `/dashboard`).
 - **Кабинет клиента (tenant admin):** `https://<домен тенанта>/admin` (например https://motolevins.rentbase.su/admin). Списки Filament: `/admin/rental-units` и т.д. — **после входа** на домене клиента. Apex `https://rentbase.su/admin` **не** используется как клиентская админка.
+- **Что нового (чейнджлог tenant-продукта):** только в **кабинете клиента** — `https://<домен тенанта>/admin/whats-new` (внутренняя страница Filament, без новой вкладки). Тексты — про кабинет клиента и публичный сайт арендатора; данные в central таблице `platform_product_changelog_entries`. Редактирование записей: **Platform Console** → группа «Платформа» → **«Чейнджлог продукта»** (роли platform); пункт **«Чейнджлог продукта»** в user menu консоли ведёт в тот же ресурс. Стартовые строки в БД задаются **статическим блоком в миграции** `2026_04_05_150000_create_platform_product_changelog_entries_table` (без `git` на сервере); после `php artisan migrate` список уже не пустой. Отдельного пункта «Настройки сайта» в user menu кабинета нет — настройки остаются в **левой навигации** (раздел «Настройки»). Публичного маршрута `/changelog` на маркетинге и редиректа с домена тенанта **нет**.
 
 Поддомен **`{slug}.{TENANCY_ROOT_DOMAIN}`** (например `motolevins.rentbase.su`) создаётся при создании тенанта в Platform Console и может досеиваться миграцией `2026_03_28_140000_ensure_motolevins_canonical_subdomain`. Без строки в `tenant_domains` со **статусом «Активен»** сайт покажет «Домен не подключён».
 
@@ -198,6 +199,12 @@ php artisan migrate --force
 2. Скрипт `scripts/rentbase-provision-domain.sh` на сервере, sudo для очереди при необходимости. Для `robots.txt` в конфиге должен быть `try_files` на `index.php` (как в актуальной версии скрипта): пустой `location = /robots.txt` без `try_files` отдаёт **404**, если в `public/` нет статического файла, и Laravel не вызывается (в отличие от `/sitemap.xml`).
 3. Выпуск TLS/nginx — через `ProvisionTenantCustomDomainJob` (очередь).
 4. `php artisan tenancy:report-domains` — сводка по доменам.
+
+---
+
+## Накопленный функционал (сводка по коду)
+
+Кратко, что уже есть в репозитории (без дублирования всей доки): **многоарендность** и домены; **две панели** Filament (platform / tenant); **CRM-заявки** (`crm_requests` и связанные таблицы), workspace оператора в Filament; **лиды, клиенты, бронирования**, публичный flow бронирования и ручное оформление из кабинета; **каталог** (`motorcycles`, `rental_units` с `tenant_id`); **квоты хранилища** тенанта и события (`tenant_storage_quotas`, `tenant_storage_quota_events`) — см. операции R2 в `docs/operations/r2-*.md`; **центр уведомлений** (таблицы `2026_04_05_120000_create_notification_center_tables`, драйверы и планировщик в `app/NotificationCenter/`); **SEO файловая зона** тенанта (`tenant_seo_files`, генерации), robots/sitemap/llms для публичного сайта клиента; **конструктор секций** страниц (page sections / page builder); **терминология** по нишам (domain terminology). Уточнения по SEO и ботам: [seo-ai-discoverability.md](../architecture/seo-ai-discoverability.md).
 
 ---
 

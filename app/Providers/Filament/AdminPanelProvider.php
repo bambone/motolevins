@@ -2,7 +2,6 @@
 
 namespace App\Providers\Filament;
 
-use App\Filament\Tenant\Pages\Settings as TenantSettingsPage;
 use App\Filament\Tenant\Pages\TenantDashboard;
 use App\Filament\Tenant\Pages\TenantLogin;
 use App\Filament\Tenant\Widgets\StatsOverviewWidget;
@@ -13,6 +12,7 @@ use App\Http\Middleware\EnsureTenantMembership;
 use App\Http\Middleware\FilamentTenantPanelAuthenticate;
 use App\Http\Middleware\ResolveTenantFromDomain;
 use App\Http\Middleware\SetTenantFilamentLocale;
+use App\Filament\Tenant\Pages\TenantProductChangelogPage;
 use App\Models\TenantSetting;
 use App\Terminology\DomainTermKeys;
 use App\Terminology\TenantTerminologyService;
@@ -59,12 +59,11 @@ class AdminPanelProvider extends PanelProvider
                     ->icon('heroicon-o-user-circle')
                     ->url(fn (): string => Filament::getProfileUrl() ?? TenantDashboard::getUrl())
                     ->sort(-1),
-                Action::make('tenant_site_settings')
-                    ->label('Настройки сайта')
-                    ->icon('heroicon-o-cog-6-tooth')
-                    ->url(fn (): string => TenantSettingsPage::getUrl())
-                    ->visible(fn (): bool => TenantSettingsPage::canAccess())
-                    ->sort(50),
+                Action::make('whats_new')
+                    ->label('Что нового')
+                    ->icon('heroicon-o-newspaper')
+                    ->url(fn (): string => TenantProductChangelogPage::getUrl())
+                    ->sort(0),
             ])
             ->brandName(function (): string {
                 $tenant = currentTenant();

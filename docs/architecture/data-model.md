@@ -11,6 +11,7 @@
 | `plans` | Тарифы, лимиты |
 | `tenant_user` | pivot: user ↔ tenant, role, status |
 | `platform_settings` | Ключ-значение |
+| `platform_product_changelog_entries` | Чейнджлог **обновлений tenant-продукта** (тексты про кабинет клиента и публичный сайт тенанта): `entry_date`, `title`, `summary`, `body` (Markdown), `sort_weight` (порядок внутри дня), `is_published`. Только **central** БД, без `tenant_id`. Стартовые опубликованные строки вставляются **в той же миграции**, что создаёт таблицу (`2026_04_05_150000_*`). Чтение в UI: **кабинет клиента** → страница «Что нового» (`whats-new`); выдача только `is_published = true`, группы по дням от новых к старым, внутри дня — `sort_weight` DESC, затем `id` DESC. |
 | `template_presets` | Шаблоны для клонирования при создании клиента |
 
 ## Tenant-scoped

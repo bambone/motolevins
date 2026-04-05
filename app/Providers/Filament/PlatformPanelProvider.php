@@ -7,6 +7,8 @@ use App\Filament\Platform\Widgets\PlatformActivityWidget;
 use App\Filament\Platform\Widgets\PlatformDashboardIntroWidget;
 use App\Filament\Platform\Widgets\PlatformStatsWidget;
 use App\Http\Middleware\EnsurePlatformAccess;
+use App\Filament\Platform\Resources\PlatformProductChangelogEntryResource;
+use Filament\Actions\Action;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
@@ -35,6 +37,13 @@ class PlatformPanelProvider extends PanelProvider
             ->path('')
             ->domain(config('app.platform_host', 'platform.rentbase.local'))
             ->login()
+            ->userMenuItems([
+                Action::make('product_changelog')
+                    ->label('Чейнджлог продукта')
+                    ->icon('heroicon-o-clipboard-document-list')
+                    ->url(fn (): string => PlatformProductChangelogEntryResource::getUrl())
+                    ->sort(15),
+            ])
             ->renderHook(PanelsRenderHook::BODY_START, fn (): string => View::make('components.filament-access-denied-banner')->render())
             ->brandName('RentBase Platform')
             ->brandLogo(fn () => View::make('components.platform-logo', [

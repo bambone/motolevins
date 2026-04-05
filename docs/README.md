@@ -6,7 +6,7 @@
 
 | Документ | Содержание |
 |----------|------------|
-| [setup-access-deploy.md](operations/setup-access-deploy.md) | URL админок (platform vs tenant), домены, установка, hosts/OSPanel, деплой, права на `storage`, типовые ошибки БД/миграций, кастомные домены; **команда клиента** и **матрица прав кабинета** (только Platform Console) |
+| [setup-access-deploy.md](operations/setup-access-deploy.md) | URL админок (platform vs tenant), домены, установка, hosts/OSPanel, деплой, права на `storage`, типовые ошибки БД/миграций, кастомные домены; **команда клиента** и **матрица прав кабинета** (только Platform Console); **чейнджлог продукта** только в кабинете клиента (`/admin/.../whats-new`), данные в central БД, правки в Platform Console |
 | [security-and-golive.md](operations/security-and-golive.md) | Роли, зоны доступа, матрица, чеклист перед релизом |
 
 ## Архитектура
@@ -33,7 +33,7 @@
 | Кабинет клиента (Filament) | `app/Filament/Tenant/` |
 | Провайдеры панелей | `app/Providers/Filament/` |
 | Публичный сайт тенанта | `routes/web.php`, `app/Http/Controllers`, `resources/views/tenant/` |
-| Маркетинг платформы | `resources/views/platform/marketing/` |
+| Маркетинг платформы | `resources/views/platform/marketing/`; чейнджлог обновлений **tenant-продукта** — только **кабинет клиента** (Filament page `whats-new`), данные в central `platform_product_changelog_entries` (стартовый seed в миграции), редактирование: **Platform Console** → «Чейнджлог продукта»; **«Что нового»** в user menu tenant admin ведёт на эту страницу |
 | Тенантность | `app/Tenant/`, `config/tenancy.php`, middleware `ResolveTenantFromDomain`, `EnsureTenantContext` |
 | Роли и доступ | `app/Auth/AccessRoles.php`, `TenantPivotPermissions`, `TenantAbilityRegistry`, политики, `tests/Feature/AccessControlTest.php`, `tests/Feature/TenantPivotPermissionMatrixTest.php` |
 | Правила для AI (Cursor) | [`.cursor/rules/`](../.cursor/rules/) — ядро (`motolevins-core`), SEO/AI (`seo-ai-discoverability`), Blade/a11y, JS lifecycle, Filament/Livewire |
