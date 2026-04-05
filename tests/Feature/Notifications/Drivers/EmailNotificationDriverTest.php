@@ -63,6 +63,8 @@ class EmailNotificationDriverTest extends TestCase
         $job->handle(app(CurrentTenantManager::class), app(NotificationChannelDriverFactory::class));
 
         $delivery->refresh();
-        $this->assertContains($delivery->status, [NotificationDeliveryStatus::Sent->value, NotificationDeliveryStatus::Delivered->value]);
+        $this->assertSame(NotificationDeliveryStatus::Sent->value, $delivery->status);
+        $this->assertNotNull($delivery->sent_at);
+        $this->assertNull($delivery->delivered_at);
     }
 }

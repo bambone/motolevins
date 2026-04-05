@@ -13,7 +13,10 @@ use Illuminate\Support\Carbon;
  * Expected shape (all keys optional; combine `days` and/or `from`–`to` as needed):
  * - timezone: string (IANA); invalid values fall back to safer resolution order below
  * - user_timezone_override: string — personal TZ; invalid → next candidate
- * - days: int[] ISO weekday 1–7 (Mon–Sun); omit or empty array = all days
+ * - days: int[] ISO weekday 1–7 (Mon–Sun); omit or empty array = all days; values outside 1–7 are ignored;
+ *   if nothing valid remains after filtering, the day filter is not applied (same as “all days”).
+ *   Product contract: junk such as `[0, 9, "foo"]` is treated as “no weekday restriction”, not as an error
+ *   or deny-all state, so behaviour stays predictable for operators editing JSON by hand.
  * - from, to: "HH:MM"
  *   - same-day window when from < to (inclusive by minute)
  *   - overnight when from > to (e.g. 22:00 → 06:00)
@@ -46,10 +49,12 @@ final class NotificationSchedulePolicy
 
         $days = $schedule['days'] ?? null;
         if (is_array($days) && $days !== []) {
-            $allowed = array_values(array_unique(array_map(intval(...), $days)));
-            $dow = $now->dayOfWeekIso;
-            if (! in_array($dow, $allowed, true)) {
-                return $this->criticalBypassAllows($schedule, $event);
+            $allowed = $this->normalizedWeekdays($days);
+            if ($allowed !== []) {
+                $dow = $now->dayOfWeekIso;
+                if (! in_array($dow, $allowed, true)) {
+                    return $this->criticalBypassAllows($schedule, $event);
+                }
             }
         }
 
@@ -153,17 +158,37 @@ final class NotificationSchedulePolicy
     private function timeToMinutes(string $time): ?int
     {
         $time = trim($time);
-        $parts = explode(':', $time);
-        if (count($parts) < 2) {
+        if (! preg_match('/^\d{1,2}:\d{2}$/', $time)) {
             return null;
         }
 
-        $h = (int) $parts[0];
-        $m = (int) $parts[1];
+        [$hStr, $mStr] = explode(':', $time, 2);
+        $h = (int) $hStr;
+        $m = (int) $mStr;
         if ($h < 0 || $h > 23 || $m < 0 || $m > 59) {
             return null;
         }
 
         return $h * 60 + $m;
+    }
+
+    /**
+     * @param  array<mixed>  $days
+     * @return list<int>
+     */
+    private function normalizedWeekdays(array $days): array
+    {
+        $allowed = [];
+        foreach ($days as $d) {
+            if (is_string($d) && ! is_numeric($d)) {
+                continue;
+            }
+            $n = (int) $d;
+            if ($n >= 1 && $n <= 7) {
+                $allowed[] = $n;
+            }
+        }
+
+        return array_values(array_unique($allowed));
     }
 }

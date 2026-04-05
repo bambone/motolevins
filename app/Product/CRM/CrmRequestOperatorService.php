@@ -150,6 +150,9 @@ final class CrmRequestOperatorService
         });
     }
 
+    /**
+     * Activity only; no notification-center event (by design — change if product needs alerts).
+     */
     public function updatePriority(User $actor, CrmRequest $crm, string $priority): void
     {
         Gate::forUser($actor)->authorize('update', $crm);
@@ -180,6 +183,8 @@ final class CrmRequestOperatorService
 
     /**
      * @param  CarbonInterface|null  $at  null clears follow-up
+     *
+     * Activity only; no notification-center event (by design).
      */
     public function updateFollowUp(User $actor, CrmRequest $crm, ?\DateTimeInterface $at): void
     {
@@ -212,6 +217,9 @@ final class CrmRequestOperatorService
         });
     }
 
+    /**
+     * Activity only; no notification-center event (by design).
+     */
     public function updateSummary(User $actor, CrmRequest $crm, ?string $summary): void
     {
         Gate::forUser($actor)->authorize('update', $crm);
@@ -270,31 +278,34 @@ final class CrmRequestOperatorService
     {
         Gate::forUser($actor)->authorize('update', $crm);
 
-        if ($crm->first_viewed_at !== null) {
-            return;
-        }
-
-        $crm->update(['first_viewed_at' => now()]);
-
-        $crmId = (int) $crm->id;
-        $tenantId = (int) $crm->tenant_id;
-        $actorId = (int) $actor->id;
-        DB::afterCommit(function () use ($crmId, $tenantId, $actorId): void {
-            $fresh = CrmRequest::query()->find($crmId);
-            $tenant = Tenant::query()->find($tenantId);
-            if ($fresh === null || $tenant === null) {
+        DB::transaction(function () use ($actor, $crm): void {
+            $crm->refresh();
+            if ($crm->first_viewed_at !== null) {
                 return;
             }
 
-            $payload = $this->crmNotifications->payloadForFirstViewed($tenant, $fresh);
-            $this->notificationRecorder->record(
-                $tenantId,
-                'crm_request.first_viewed',
-                class_basename(CrmRequest::class),
-                $crmId,
-                $payload,
-                actorUserId: $actorId,
-            );
+            $crm->update(['first_viewed_at' => now()]);
+
+            $crmId = (int) $crm->id;
+            $tenantId = (int) $crm->tenant_id;
+            $actorId = (int) $actor->id;
+            DB::afterCommit(function () use ($crmId, $tenantId, $actorId): void {
+                $fresh = CrmRequest::query()->find($crmId);
+                $tenant = Tenant::query()->find($tenantId);
+                if ($fresh === null || $tenant === null) {
+                    return;
+                }
+
+                $payload = $this->crmNotifications->payloadForFirstViewed($tenant, $fresh);
+                $this->notificationRecorder->record(
+                    $tenantId,
+                    'crm_request.first_viewed',
+                    class_basename(CrmRequest::class),
+                    $crmId,
+                    $payload,
+                    actorUserId: $actorId,
+                );
+            });
         });
     }
 }

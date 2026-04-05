@@ -68,19 +68,29 @@ class WebhookNotificationDriverTest extends TestCase
         $job = new DispatchNotificationDeliveryJob((int) $delivery->id);
         $job->handle(app(CurrentTenantManager::class), app(NotificationChannelDriverFactory::class));
 
-        Http::assertSent(function (Request $request): bool {
-            if ($request->header('X-Notification-Signature') === []) {
+        Http::assertSent(function (Request $request) use ($delivery, $event): bool {
+            $deliveryHeader = $request->header('X-Notification-Delivery-Id')[0] ?? null;
+            $eventIdHeader = $request->header('X-Notification-Event-Id')[0] ?? null;
+            $eventKeyHeader = $request->header('X-Notification-Event-Key')[0] ?? null;
+            if ((string) $delivery->id !== $deliveryHeader || (string) $event->id !== $eventIdHeader || $event->event_key !== $eventKeyHeader) {
+                return false;
+            }
+
+            $ts = $request->header('X-Notification-Timestamp')[0] ?? null;
+            $sigLine = $request->header('X-Notification-Signature')[0] ?? '';
+            if ($ts === null || ! str_starts_with($sigLine, 'sha256=')) {
                 return false;
             }
             $body = (string) $request->body();
-            $sig = $request->header('X-Notification-Signature')[0];
-            $expected = hash_hmac('sha256', $body, 'shared-secret');
+            $expected = hash_hmac('sha256', $ts.'.'.$body, 'shared-secret');
+            $sig = substr($sigLine, 7);
 
             return hash_equals($expected, $sig);
         });
 
         $delivery->refresh();
-        $this->assertContains($delivery->status, [NotificationDeliveryStatus::Sent->value, NotificationDeliveryStatus::Delivered->value]);
+        $this->assertSame(NotificationDeliveryStatus::Sent->value, $delivery->status);
+        $this->assertNull($delivery->delivered_at);
     }
 
     public function test_http_url_in_config_fails_before_request(): void

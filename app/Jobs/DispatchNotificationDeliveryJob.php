@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Models\NotificationDelivery;
 use App\Models\NotificationDeliveryAttempt;
 use App\Models\Tenant;
+use App\NotificationCenter\ChannelSendResult;
 use App\NotificationCenter\NotificationChannelDriverFactory;
 use App\NotificationCenter\NotificationDeliveryStatus;
 use App\NotificationCenter\UnsupportedNotificationChannelException;
@@ -106,14 +107,14 @@ class DispatchNotificationDeliveryJob implements ShouldQueue
                 }
 
                 $driver = $drivers->forType($delivery->channel_type);
-                $driver->send($delivery, $event, $destination);
-
+                $result = $driver->send($delivery, $event, $destination);
+                $this->applySendResult($delivery, $result);
                 $delivery->refresh();
 
                 $attempt->update([
                     'status' => 'succeeded',
                     'finished_at' => Carbon::now(),
-                    'response_json' => $this->attemptResponseSnapshot($delivery),
+                    'response_json' => $this->attemptResponseSnapshot($result, $delivery),
                 ]);
             } catch (UnsupportedNotificationChannelException $e) {
                 $attempt->update([
@@ -156,14 +157,32 @@ class DispatchNotificationDeliveryJob implements ShouldQueue
         }
     }
 
+    private function applySendResult(NotificationDelivery $delivery, ChannelSendResult $result): void
+    {
+        $data = [
+            'status' => $result->status->value,
+            'provider_message_id' => $result->providerMessageId,
+        ];
+        if ($result->sentAt !== null) {
+            $data['sent_at'] = $result->sentAt;
+        }
+        if ($result->deliveredAt !== null) {
+            $data['delivered_at'] = $result->deliveredAt;
+        }
+        if ($result->responseJson !== []) {
+            $data['response_json'] = $result->responseJson;
+        }
+
+        $delivery->update($data);
+    }
+
     /**
      * @return array<string, mixed>
      */
-    private function attemptResponseSnapshot(NotificationDelivery $delivery): array
+    private function attemptResponseSnapshot(ChannelSendResult $result, NotificationDelivery $delivery): array
     {
-        $fromDelivery = $delivery->response_json;
-        if (is_array($fromDelivery) && $fromDelivery !== []) {
-            return $fromDelivery;
+        if ($result->responseJson !== []) {
+            return $result->responseJson;
         }
 
         return [

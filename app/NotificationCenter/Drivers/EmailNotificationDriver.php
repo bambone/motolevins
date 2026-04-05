@@ -5,6 +5,7 @@ namespace App\NotificationCenter\Drivers;
 use App\Models\NotificationDelivery;
 use App\Models\NotificationDestination;
 use App\Models\NotificationEvent;
+use App\NotificationCenter\ChannelSendResult;
 use App\NotificationCenter\Contracts\NotificationChannelDriver;
 use App\NotificationCenter\NotificationDeliveryStatus;
 use Illuminate\Mail\Message;
@@ -17,7 +18,7 @@ final class EmailNotificationDriver implements NotificationChannelDriver
         NotificationDelivery $delivery,
         NotificationEvent $event,
         NotificationDestination $destination,
-    ): void {
+    ): ChannelSendResult {
         $to = $destination->config_json['email'] ?? null;
         if (! is_string($to) || ! filter_var($to, FILTER_VALIDATE_EMAIL)) {
             throw new \InvalidArgumentException('Invalid email destination config.');
@@ -30,14 +31,21 @@ final class EmailNotificationDriver implements NotificationChannelDriver
             $body .= "\n\n".$payload->actionUrl;
         }
 
-        Mail::raw($body, function (Message $message) use ($to, $subject): void {
-            $message->to($to)->subject($subject);
-        });
+        try {
+            Mail::raw($body, function (Message $message) use ($to, $subject): void {
+                $message->to($to)->subject($subject);
+            });
+        } catch (\Throwable $e) {
+            throw new \RuntimeException('Email send failed: '.$e->getMessage(), previous: $e);
+        }
 
-        $delivery->update([
-            'status' => NotificationDeliveryStatus::Sent->value,
-            'sent_at' => Carbon::now(),
-            'delivered_at' => Carbon::now(),
-        ]);
+        $now = Carbon::now();
+
+        return new ChannelSendResult(
+            status: NotificationDeliveryStatus::Sent,
+            sentAt: $now,
+            deliveredAt: null,
+            responseJson: ['channel' => 'mail'],
+        );
     }
 }

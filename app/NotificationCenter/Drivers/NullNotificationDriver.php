@@ -5,6 +5,7 @@ namespace App\NotificationCenter\Drivers;
 use App\Models\NotificationDelivery;
 use App\Models\NotificationDestination;
 use App\Models\NotificationEvent;
+use App\NotificationCenter\ChannelSendResult;
 use App\NotificationCenter\Contracts\NotificationChannelDriver;
 use App\NotificationCenter\UnsupportedNotificationChannelException;
 
@@ -21,7 +22,7 @@ final class NullNotificationDriver implements NotificationChannelDriver
         NotificationDelivery $delivery,
         NotificationEvent $event,
         NotificationDestination $destination,
-    ): void {
+    ): ChannelSendResult {
         throw new UnsupportedNotificationChannelException($this->reason);
     }
 }

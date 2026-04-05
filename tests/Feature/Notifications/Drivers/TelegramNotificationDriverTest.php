@@ -14,6 +14,7 @@ use App\NotificationCenter\NotificationPayloadDto;
 use App\Services\CurrentTenantManager;
 use App\Services\Platform\PlatformNotificationSettings;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use Tests\Support\NotificationTestHelpers;
 use Tests\TestCase;
@@ -76,8 +77,62 @@ class TelegramNotificationDriverTest extends TestCase
         $job->handle(app(CurrentTenantManager::class), app(NotificationChannelDriverFactory::class));
 
         $delivery->refresh();
-        $this->assertContains($delivery->status, [NotificationDeliveryStatus::Sent->value, NotificationDeliveryStatus::Delivered->value]);
+        $this->assertSame(NotificationDeliveryStatus::Sent->value, $delivery->status);
+        $this->assertNotNull($delivery->sent_at);
+        $this->assertNull($delivery->delivered_at);
         Http::assertSentCount(1);
+    }
+
+    public function test_send_truncates_message_to_telegram_limit(): void
+    {
+        Http::fake([
+            'api.telegram.org/*' => Http::response(['ok' => true, 'result' => ['message_id' => 1]], 200),
+        ]);
+
+        $tenant = $this->createNotificationTenant();
+        app(PlatformNotificationSettings::class)->setTelegramBotToken('test-bot-token');
+
+        $dest = NotificationDestination::query()->create([
+            'tenant_id' => $tenant->id,
+            'user_id' => null,
+            'name' => 'TG',
+            'type' => NotificationChannelType::Telegram->value,
+            'status' => NotificationDestinationStatus::Verified->value,
+            'is_shared' => true,
+            'config_json' => ['chat_id' => '1'],
+        ]);
+
+        $long = str_repeat('а', 5000);
+        $event = NotificationEvent::factory()->create([
+            'tenant_id' => $tenant->id,
+            'event_key' => 'crm_request.created',
+            'subject_type' => 'CrmRequest',
+            'subject_id' => 1,
+            'severity' => 'normal',
+            'dedupe_key' => null,
+            'payload_json' => (new NotificationPayloadDto($long, $long, null, null, []))->toArray(),
+            'occurred_at' => now(),
+        ]);
+
+        $delivery = NotificationDelivery::factory()->create([
+            'tenant_id' => $tenant->id,
+            'event_id' => $event->id,
+            'destination_id' => $dest->id,
+            'channel_type' => NotificationChannelType::Telegram->value,
+            'status' => NotificationDeliveryStatus::Queued->value,
+            'queued_at' => now(),
+        ]);
+
+        app(CurrentTenantManager::class)->setTenant($tenant);
+        $job = new DispatchNotificationDeliveryJob((int) $delivery->id);
+        $job->handle(app(CurrentTenantManager::class), app(NotificationChannelDriverFactory::class));
+
+        Http::assertSent(function (Request $request): bool {
+            $payload = json_decode((string) $request->body(), true);
+            $text = is_array($payload) ? (string) ($payload['text'] ?? '') : '';
+
+            return $text !== '' && mb_strlen($text) <= 4096;
+        });
     }
 
     public function test_kill_switch_skips_dispatch_without_external_http(): void

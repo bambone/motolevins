@@ -6,6 +6,7 @@ use App\Models\NotificationDelivery;
 use App\Models\NotificationDestination;
 use App\Models\NotificationEvent;
 use App\Models\NotificationPushSubscription;
+use App\NotificationCenter\ChannelSendResult;
 use App\NotificationCenter\Contracts\NotificationChannelDriver;
 use App\NotificationCenter\NotificationDeliveryStatus;
 use App\NotificationCenter\UnsupportedNotificationChannelException;
@@ -24,7 +25,7 @@ final class WebPushNotificationDriver implements NotificationChannelDriver
         NotificationDelivery $delivery,
         NotificationEvent $event,
         NotificationDestination $destination,
-    ): void {
+    ): ChannelSendResult {
         if (! class_exists(WebPush::class)) {
             throw new UnsupportedNotificationChannelException(
                 'Web Push: add composer package minishlink/web-push (see docs).'
@@ -88,22 +89,28 @@ final class WebPushNotificationDriver implements NotificationChannelDriver
             $webPush->queueNotification($subscription, $json);
         }
 
-        $anySuccess = false;
-        foreach ($webPush->flush() as $report) {
-            if ($report->isSuccess()) {
-                $anySuccess = true;
+        try {
+            $anySuccess = false;
+            foreach ($webPush->flush() as $report) {
+                if ($report->isSuccess()) {
+                    $anySuccess = true;
+                }
             }
+        } catch (\Throwable $e) {
+            throw new \RuntimeException('Web push request failed: '.$e->getMessage(), previous: $e);
         }
 
         if (! $anySuccess) {
             throw new \RuntimeException('All web push deliveries failed.');
         }
 
-        $delivery->update([
-            'status' => NotificationDeliveryStatus::Sent->value,
-            'sent_at' => Carbon::now(),
-            'delivered_at' => Carbon::now(),
-            'response_json' => ['subscriptions' => $subs->count()],
-        ]);
+        $now = Carbon::now();
+
+        return new ChannelSendResult(
+            status: NotificationDeliveryStatus::Sent,
+            sentAt: $now,
+            deliveredAt: null,
+            responseJson: ['subscriptions' => $subs->count()],
+        );
     }
 }
