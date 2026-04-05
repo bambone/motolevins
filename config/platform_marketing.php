@@ -267,4 +267,18 @@ return [
 RentBase — платформа (SaaS) для сервисного бизнеса: сайт клиента, онлайн-запись и бронирования, заявки, клиенты и админка. Отдельные страницы: возможности, тарифы, FAQ, контакты, вертикали проката мото/авто и сервисов по записи.
 TXT,
 
+    /*
+    | Публичные пути маркетингового сайта: sitemap и fallback для llms (если в PlatformSetting пусто).
+    */
+    'marketing_public_paths' => [
+        '/',
+        '/features',
+        '/pricing',
+        '/faq',
+        '/contact',
+        '/for-moto-rental',
+        '/for-car-rental',
+        '/for-services',
+    ],
+
 ];

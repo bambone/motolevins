@@ -2,50 +2,31 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\PlatformSetting;
+use App\Services\Seo\PlatformMarketingLlmsGenerator;
+use App\Services\Seo\PlatformMarketingSitemapXml;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 
 class PlatformMarketingSitemapController extends Controller
 {
-    public function __invoke(Request $request): Response
-    {
+    public function __invoke(
+        Request $request,
+        PlatformMarketingSitemapXml $xml,
+        PlatformMarketingLlmsGenerator $pathsSource,
+    ): Response {
         $base = rtrim($request->getSchemeAndHttpHost(), '/');
-        $paths = [
-            '/',
-            '/features',
-            '/pricing',
-            '/faq',
-            '/contact',
-            '/for-moto-rental',
-            '/for-car-rental',
-            '/for-services',
-        ];
 
-        $urls = [];
-        foreach ($paths as $path) {
-            $urls[] = [
-                'loc' => $base.$path,
-                'changefreq' => $path === '/' ? 'daily' : 'weekly',
-                'priority' => $path === '/' ? '1.0' : '0.8',
-            ];
+        $paths = PlatformSetting::get('marketing.seo.sitemap_paths', null);
+        if (! is_array($paths) || $paths === []) {
+            $paths = $pathsSource->defaultPaths();
+        } else {
+            $paths = array_values(array_filter(array_map('strval', $paths), fn (string $p): bool => $p !== ''));
         }
 
-        $parts = [
-            '<?xml version="1.0" encoding="UTF-8"?>',
-            '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
-        ];
-        foreach ($urls as $u) {
-            $loc = htmlspecialchars($u['loc'], ENT_XML1 | ENT_QUOTES, 'UTF-8');
-            $parts[] = '  <url>';
-            $parts[] = '    <loc>'.$loc.'</loc>';
-            $parts[] = '    <changefreq>'.htmlspecialchars($u['changefreq'], ENT_XML1 | ENT_QUOTES, 'UTF-8').'</changefreq>';
-            $parts[] = '    <priority>'.htmlspecialchars($u['priority'], ENT_XML1 | ENT_QUOTES, 'UTF-8').'</priority>';
-            $parts[] = '  </url>';
-        }
-        $parts[] = '</urlset>';
-        $xml = implode("\n", $parts);
+        $document = $xml->build($base, $paths);
 
-        return new Response($xml, 200, [
+        return new Response($document, 200, [
             'Content-Type' => 'application/xml; charset=UTF-8',
         ]);
     }

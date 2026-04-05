@@ -2,42 +2,29 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\PlatformSetting;
+use App\Services\Seo\PlatformMarketingRobotsBody;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 
 class PlatformMarketingRobotsController extends Controller
 {
-    public function __invoke(Request $request): Response
+    public function __invoke(Request $request, PlatformMarketingRobotsBody $body): Response
     {
         $sitemap = rtrim($request->getSchemeAndHttpHost(), '/').'/sitemap.xml';
-        $lines = [
-            'User-agent: *',
-            'Allow: /',
-            'Disallow: /admin',
-            'Disallow: /platform',
-            'Disallow: /api',
-            '',
-            '# Explicit allow for major search / AI crawlers (same private paths as *)',
-            'User-agent: OAI-SearchBot',
-            'User-agent: GPTBot',
-            'User-agent: Googlebot',
-            'User-agent: Google-Extended',
-            'User-agent: Bingbot',
-            'User-agent: PerplexityBot',
-            'User-agent: ClaudeBot',
-            'User-agent: Claude-Web',
-            'User-agent: CCBot',
-            'User-agent: Yandex',
-            'Allow: /',
-            'Disallow: /admin',
-            'Disallow: /platform',
-            'Disallow: /api',
-            '',
-            'Sitemap: '.$sitemap,
-            '',
-        ];
 
-        return new Response(implode("\n", $lines), 200, [
+        if ((bool) PlatformSetting::get('marketing.seo.custom_robots_enabled', false)) {
+            $custom = trim((string) PlatformSetting::get('marketing.seo.robots_txt', ''));
+            if ($custom !== '') {
+                return new Response($custom, 200, [
+                    'Content-Type' => 'text/plain; charset=UTF-8',
+                ]);
+            }
+        }
+
+        $text = $body->build($sitemap);
+
+        return new Response($text, 200, [
             'Content-Type' => 'text/plain; charset=UTF-8',
         ]);
     }
