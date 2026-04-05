@@ -33,13 +33,15 @@ class HostRoutingSplitTest extends TestCase
 
     public function test_central_domain_root_returns_marketing_landing(): void
     {
+        $pm = config('platform_marketing');
+
         $this->getWithHost('apex.test', '/')
             ->assertOk()
             ->assertSee('Операционная система', false)
             ->assertSee('бронированиями', false)
-            ->assertSee('Запустить проект', false)
-            ->assertSee('Посмотреть демо', false)
-            ->assertSee('Обсудить проект', false);
+            ->assertSee($pm['cta']['primary'], false)
+            ->assertSee($pm['cta']['secondary'], false)
+            ->assertSee($pm['cta']['discuss'], false);
     }
 
     public function test_central_domain_robots_txt_is_plain_and_lists_sitemap(): void
