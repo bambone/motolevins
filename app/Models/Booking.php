@@ -4,12 +4,15 @@ namespace App\Models;
 
 use App\Enums\BookingStatus;
 use App\Models\Concerns\BelongsToTenant;
+use App\NotificationCenter\NotificationEventRecorder;
+use App\NotificationCenter\Presenters\BookingNotificationPresenter;
 use App\Services\AvailabilityService;
 use Database\Factories\BookingFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class Booking extends Model
@@ -66,6 +69,27 @@ class Booking extends Model
         static::updated(function (Booking $booking) {
             if ($booking->status === BookingStatus::CANCELLED) {
                 app(AvailabilityService::class)->unblockForBooking($booking);
+            }
+
+            if ($booking->wasChanged('status') && $booking->status === BookingStatus::CANCELLED) {
+                $bookingId = (int) $booking->id;
+                $tenantId = (int) $booking->tenant_id;
+                DB::afterCommit(function () use ($bookingId, $tenantId): void {
+                    $fresh = Booking::query()->find($bookingId);
+                    $tenant = Tenant::query()->find($tenantId);
+                    if ($fresh === null || $tenant === null) {
+                        return;
+                    }
+
+                    $payload = app(BookingNotificationPresenter::class)->payloadForCancelled($tenant, $fresh);
+                    app(NotificationEventRecorder::class)->record(
+                        $tenantId,
+                        'booking.cancelled',
+                        class_basename(Booking::class),
+                        $bookingId,
+                        $payload,
+                    );
+                });
             }
         });
     }

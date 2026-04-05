@@ -10,14 +10,20 @@ use App\Models\Bike;
 use App\Models\Booking;
 use App\Models\BookingAddon;
 use App\Models\RentalUnit;
+use App\Models\Tenant;
+use App\NotificationCenter\NotificationEventRecorder;
+use App\NotificationCenter\Presenters\BookingNotificationPresenter;
 use App\Support\PhoneNormalizer;
 use Carbon\Carbon;
 use Exception;
+use Illuminate\Support\Facades\DB;
 
 class BookingService
 {
     public function __construct(
-        protected AvailabilityService $availabilityService
+        protected AvailabilityService $availabilityService,
+        protected NotificationEventRecorder $notificationRecorder,
+        protected BookingNotificationPresenter $bookingNotifications,
     ) {}
 
     /**
@@ -55,7 +61,10 @@ class BookingService
             'customer_comment' => $data->customer_comment,
         ]);
 
-        SendBookingTelegramNotification::dispatch($booking);
+        $this->dispatchBookingCreatedNotification($booking);
+        if (config('notification_center.legacy_telegram_parallel')) {
+            SendBookingTelegramNotification::dispatch($booking);
+        }
 
         return $booking;
     }
@@ -105,9 +114,34 @@ class BookingService
             $this->availabilityService->blockForBooking($booking);
         }
 
-        SendBookingTelegramNotification::dispatch($booking);
+        $this->dispatchBookingCreatedNotification($booking);
+        if (config('notification_center.legacy_telegram_parallel')) {
+            SendBookingTelegramNotification::dispatch($booking);
+        }
 
         return $booking;
+    }
+
+    private function dispatchBookingCreatedNotification(Booking $booking): void
+    {
+        $bookingId = (int) $booking->id;
+        $tenantId = (int) $booking->tenant_id;
+        DB::afterCommit(function () use ($bookingId, $tenantId): void {
+            $fresh = Booking::query()->find($bookingId);
+            $tenant = Tenant::query()->find($tenantId);
+            if ($fresh === null || $tenant === null) {
+                return;
+            }
+
+            $payload = $this->bookingNotifications->payloadForCreated($tenant, $fresh);
+            $this->notificationRecorder->record(
+                $tenantId,
+                'booking.created',
+                class_basename(Booking::class),
+                $bookingId,
+                $payload,
+            );
+        });
     }
 
     public function isAvailable(int $bikeId, string $startDate, string $endDate): bool

@@ -7,6 +7,7 @@ use App\Filament\Tenant\Pages\TenantDashboard;
 use App\Filament\Tenant\Pages\TenantLogin;
 use App\Filament\Tenant\Widgets\StatsOverviewWidget;
 use App\Http\Controllers\Filament\TenantSpatieMediaStreamController;
+use App\Http\Controllers\Tenant\TenantNotificationPushSubscriptionController;
 use App\Http\Middleware\EnsureTenantContext;
 use App\Http\Middleware\EnsureTenantMembership;
 use App\Http\Middleware\FilamentTenantPanelAuthenticate;
@@ -151,6 +152,10 @@ class AdminPanelProvider extends PanelProvider
             ->authenticatedRoutes(function (): void {
                 Route::get('/spatie-media/{media}', [TenantSpatieMediaStreamController::class, 'show'])
                     ->name('spatie-media.show');
+                Route::post('/notification-push/subscriptions', [TenantNotificationPushSubscriptionController::class, 'store'])
+                    ->name('notification-push.subscriptions.store');
+                Route::delete('/notification-push/subscriptions', [TenantNotificationPushSubscriptionController::class, 'destroy'])
+                    ->name('notification-push.subscriptions.destroy');
             });
     }
 

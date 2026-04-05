@@ -5,6 +5,9 @@ namespace App\Product\CRM\Actions;
 use App\Models\CrmRequest;
 use App\Models\CrmRequestActivity;
 use App\Models\Lead;
+use App\Models\Tenant;
+use App\NotificationCenter\NotificationEventRecorder;
+use App\NotificationCenter\Presenters\CrmRequestNotificationPresenter;
 use App\Product\CRM\CrmRequestCreationResult;
 use App\Product\CRM\DTO\PublicInboundContext;
 use App\Product\CRM\DTO\PublicInboundSubmission;
@@ -20,6 +23,8 @@ final class CreateCrmRequestFromPublicForm
 {
     public function __construct(
         private readonly ProductMailOrchestrator $mailOrchestrator,
+        private readonly NotificationEventRecorder $notificationRecorder,
+        private readonly CrmRequestNotificationPresenter $crmNotifications,
     ) {}
 
     public function handle(PublicInboundContext $context, PublicInboundSubmission $submission): CrmRequestCreationResult
@@ -67,6 +72,27 @@ final class CreateCrmRequestFromPublicForm
 
             if ($context->isPlatformScope) {
                 $this->mailOrchestrator->queuePlatformInboundNotification($crm);
+            }
+
+            if (! $context->isPlatformScope && $context->tenantId !== null) {
+                $crmId = (int) $crm->id;
+                $tenantId = (int) $context->tenantId;
+                DB::afterCommit(function () use ($crmId, $tenantId): void {
+                    $fresh = CrmRequest::query()->find($crmId);
+                    $tenant = Tenant::query()->find($tenantId);
+                    if ($fresh === null || $tenant === null) {
+                        return;
+                    }
+
+                    $payload = $this->crmNotifications->payloadForCreated($tenant, $fresh);
+                    $this->notificationRecorder->record(
+                        $tenantId,
+                        'crm_request.created',
+                        class_basename(CrmRequest::class),
+                        $crmId,
+                        $payload,
+                    );
+                });
             }
 
             return new CrmRequestCreationResult(crmRequest: $crm, lead: $lead);

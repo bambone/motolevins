@@ -5,7 +5,10 @@ namespace App\Product\CRM;
 use App\Models\CrmRequest;
 use App\Models\CrmRequestActivity;
 use App\Models\CrmRequestNote;
+use App\Models\Tenant;
 use App\Models\User;
+use App\NotificationCenter\NotificationEventRecorder;
+use App\NotificationCenter\Presenters\CrmRequestNotificationPresenter;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -21,6 +24,8 @@ final class CrmRequestOperatorService
 {
     public function __construct(
         private readonly TenantBookingFromCrmConverter $tenantBookingFromCrmConverter,
+        private readonly NotificationEventRecorder $notificationRecorder,
+        private readonly CrmRequestNotificationPresenter $crmNotifications,
     ) {}
 
     public function changeStatus(User $actor, CrmRequest $crm, string $toStatus): void
@@ -61,6 +66,27 @@ final class CrmRequestOperatorService
             if ($toStatus === CrmRequest::STATUS_CONVERTED) {
                 $this->tenantBookingFromCrmConverter->createConfirmedBookingIfMissing($crm);
             }
+
+            $crmId = (int) $crm->id;
+            $tenantId = (int) $crm->tenant_id;
+            $actorId = (int) $actor->id;
+            DB::afterCommit(function () use ($crmId, $tenantId, $fromStatus, $toStatus, $actorId): void {
+                $fresh = CrmRequest::query()->find($crmId);
+                $tenant = Tenant::query()->find($tenantId);
+                if ($fresh === null || $tenant === null) {
+                    return;
+                }
+
+                $payload = $this->crmNotifications->payloadForStatusChanged($tenant, $fresh, $fromStatus, $toStatus);
+                $this->notificationRecorder->record(
+                    $tenantId,
+                    'crm_request.status_changed',
+                    class_basename(CrmRequest::class),
+                    $crmId,
+                    $payload,
+                    actorUserId: $actorId,
+                );
+            });
         });
     }
 
@@ -98,6 +124,27 @@ final class CrmRequestOperatorService
                 ],
                 'actor_user_id' => $actor->id,
             ]);
+
+            $crmId = (int) $crm->id;
+            $tenantId = (int) $crm->tenant_id;
+            $actorId = (int) $actor->id;
+            DB::afterCommit(function () use ($crmId, $tenantId, $actorId, $preview): void {
+                $fresh = CrmRequest::query()->find($crmId);
+                $tenant = Tenant::query()->find($tenantId);
+                if ($fresh === null || $tenant === null) {
+                    return;
+                }
+
+                $payload = $this->crmNotifications->payloadForNoteAdded($tenant, $fresh, $preview);
+                $this->notificationRecorder->record(
+                    $tenantId,
+                    'crm_request.note_added',
+                    class_basename(CrmRequest::class),
+                    $crmId,
+                    $payload,
+                    actorUserId: $actorId,
+                );
+            });
 
             return $note;
         });
@@ -228,5 +275,26 @@ final class CrmRequestOperatorService
         }
 
         $crm->update(['first_viewed_at' => now()]);
+
+        $crmId = (int) $crm->id;
+        $tenantId = (int) $crm->tenant_id;
+        $actorId = (int) $actor->id;
+        DB::afterCommit(function () use ($crmId, $tenantId, $actorId): void {
+            $fresh = CrmRequest::query()->find($crmId);
+            $tenant = Tenant::query()->find($tenantId);
+            if ($fresh === null || $tenant === null) {
+                return;
+            }
+
+            $payload = $this->crmNotifications->payloadForFirstViewed($tenant, $fresh);
+            $this->notificationRecorder->record(
+                $tenantId,
+                'crm_request.first_viewed',
+                class_basename(CrmRequest::class),
+                $crmId,
+                $payload,
+                actorUserId: $actorId,
+            );
+        });
     }
 }

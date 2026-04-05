@@ -39,6 +39,7 @@ class CurrentTenantManager
     {
         $this->tenant = null;
         $this->resolved = false;
+        app()->instance(CurrentTenant::class, new CurrentTenant(null, null, true, null));
     }
 
     public function getId(): ?int

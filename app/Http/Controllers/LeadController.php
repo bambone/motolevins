@@ -44,8 +44,9 @@ class LeadController extends Controller
         $lead = $result->lead;
         abort_if($lead === null, 500);
 
-        // Кандидат на консолидацию: уведомление привязано к downstream Lead; почта/CRM-activity уже в product layer.
-        SendLeadTelegramNotification::dispatch($lead);
+        if (config('notification_center.legacy_telegram_parallel')) {
+            SendLeadTelegramNotification::dispatch($lead);
+        }
 
         $leadWord = app(TenantTerminologyService::class)->label($tenant, DomainTermKeys::LEAD);
 

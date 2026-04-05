@@ -42,6 +42,11 @@ final class TenantAbilityRegistry
             'manage_contacts' => 'Контакты',
             'manage_media' => 'Медиа',
             'manage_integrations' => 'Интеграции',
+            'manage_notifications' => 'Уведомления (настройки и каналы)',
+            'view_notification_history' => 'История уведомлений',
+            'manage_notification_destinations' => 'Получатели уведомлений',
+            'manage_notification_subscriptions' => 'Правила уведомлений',
+            'manage_push_devices' => 'Push-устройства',
         ];
     }
 

@@ -16,6 +16,13 @@ use App\Models\Review;
 use App\Models\Setting;
 use App\Models\TenantSetting;
 use App\Models\User;
+use App\NotificationCenter\NotificationActionUrlBuilder;
+use App\NotificationCenter\NotificationChannelDriverFactory;
+use App\NotificationCenter\NotificationDedupeService;
+use App\NotificationCenter\NotificationDeliveryPlanner;
+use App\NotificationCenter\NotificationEventRecorder;
+use App\NotificationCenter\NotificationRouter;
+use App\NotificationCenter\NotificationSchedulePolicy;
 use App\Observers\LeadObserver;
 use App\PageBuilder\LegacySectionTypeResolver;
 use App\PageBuilder\PageSectionKeyGenerator;
@@ -27,6 +34,7 @@ use App\Services\CurrentTenantManager;
 use App\Services\Mail\TenantMailer;
 use App\Services\PageBuilder\PageSectionOperationsService;
 use App\Services\PageBuilder\SectionViewResolver;
+use App\Services\Platform\PlatformNotificationSettings;
 use App\Services\Tenancy\TenantMainMenuPages;
 use App\Services\Tenancy\TenantPagePrimaryHtmlSync;
 use App\Services\Tenancy\TenantViewResolver;
@@ -64,6 +72,15 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(PageSectionKeyGenerator::class);
         $this->app->singleton(PageSectionOperationsService::class);
         $this->app->singleton(SectionViewResolver::class);
+
+        $this->app->singleton(PlatformNotificationSettings::class);
+        $this->app->singleton(NotificationSchedulePolicy::class);
+        $this->app->singleton(NotificationActionUrlBuilder::class);
+        $this->app->singleton(NotificationDedupeService::class);
+        $this->app->singleton(NotificationDeliveryPlanner::class);
+        $this->app->singleton(NotificationRouter::class);
+        $this->app->singleton(NotificationEventRecorder::class);
+        $this->app->singleton(NotificationChannelDriverFactory::class);
     }
 
     /**
@@ -176,7 +193,7 @@ class AppServiceProvider extends ServiceProvider
                 return null;
             }
 
-            if (! str_starts_with($ability, 'manage_') && $ability !== 'export_leads') {
+            if (! str_starts_with($ability, 'manage_') && ! in_array($ability, ['export_leads', 'view_notification_history'], true)) {
                 return null;
             }
 
