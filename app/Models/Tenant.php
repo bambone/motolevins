@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Scheduling\Enums\IntegrationErrorPolicy;
+use App\Scheduling\Enums\StaleBusyPolicy;
 use App\Terminology\TenantTerminologyService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -28,7 +30,24 @@ class Tenant extends Model
         'owner_user_id',
         'support_manager_id',
         'mail_rate_limit_per_minute',
+        'scheduling_module_enabled',
+        'calendar_integrations_enabled',
+        'scheduling_promo_free_until',
+        'scheduling_integration_error_policy',
+        'scheduling_stale_busy_policy',
+        'scheduling_default_write_calendar_subscription_id',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'scheduling_module_enabled' => 'boolean',
+            'calendar_integrations_enabled' => 'boolean',
+            'scheduling_promo_free_until' => 'date',
+            'scheduling_integration_error_policy' => IntegrationErrorPolicy::class,
+            'scheduling_stale_busy_policy' => StaleBusyPolicy::class,
+        ];
+    }
 
     public function plan(): BelongsTo
     {
@@ -68,6 +87,11 @@ class Tenant extends Model
     public function storageQuotaEvents(): HasMany
     {
         return $this->hasMany(TenantStorageQuotaEvent::class);
+    }
+
+    public function schedulingResourceTypeLabels(): HasMany
+    {
+        return $this->hasMany(SchedulingResourceTypeLabel::class);
     }
 
     public function users(): BelongsToMany

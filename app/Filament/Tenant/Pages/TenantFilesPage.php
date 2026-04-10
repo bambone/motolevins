@@ -3,6 +3,8 @@
 namespace App\Filament\Tenant\Pages;
 
 use App\Services\TenantFiles\TenantFileCatalogService;
+use App\Tenant\StorageQuota\TenantStorageQuotaData;
+use App\Tenant\StorageQuota\TenantStorageQuotaService;
 use Filament\Pages\Page;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Computed;
@@ -28,6 +30,10 @@ class TenantFilesPage extends Page
 
     public string $filter = TenantFileCatalogService::FILTER_ALL;
 
+    public int $filePage = 1;
+
+    public int $filesPerPage = 30;
+
     public static function canAccess(): bool
     {
         if (\currentTenant() === null) {
@@ -40,7 +46,7 @@ class TenantFilesPage extends Page
     }
 
     #[Computed]
-    public function catalogRows(): array
+    public function lightCatalogRows(): array
     {
         $t = \currentTenant();
         if ($t === null) {
@@ -48,20 +54,80 @@ class TenantFilesPage extends Page
         }
         $q = trim($this->search);
 
-        return app(TenantFileCatalogService::class)->listForTenant(
+        return app(TenantFileCatalogService::class)->listLightForTenant(
             (int) $t->id,
             $this->filter,
             $q !== '' ? $q : null,
         );
     }
 
+    #[Computed]
+    public function fileCatalogTotal(): int
+    {
+        return count($this->lightCatalogRows);
+    }
+
+    #[Computed]
+    public function fileCatalogLastPage(): int
+    {
+        $total = $this->fileCatalogTotal;
+        if ($total === 0) {
+            return 1;
+        }
+
+        return (int) max(1, (int) ceil($total / max(1, $this->filesPerPage)));
+    }
+
+    /**
+     * Метаданные (размер, дата) подгружаются только для текущей страницы списка.
+     *
+     * @return list<array<string, mixed>>
+     */
+    #[Computed]
+    public function catalogRows(): array
+    {
+        $t = \currentTenant();
+        if ($t === null) {
+            return [];
+        }
+
+        $all = $this->lightCatalogRows;
+        $page = max(1, min($this->filePage, $this->fileCatalogLastPage));
+
+        $offset = ($page - 1) * max(1, $this->filesPerPage);
+        $slice = array_slice($all, $offset, max(1, $this->filesPerPage));
+
+        return app(TenantFileCatalogService::class)->hydrateFileMetadata((int) $t->id, $slice);
+    }
+
+    #[Computed]
+    public function storageQuota(): ?TenantStorageQuotaData
+    {
+        $t = \currentTenant();
+        if ($t === null) {
+            return null;
+        }
+
+        return app(TenantStorageQuotaService::class)->forTenant($t);
+    }
+
+    public function gotoFilePage(int $page): void
+    {
+        $this->filePage = max(1, $page);
+        unset($this->catalogRows);
+    }
+
     public function updatedSearch(): void
     {
+        $this->filePage = 1;
+        unset($this->lightCatalogRows);
         unset($this->catalogRows);
     }
 
     public function updatedFilter(): void
     {
+        $this->filePage = 1;
+        unset($this->lightCatalogRows);
         unset($this->catalogRows);
     }
 }

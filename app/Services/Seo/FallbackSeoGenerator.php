@@ -2,9 +2,11 @@
 
 namespace App\Services\Seo;
 
+use App\Models\LocationLandingPage;
 use App\Models\Motorcycle;
 use App\Models\Page;
 use App\Models\PageSection;
+use App\Models\SeoLandingPage;
 use App\Models\Tenant;
 use App\Models\TenantSetting;
 
@@ -83,10 +85,68 @@ final class FallbackSeoGenerator
             $description = $this->excerptFromPlain('Аренда '.$name.' у '.$site.'.', 160);
         }
 
+        $geoPriceBits = array_filter([
+            trim((string) TenantSetting::getForTenant($tenant->id, 'general.primary_city', '')),
+            $moto->price_per_day > 0 ? 'от '.number_format((int) $moto->price_per_day, 0, ',', ' ').' ₽/сутки' : '',
+        ]);
+        if ($geoPriceBits !== [] && $description !== '') {
+            $description = $this->excerptFromPlain($description.' '.implode(', ', $geoPriceBits), 160);
+        }
+
         return [
             'title' => $title,
             'description' => $description,
             'h1' => $name,
+        ];
+    }
+
+    /**
+     * @return array{title: string, description: string, h1: string}
+     */
+    public function forLocationLandingPage(Tenant $tenant, LocationLandingPage $page): array
+    {
+        $site = $this->siteName($tenant);
+        $titleName = trim((string) $page->title) ?: (string) $page->slug;
+        $title = $site === '' ? $titleName : $titleName.' — '.$site;
+        $plain = trim(strip_tags((string) ($page->intro ?? '')));
+        if ($plain === '') {
+            $plain = trim(strip_tags((string) ($page->body ?? '')));
+        }
+        $description = $this->excerptFromPlain($plain, 160);
+        if ($description === '') {
+            $description = $this->excerptFromPlain($titleName, 160);
+        }
+        $h1 = trim((string) ($page->h1 ?? '')) ?: $titleName;
+
+        return [
+            'title' => $title,
+            'description' => $description,
+            'h1' => $h1,
+        ];
+    }
+
+    /**
+     * @return array{title: string, description: string, h1: string}
+     */
+    public function forSeoLandingPage(Tenant $tenant, SeoLandingPage $page): array
+    {
+        $site = $this->siteName($tenant);
+        $titleName = trim((string) $page->title) ?: (string) $page->slug;
+        $title = $site === '' ? $titleName : $titleName.' — '.$site;
+        $plain = trim(strip_tags((string) ($page->intro ?? '')));
+        if ($plain === '') {
+            $plain = trim(strip_tags((string) ($page->body ?? '')));
+        }
+        $description = $this->excerptFromPlain($plain, 160);
+        if ($description === '') {
+            $description = $this->excerptFromPlain($titleName, 160);
+        }
+        $h1 = trim((string) ($page->h1 ?? '')) ?: $titleName;
+
+        return [
+            'title' => $title,
+            'description' => $description,
+            'h1' => $h1,
         ];
     }
 

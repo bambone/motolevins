@@ -113,7 +113,6 @@ class ManualLeadBookingServiceTest extends TestCase
             tenantId: $tenant->id,
             name: 'Пётр',
             phone: '+79992223344',
-            messenger: 'telegram',
             comment: 'Звонил',
             createCrm: true,
             createBooking: false,
@@ -122,7 +121,7 @@ class ManualLeadBookingServiceTest extends TestCase
         $this->assertNotNull($result->crmRequest);
         $this->assertSame(ManualLeadBookingService::REQUEST_TYPE_TENANT_OPERATOR, $result->crmRequest->request_type);
         $this->assertSame('manual', $result->crmRequest->source);
-        $this->assertSame('telegram', $result->crmRequest->channel);
+        $this->assertSame('phone', $result->crmRequest->channel);
         $this->assertNotNull($result->lead);
         $this->assertSame('in_progress', $result->lead->status);
         $this->assertSame($result->crmRequest->id, $result->lead->crm_request_id);

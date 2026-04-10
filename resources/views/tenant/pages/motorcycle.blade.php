@@ -7,6 +7,7 @@
     $relatedMotorcycles = $relatedMotorcycles ?? collect();
     $contactTelHref = $contactTelHref ?? null;
     $contactEmail = $contactEmail ?? '';
+    $visibleAtSelectedLocation = $visibleAtSelectedLocation ?? true;
     $telLink = filled($contactTelHref) ? 'tel:'.preg_replace('/\s+/', '', (string) $contactTelHref) : null;
 
     $heroCard = $motorcycle->catalogCardForView();
@@ -23,12 +24,45 @@
 
 @section('content')
     <div class="mx-auto w-full min-w-0 max-w-7xl px-4 pb-14 pt-24 sm:px-6 sm:pb-16 sm:pt-28 lg:px-8">
-        <nav class="mb-5 w-full min-w-0 text-sm" aria-label="Навигация">
-            <a href="{{ route('home') }}#catalog"
-               class="inline-flex min-h-10 items-center gap-1.5 text-zinc-400 transition-colors hover:text-zinc-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moto-amber">
-                <span aria-hidden="true">←</span> К каталогу
-            </a>
+        @php
+            $publicBreadcrumbs = $publicBreadcrumbs ?? [];
+        @endphp
+        <nav class="mb-5 w-full min-w-0 text-sm" aria-label="Хлебные крошки">
+            @if (count($publicBreadcrumbs) > 0)
+                <ol class="flex flex-wrap items-center gap-x-2 gap-y-1 text-zinc-400">
+                    @foreach ($publicBreadcrumbs as $i => $crumb)
+                        @if ($i > 0)
+                            <li aria-hidden="true" class="text-zinc-600">/</li>
+                        @endif
+                        <li>
+                            @if ($i < count($publicBreadcrumbs) - 1)
+                                <a href="{{ $crumb['url'] }}"
+                                   class="transition-colors hover:text-zinc-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moto-amber">{{ $crumb['name'] }}</a>
+                            @else
+                                <span class="text-zinc-300">{{ $crumb['name'] }}</span>
+                            @endif
+                        </li>
+                    @endforeach
+                </ol>
+            @else
+                <a href="{{ route('motorcycles.index') }}"
+                   class="inline-flex min-h-10 items-center gap-1.5 text-zinc-400 transition-colors hover:text-zinc-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moto-amber">
+                    <span aria-hidden="true">←</span> К каталогу
+                </a>
+            @endif
         </nav>
+
+        @include('tenant.partials.catalog-location-filter', [
+            'catalogLocations' => $catalogLocations ?? collect(),
+            'selectedCatalogLocation' => $selectedCatalogLocation ?? null,
+            'catalogLocationFormAction' => $catalogLocationFormAction ?? route('motorcycles.index'),
+        ])
+
+        @if (! $visibleAtSelectedLocation)
+            <div class="mb-6 rounded-xl border border-amber-500/35 bg-amber-950/35 p-4 text-sm leading-relaxed text-amber-100 sm:mb-8 sm:text-base" role="status">
+                В выбранной точке эта модель сейчас недоступна. Смените локацию выше или откройте <a href="{{ route('motorcycles.index', ['location' => 'all']) }}" class="font-semibold text-moto-amber underline-offset-2 hover:underline">весь каталог</a>.
+            </div>
+        @endif
 
         {{-- Flex вместо grid-cols-12: при CDN Tailwind без полного набора утилит col-span мог не попасть в CSS, и колонка схлопывалась в 1/12 сетки --}}
         <div class="flex w-full min-w-0 flex-col gap-8 lg:flex-row lg:items-start lg:gap-10 xl:gap-12">
@@ -65,8 +99,13 @@
                         </div>
                         <div class="flex w-full min-w-0 max-w-md flex-col gap-3 lg:max-w-sm lg:shrink-0">
                             <button type="button"
-                                    class="tenant-btn-primary min-h-12 w-full gap-2 px-6 touch-manipulation"
-                                    @click="$dispatch('open-booking-modal', Object.assign({}, @js(['id' => $motorcycle->id, 'name' => $motorcycle->name, 'price' => $motorcycle->price_per_day]), { start: $store.tenantBooking.filters.start_date, end: $store.tenantBooking.filters.end_date }))">
+                                    class="tenant-btn-primary min-h-12 w-full gap-2 px-6 touch-manipulation @if(! $visibleAtSelectedLocation) cursor-not-allowed opacity-50 @endif"
+                                    @if($visibleAtSelectedLocation)
+                                        @click="$dispatch('open-booking-modal', Object.assign({}, @js(['id' => $motorcycle->id, 'name' => $motorcycle->name, 'price' => $motorcycle->price_per_day]), { start: $store.tenantBooking.filters.start_date, end: $store.tenantBooking.filters.end_date }))"
+                                    @else
+                                        disabled
+                                    @endif
+                            >
                                 Забронировать
                                 <svg class="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
                             </button>
@@ -262,5 +301,6 @@
         @endif
     </div>
 
-    <x-booking-modal />
+    @php($preferredChannelFormOptions = currentTenant() ? app(\App\ContactChannels\TenantContactChannelsStore::class)->publicFormPreferredOptions(currentTenant()->id) : [])
+    <x-booking-modal :preferredChannelFormOptions="$preferredChannelFormOptions" />
 @endsection

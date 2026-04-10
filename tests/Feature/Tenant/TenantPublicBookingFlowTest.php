@@ -131,6 +131,10 @@ class TenantPublicBookingFlowTest extends TestCase
         $this->assertSame($bike->id, $lead->motorcycle_id);
         $this->assertSame('2026-04-10', $lead->rental_date_from->format('Y-m-d'));
         $this->assertSame('2026-04-12', $lead->rental_date_to->format('Y-m-d'));
+        $this->assertSame('phone', $lead->preferred_contact_channel);
+        $this->assertIsArray($lead->visitor_contact_channels_json);
+        $this->assertSame('phone', $lead->visitor_contact_channels_json[0]['type'] ?? null);
+        $this->assertSame('+79997776655', $lead->visitor_contact_channels_json[0]['value'] ?? null);
     }
 
     public function test_tenant_post_json_booking_lead_accepts_masked_russian_phone(): void
@@ -169,5 +173,6 @@ class TenantPublicBookingFlowTest extends TestCase
 
         $lead = Lead::query()->findOrFail((int) $response->json('lead_id'));
         $this->assertSame('+79517845889', $lead->phone);
+        $this->assertSame('phone', $lead->preferred_contact_channel);
     }
 }

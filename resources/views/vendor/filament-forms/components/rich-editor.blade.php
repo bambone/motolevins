@@ -15,6 +15,14 @@
     $linkProtocols = $getLinkProtocols();
     $fileAttachmentsMaxSize = $getFileAttachmentsMaxSize();
     $fileAttachmentsAcceptedFileTypes = $getFileAttachmentsAcceptedFileTypes();
+
+    // Сборка в @php: многострочный :attributes="…->merge([…])" ломает Blade (лишний endif / ParseError в compiled view).
+    $richEditorInputWrapperAttributes = \Filament\Support\prepare_inherited_attributes($extraAttributeBag)
+        ->merge([
+            'aria-labelledby' => $id . '-label',
+            'role' => 'group',
+        ], escape: false)
+        ->class(['fi-fo-rich-editor']);
 @endphp
 
 <x-dynamic-component :component="$fieldWrapperView" :field="$field">
@@ -22,10 +30,7 @@
         :disabled="$isDisabled"
         :valid="! $errors->has($statePath)"
         x-cloak
-        :attributes="
-            \Filament\Support\prepare_inherited_attributes($extraAttributeBag)
-                ->class(['fi-fo-rich-editor'])
-        "
+        :attributes="$richEditorInputWrapperAttributes"
     >
         <div
             x-load

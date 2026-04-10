@@ -17,7 +17,6 @@ final class ManualBookingCreateData
         public readonly ?string $phone = null,
         public readonly ?string $email = null,
         public readonly ?string $comment = null,
-        public readonly ?string $messenger = null,
         public readonly ?int $existingLeadId = null,
         public readonly bool $createLead = true,
         public readonly bool $createCrm = true,

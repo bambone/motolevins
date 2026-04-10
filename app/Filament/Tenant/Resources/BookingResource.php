@@ -3,6 +3,7 @@
 namespace App\Filament\Tenant\Resources;
 
 use App\Bookings\Calendar\BookingStatusPresentation;
+use App\ContactChannels\ContactChannelRegistry;
 use App\Enums\BookingStatus;
 use App\Filament\Tenant\Concerns\ResolvesDomainTermLabels;
 use App\Filament\Tenant\Resources\BookingResource\Pages;
@@ -18,6 +19,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\HtmlString;
 use UnitEnum;
 
 class BookingResource extends Resource
@@ -72,6 +74,19 @@ class BookingResource extends Resource
                             ->label('Клиент'),
                         TextEntry::make('phone')
                             ->label('Телефон'),
+                        TextEntry::make('preferred_contact_channel')
+                            ->label('Предпочтительный канал')
+                            ->formatStateUsing(fn (?string $state): string => $state ? ContactChannelRegistry::label($state) : '—'),
+                        TextEntry::make('visitor_contact_channels_json')
+                            ->label('Каналы посетителя')
+                            ->formatStateUsing(function ($state): HtmlString {
+                                if (! is_array($state) || $state === []) {
+                                    return new HtmlString('—');
+                                }
+
+                                return new HtmlString('<pre class="whitespace-pre-wrap text-xs">'.e(json_encode($state, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT)).'</pre>');
+                            })
+                            ->html(),
                         TextEntry::make('motorcycle.name')
                             ->label('Модель в каталоге')
                             ->placeholder('—'),

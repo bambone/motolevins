@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\ContactChannels\VisitorContactPayloadBuilder;
 use App\Http\Requests\StoreLeadRequest;
 use App\Jobs\SendLeadTelegramNotification;
 use App\Product\CRM\Actions\CreateCrmRequestFromPublicForm;
@@ -16,9 +17,16 @@ class LeadController extends Controller
     public function store(
         StoreLeadRequest $request,
         CreateCrmRequestFromPublicForm $createCrmRequest,
+        VisitorContactPayloadBuilder $contactPayloadBuilder,
     ): JsonResponse {
         $tenant = currentTenant();
         abort_if($tenant === null, 404);
+
+        $contact = $contactPayloadBuilder->build($tenant->id, [
+            'phone' => $request->validated('phone'),
+            'preferred_contact_channel' => $request->validated('preferred_contact_channel'),
+            'preferred_contact_value' => $request->validated('preferred_contact_value'),
+        ]);
 
         $submission = new PublicInboundSubmission(
             requestType: 'tenant_booking',
@@ -37,6 +45,9 @@ class LeadController extends Controller
             referrer: $request->header('referer'),
             ip: $request->ip(),
             userAgent: $request->userAgent(),
+            preferredContactChannel: $contact['preferred_contact_channel'],
+            preferredContactValue: $contact['preferred_contact_value'],
+            visitorContactChannelsJson: $contact['visitor_contact_channels_json'],
         );
 
         $result = $createCrmRequest->handle(PublicInboundContext::tenant($tenant->id), $submission);

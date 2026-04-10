@@ -7,6 +7,8 @@ use App\Models\Motorcycle;
 use App\Models\Page;
 use App\Models\PageSection;
 use App\Models\Review;
+use App\Services\Catalog\MotorcycleLocationCatalogService;
+use App\Services\Catalog\TenantPublicCatalogLocationService;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Collection as BaseCollection;
 use Illuminate\Support\Facades\Cache;
@@ -19,8 +21,10 @@ class HomeController extends Controller
         Cache::forget(sprintf('tenant:%d:home:index:v1', $tenantId));
     }
 
-    public function index()
-    {
+    public function index(
+        TenantPublicCatalogLocationService $catalogLocation,
+        MotorcycleLocationCatalogService $locationScope,
+    ) {
         if (tenant() === null) {
             abort(404);
         }
@@ -29,19 +33,27 @@ class HomeController extends Controller
          * Не кэшируем массив для Blade через Cache::remember: внутри Eloquent Collection / Model.
          * После serialize/unserialize из Redis на проде возможен «incomplete object» и 500 на home.blade.php.
          */
-        return tenant_view('pages.home', $this->buildHomeIndexData());
+        return tenant_view('pages.home', $this->buildHomeIndexData($catalogLocation, $locationScope));
     }
 
     /**
      * @return array<string, mixed>
      */
-    private function buildHomeIndexData(): array
-    {
-        $bikes = Motorcycle::where('show_in_catalog', true)
+    /**
+     * @return array<string, mixed>
+     */
+    private function buildHomeIndexData(
+        TenantPublicCatalogLocationService $catalogLocation,
+        MotorcycleLocationCatalogService $locationScope,
+    ): array {
+        $bikesQuery = Motorcycle::where('show_in_catalog', true)
             ->where('status', 'available')
-            ->with(['category', 'media'])
-            ->orderBy('sort_order')
-            ->get();
+            ->with(['category', 'media']);
+        $selectedCatalogLocation = $catalogLocation->resolve();
+        if ($selectedCatalogLocation !== null) {
+            $locationScope->scopeMotorcyclesVisibleAtLocation($bikesQuery, $selectedCatalogLocation);
+        }
+        $bikes = $bikesQuery->orderBy('sort_order')->get();
         $badges = [
             'Хит',
             'Новинка',
@@ -73,6 +85,9 @@ class HomeController extends Controller
             ->get();
         $reviews = $this->getHomeReviews($homeLayoutSections);
 
+        $catalogLocations = $catalogLocation->activeLocationsForCurrentTenant();
+        $catalogLocationFormAction = route('home');
+
         return compact(
             'bikes',
             'badges',
@@ -80,6 +95,9 @@ class HomeController extends Controller
             'homeLayoutSections',
             'faqs',
             'reviews',
+            'selectedCatalogLocation',
+            'catalogLocations',
+            'catalogLocationFormAction',
         );
     }
 

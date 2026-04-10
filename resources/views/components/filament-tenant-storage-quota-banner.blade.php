@@ -4,7 +4,7 @@
     use App\Tenant\StorageQuota\TenantStorageQuotaStatus;
 
     $tenant = currentTenant();
-    $q = $tenant ? app(TenantStorageQuotaService::class)->forTenant($tenant) : null;
+    $q = $tenant ? app(TenantStorageQuotaService::class)->snapshotForBanner($tenant) : null;
 @endphp
 
 @if ($q !== null && $q->status !== TenantStorageQuotaStatus::Ok)

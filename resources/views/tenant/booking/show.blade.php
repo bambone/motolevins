@@ -1,11 +1,26 @@
 @extends('tenant.layouts.app')
 
 @section('content')
+@php
+    $visibleAtSelectedLocation = $visibleAtSelectedLocation ?? true;
+@endphp
 <section class="mx-auto max-w-4xl px-3 pb-12 pt-24 sm:px-4 sm:pb-16 sm:pt-28 md:px-8">
     <a href="{{ route('booking.index') }}" class="mb-6 inline-flex min-h-10 items-center gap-2 text-sm text-silver transition-colors hover:text-white sm:mb-8 sm:text-base focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moto-amber">
         <svg class="h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
         Назад к каталогу
     </a>
+
+    @include('tenant.partials.catalog-location-filter', [
+        'catalogLocations' => $catalogLocations ?? collect(),
+        'selectedCatalogLocation' => $selectedCatalogLocation ?? null,
+        'catalogLocationFormAction' => $catalogLocationFormAction ?? route('booking.show', $motorcycle->slug),
+    ])
+
+    @if (! $visibleAtSelectedLocation)
+        <div class="mb-6 rounded-xl border border-amber-500/35 bg-amber-950/35 p-4 text-sm leading-relaxed text-amber-100 sm:text-base" role="status">
+            В выбранной точке эта модель сейчас недоступна. Выберите другую локацию выше или откройте <a href="{{ route('booking.index', ['location' => 'all']) }}" class="font-semibold text-moto-amber underline-offset-2 hover:underline">весь каталог бронирования</a>.
+        </div>
+    @endif
 
     <div class="mb-8 grid grid-cols-1 gap-6 sm:mb-10 md:grid-cols-2 md:gap-8">
         <div class="aspect-[4/3] overflow-hidden rounded-2xl bg-carbon">
@@ -20,7 +35,7 @@
         </div>
     </div>
 
-    <div class="glass rounded-2xl p-4 sm:p-6 md:p-8" x-data="bookingForm({{ $motorcycle->id }}, {{ $rentalUnits->first()?->id ?? 'null' }}, @js($addons->map(fn($a) => ['id' => $a->id])->values()->all()))">
+    <div class="glass rounded-2xl p-4 sm:p-6 md:p-8" x-data="bookingForm({{ $motorcycle->id }}, {{ $rentalUnits->first()?->id ?? 'null' }}, @js($addons->map(fn($a) => ['id' => $a->id])->values()->all()), {{ $visibleAtSelectedLocation ? 'false' : 'true' }})">
         <h2 class="mb-5 text-lg font-bold text-white sm:mb-6 sm:text-xl">Выберите даты</h2>
 
         <div class="mb-6 grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2">
@@ -86,9 +101,10 @@
 
 <script>
 document.addEventListener('alpine:init', () => {
-    Alpine.data('bookingForm', (motorcycleId, rentalUnitId, addonsList) => ({
+    Alpine.data('bookingForm', (motorcycleId, rentalUnitId, addonsList, locationBlocked = false) => ({
         motorcycleId,
         rentalUnitId,
+        locationBlocked,
         startDate: '',
         endDate: '',
         addons: Object.fromEntries(addonsList.map(a => [a.id, 0])),
@@ -97,6 +113,7 @@ document.addEventListener('alpine:init', () => {
         minDate: new Date().toISOString().split('T')[0],
 
         get canProceed() {
+            if (this.locationBlocked) return false;
             return this.startDate && this.endDate && this.priceResult?.available;
         },
 
@@ -105,6 +122,7 @@ document.addEventListener('alpine:init', () => {
         },
 
         async calculatePrice() {
+            if (this.locationBlocked) return;
             if (!this.startDate || !this.endDate) return;
             this.loading = true;
             try {
@@ -137,7 +155,7 @@ document.addEventListener('alpine:init', () => {
         },
 
         async proceedToCheckout() {
-            if (!this.canProceed) return;
+            if (this.locationBlocked || !this.canProceed) return;
             this.loading = true;
             try {
                 const addonsPayload = {};

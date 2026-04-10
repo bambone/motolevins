@@ -5,12 +5,26 @@ namespace App\Services;
 use App\Models\AvailabilityCalendar;
 use App\Models\Booking;
 use App\Models\RentalUnit;
+use App\Models\SchedulingTarget;
+use App\Scheduling\Enums\ExternalBusyEffect;
+use App\Scheduling\Enums\SchedulingScope;
+use App\Scheduling\Enums\SchedulingTargetType;
+use App\Scheduling\Enums\TentativeEventsPolicy;
+use App\Scheduling\Occupancy\ExternalCalendarOccupancyProvider;
+use App\Scheduling\Occupancy\RentalAvailabilityBridge;
+use App\Scheduling\SchedulingStaleBusyEvaluator;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
 use Illuminate\Support\Collection;
 
 class AvailabilityService
 {
+    public function __construct(
+        private readonly RentalAvailabilityBridge $rentalAvailabilityBridge,
+        private readonly ExternalCalendarOccupancyProvider $externalCalendarOccupancy,
+        private readonly SchedulingStaleBusyEvaluator $staleBusyEvaluator,
+    ) {}
+
     /**
      * Check if a rental unit is available for the given date range.
      */
@@ -26,7 +40,7 @@ class AvailabilityService
      */
     public function getConflicts(RentalUnit $rentalUnit, Carbon $start, Carbon $end, ?int $excludeBookingId = null): Collection
     {
-        return AvailabilityCalendar::query()
+        $calendar = AvailabilityCalendar::query()
             ->where('rental_unit_id', $rentalUnit->id)
             ->where(function ($q) use ($start, $end) {
                 $q->whereBetween('starts_at', [$start, $end])
@@ -39,6 +53,8 @@ class AvailabilityService
             ->whereIn('status', ['blocked', 'booked'])
             ->when($excludeBookingId, fn ($q) => $q->where('booking_id', '!=', $excludeBookingId)->orWhereNull('booking_id'))
             ->get();
+
+        return $calendar->concat($this->externalSchedulingConflictPlaceholders($rentalUnit, $start, $end));
     }
 
     /**
@@ -128,5 +144,108 @@ class AvailabilityService
         }
 
         return $available;
+    }
+
+    /**
+     * Synthetic conflict rows for rental UI / validation when external scheduling occupancy blocks the range.
+     *
+     * @return Collection<int, object{starts_at: Carbon, ends_at: Carbon, status: string, source: string}>
+     */
+    private function externalSchedulingConflictPlaceholders(RentalUnit $rentalUnit, Carbon $start, Carbon $end): Collection
+    {
+        $target = $this->schedulingTargetForRentalUnit($rentalUnit);
+        if ($target === null || ! $target->external_busy_enabled) {
+            return collect();
+        }
+
+        if (! $this->rentalAvailabilityBridge->shouldHardBlockRental($target, $rentalUnit->tenant)) {
+            return collect();
+        }
+
+        $startUtc = $start->copy()->utc();
+        $endUtc = $end->copy()->utc();
+
+        if ($this->rentalAvailabilityBridge->staleDataBlocksNewSlots($target, $rentalUnit->tenant)
+            && $this->staleBusyEvaluator->subscriptionsAreStaleForTarget($target)) {
+            return collect([(object) [
+                'starts_at' => $startUtc,
+                'ends_at' => $endUtc,
+                'status' => 'blocked',
+                'source' => 'scheduling_stale_external',
+            ]]);
+        }
+
+        $out = [];
+        $resources = $target->schedulingResources()->where('scheduling_resources.is_active', true)->get();
+        foreach ($resources as $resource) {
+            foreach ($this->externalCalendarOccupancy->intervalsFor($resource, $startUtc, $endUtc) as $interval) {
+                if (! $this->rentalAvailabilityBridge->overlaps($startUtc, $endUtc, $interval['start'], $interval['end'])) {
+                    continue;
+                }
+                if ($interval['is_tentative'] && $resource->tentative_events_policy === TentativeEventsPolicy::TreatAsFree) {
+                    continue;
+                }
+                $out[] = (object) [
+                    'starts_at' => $interval['start']->copy(),
+                    'ends_at' => $interval['end']->copy(),
+                    'status' => 'blocked',
+                    'source' => 'external_calendar',
+                ];
+            }
+        }
+
+        return collect($out);
+    }
+
+    /**
+     * Мягкое предупреждение для оператора: пересечение с внешним busy при {@see ExternalBusyEffect::SoftWarning}.
+     *
+     * @return Collection<int, object{starts_at: Carbon, ends_at: Carbon, status: string, source: string}>
+     */
+    public function getExternalSchedulingSoftWarnings(RentalUnit $rentalUnit, Carbon $start, Carbon $end): Collection
+    {
+        $target = $this->schedulingTargetForRentalUnit($rentalUnit);
+        if ($target === null || ! $target->external_busy_enabled) {
+            return collect();
+        }
+
+        if ($this->rentalAvailabilityBridge->effectiveExternalBusyEffect($target, $rentalUnit->tenant) !== ExternalBusyEffect::SoftWarning) {
+            return collect();
+        }
+
+        $startUtc = $start->copy()->utc();
+        $endUtc = $end->copy()->utc();
+
+        $out = [];
+        $resources = $target->schedulingResources()->where('scheduling_resources.is_active', true)->get();
+        foreach ($resources as $resource) {
+            foreach ($this->externalCalendarOccupancy->intervalsFor($resource, $startUtc, $endUtc) as $interval) {
+                if (! $this->rentalAvailabilityBridge->overlaps($startUtc, $endUtc, $interval['start'], $interval['end'])) {
+                    continue;
+                }
+                if ($interval['is_tentative'] && $resource->tentative_events_policy === TentativeEventsPolicy::TreatAsFree) {
+                    continue;
+                }
+                $out[] = (object) [
+                    'starts_at' => $interval['start']->copy(),
+                    'ends_at' => $interval['end']->copy(),
+                    'status' => 'warning',
+                    'source' => 'external_calendar_soft',
+                ];
+            }
+        }
+
+        return collect($out);
+    }
+
+    private function schedulingTargetForRentalUnit(RentalUnit $rentalUnit): ?SchedulingTarget
+    {
+        return SchedulingTarget::query()
+            ->where('scheduling_scope', SchedulingScope::Tenant)
+            ->where('tenant_id', $rentalUnit->tenant_id)
+            ->where('target_type', SchedulingTargetType::RentalUnit)
+            ->where('target_id', $rentalUnit->id)
+            ->where('is_active', true)
+            ->first();
     }
 }

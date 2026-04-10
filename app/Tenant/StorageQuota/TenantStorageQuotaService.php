@@ -93,6 +93,23 @@ class TenantStorageQuotaService
         return $this->toData($q);
     }
 
+    /**
+     * Снимок квоты без {@code refresh()} и без {@code ensureQuotaRecord()} — для глобальных хуков Filament,
+     * чтобы не делать лишний тяжёлый запрос на каждой странице, когда баннер всё равно скрыт (статус ok).
+     */
+    public function snapshotForBanner(Tenant $tenant): ?TenantStorageQuotaData
+    {
+        $row = TenantStorageQuota::query()
+            ->where('tenant_id', $tenant->id)
+            ->first();
+
+        if ($row === null) {
+            return null;
+        }
+
+        return $this->toData($row);
+    }
+
     public function toData(TenantStorageQuota $q): TenantStorageQuotaData
     {
         $effective = $q->effective_quota_bytes;

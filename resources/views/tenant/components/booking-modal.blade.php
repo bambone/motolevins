@@ -1,6 +1,8 @@
+@props(['preferredChannelFormOptions' => []])
+
 <!-- Alpine Booking Modal -->
 <div
-    x-data="bookingModal()"
+    x-data="bookingModal({ preferredOptions: @js($preferredChannelFormOptions) })"
     @open-booking-modal.window="openModal($event.detail)"
     x-show="isOpen"
     style="display: none;"
@@ -46,7 +48,7 @@
                         {{-- relative + flex-1 min-h-0: родитель с ограниченной высотой; absolute inset-0 + overflow-y-auto — стабильный скролл (обходит min-height:auto у flex/grid). --}}
                         <div class="relative min-h-0 min-w-0 flex-1 overflow-hidden">
                         <div class="tenant-thin-scrollbar tenant-booking-modal-scroll absolute inset-0 touch-pan-y overflow-x-hidden overflow-y-auto overscroll-contain px-5 py-4 sm:px-8 sm:py-5">
-                            <div x-show="errorMessage" class="mb-4 rounded-xl border border-red-500/40 bg-red-500/10 p-3">
+                            <div x-show="errorMessage" x-ref="bookingErrorBanner" class="mb-4 rounded-xl border border-red-500/40 bg-red-500/10 p-3">
                                 <div class="flex items-start gap-3">
                                     <svg class="mt-0.5 h-5 w-5 shrink-0 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                                     <span class="text-sm text-red-100" x-text="errorMessage"></span>
@@ -59,6 +61,7 @@
                                     <div>
                                         <label for="booking-modal-start-date" class="mb-1.5 block text-sm font-medium text-zinc-400">Дата начала</label>
                                         <input id="booking-modal-start-date"
+                                               x-ref="bookingStartDateInput"
                                                data-fp-anchor="tenant-modal-start"
                                                name="booking_start_date"
                                                type="text"
@@ -72,6 +75,7 @@
                                     <div>
                                         <label for="booking-modal-end-date" class="mb-1.5 block text-sm font-medium text-zinc-400">Дата возврата</label>
                                         <input id="booking-modal-end-date"
+                                               x-ref="bookingEndDateInput"
                                                data-fp-anchor="tenant-modal-end"
                                                name="booking_end_date"
                                                type="text"
@@ -120,6 +124,7 @@
                                 <div>
                                     <label for="booking-modal-customer-name" class="mb-1.5 block text-sm font-medium text-zinc-400">Ваше имя</label>
                                     <input id="booking-modal-customer-name" name="customer_name" type="text" x-model="form.customer_name" required placeholder="Иван Иванов" autocomplete="name"
+                                           x-ref="bookingCustomerNameInput"
                                            class="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-base text-white outline-none transition-colors placeholder:text-zinc-500 focus:border-moto-amber/50 focus:ring-1 focus:ring-moto-amber">
                                 </div>
                                 <div>
@@ -139,6 +144,37 @@
                                            class="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-base text-white outline-none transition-colors placeholder:text-zinc-500 focus:border-moto-amber/50 focus:ring-1 focus:ring-moto-amber">
                                     <p class="mt-2 text-xs leading-snug text-zinc-400 sm:text-sm" x-text="phoneFieldHint()"></p>
                                 </div>
+
+                                <fieldset x-show="showPreferredBlock()" x-cloak
+                                          class="rounded-xl border border-white/10 bg-black/25 p-4 sm:p-5">
+                                    <legend class="mb-1 w-full text-sm font-semibold uppercase tracking-wider text-zinc-500">Как удобнее связаться</legend>
+                                    <p class="mb-4 text-xs leading-relaxed text-zinc-500">Телефон обязателен. Можно выбрать удобный мессенджер.</p>
+                                    <div class="flex flex-col gap-2">
+                                        <template x-for="opt in preferredOptions" :key="opt.id">
+                                            <label :for="'booking-modal-pref-'+opt.id"
+                                                   class="group flex min-h-[3rem] cursor-pointer touch-manipulation items-center gap-3 rounded-xl border border-white/10 bg-black/35 px-4 py-3 transition-colors hover:border-white/[0.14] has-[:checked]:border-moto-amber/55 has-[:checked]:bg-moto-amber/[0.08] has-[:checked]:shadow-[inset_0_0_0_1px_rgba(232,93,4,0.22)] focus-within:ring-2 focus-within:ring-moto-amber/35 focus-within:ring-offset-2 focus-within:ring-offset-[#141417]">
+                                                <input type="radio" name="booking_modal_preferred_channel"
+                                                       class="sr-only"
+                                                       :id="'booking-modal-pref-'+opt.id"
+                                                       :value="opt.id"
+                                                       x-model="form.preferred_contact_channel">
+                                                <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 border-zinc-500/45 bg-[#0c0c0e] transition-colors group-has-[:checked]:border-moto-amber group-has-[:checked]:bg-moto-amber/10" aria-hidden="true">
+                                                    <span class="h-2 w-2 rounded-full bg-moto-amber opacity-0 shadow-[0_0_10px_rgba(232,93,4,0.55)] transition group-has-[:checked]:opacity-100"></span>
+                                                </span>
+                                                <span class="min-w-0 flex-1 text-sm leading-snug text-zinc-300 group-has-[:checked]:font-medium group-has-[:checked]:text-white" x-text="opt.label"></span>
+                                            </label>
+                                        </template>
+                                    </div>
+                                    <div x-show="selectedNeedsExtraValue()" x-collapse class="mt-4 border-t border-white/[0.08] pt-4">
+                                        <label for="booking-modal-pref-value" class="mb-1.5 block text-sm font-medium text-zinc-400">Контакт в мессенджере *</label>
+                                        <input id="booking-modal-pref-value" type="text" x-model="form.preferred_contact_value" autocomplete="off"
+                                               x-ref="bookingPrefValueInput"
+                                               :placeholder="preferredValuePlaceholder()"
+                                               class="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-base text-white outline-none transition-colors placeholder:text-zinc-500 focus:border-moto-amber/50 focus:ring-1 focus:ring-moto-amber">
+                                        <p class="mt-2 text-xs leading-relaxed text-zinc-500" x-show="preferredValueHint()" x-text="preferredValueHint()"></p>
+                                    </div>
+                                </fieldset>
+
                                 <div>
                                     <label for="booking-modal-comment" class="mb-1.5 block text-sm font-medium text-zinc-400">Комментарий (необязательно)</label>
                                     <textarea id="booking-modal-comment" name="customer_comment" x-model="form.customer_comment" placeholder="Например: нужна доставка в Анапу" rows="2" autocomplete="off"
@@ -181,7 +217,7 @@
 
 <script>
 document.addEventListener('alpine:init', () => {
-    Alpine.data('bookingModal', () => ({
+    Alpine.data('bookingModal', (cfg = {}) => ({
         init() {
             this.$watch('isOpen', (open) => {
                 const root = document.documentElement;
@@ -203,13 +239,28 @@ document.addEventListener('alpine:init', () => {
 
         bike: { id: null, name: '', price: 0 },
 
+        preferredOptions: Array.isArray(cfg.preferredOptions) ? cfg.preferredOptions : [],
+
         form: {
             start_date: '',
             end_date: '',
             customer_name: '',
             phone: '',
             customer_comment: '',
+            preferred_contact_channel: 'phone',
+            preferred_contact_value: '',
             source: 'site',
+        },
+
+        showPreferredBlock() {
+            return this.preferredOptions.length > 1;
+        },
+
+        selectedNeedsExtraValue() {
+            const id = this.form.preferred_contact_channel;
+            const o = this.preferredOptions.find((x) => x.id === id);
+
+            return !!(o && o.needs_value);
         },
 
         calculatedDays: 0,
@@ -235,6 +286,48 @@ document.addEventListener('alpine:init', () => {
             }
 
             return 'Введите номер в международном формате. Для России можно начинать с 8 или +7.';
+        },
+
+        _fieldFlashTimer: null,
+        _flashedEls: [],
+
+        fieldFlashClear() {
+            (this._flashedEls || []).forEach((el) => el.classList.remove('tenant-field-error-flash'));
+            this._flashedEls = [];
+        },
+
+        /**
+         * Прокрутка к проблемному полю и красная «вспышка» ~2 с (см. .tenant-field-error-flash в layout).
+         *
+         * @param  {Element|Element[]|null|undefined}  els
+         */
+        flashFieldGroup(els) {
+            this.fieldFlashClear();
+            const list = (Array.isArray(els) ? els : [els]).filter((e) => e && e.nodeType === 1);
+            if (list.length === 0) {
+                return;
+            }
+            this._flashedEls = list;
+            this.$nextTick(() => {
+                list[0].scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+                list.forEach((el) => el.classList.add('tenant-field-error-flash'));
+                clearTimeout(this._fieldFlashTimer);
+                this._fieldFlashTimer = setTimeout(() => this.fieldFlashClear(), 2000);
+            });
+        },
+
+        preferredValueHint() {
+            const id = this.form.preferred_contact_channel;
+            const o = this.preferredOptions.find((x) => x.id === id);
+
+            return (o && o.value_hint) ? o.value_hint : '';
+        },
+
+        preferredValuePlaceholder() {
+            const id = this.form.preferred_contact_channel;
+            const o = this.preferredOptions.find((x) => x.id === id);
+
+            return (o && o.value_placeholder) ? o.value_placeholder : '';
         },
 
         onPhoneInput() {
@@ -393,12 +486,16 @@ document.addEventListener('alpine:init', () => {
         },
 
         resetForm() {
+            this.fieldFlashClear();
+            clearTimeout(this._fieldFlashTimer);
             window.TenantDatePickers?.destroyModal?.();
             this.form.start_date = '';
             this.form.end_date = '';
             this.form.customer_name = '';
             this.form.phone = '';
             this.form.customer_comment = '';
+            this.form.preferred_contact_channel = 'phone';
+            this.form.preferred_contact_value = '';
             this.calculatedDays = 0;
             this.totalPrice = 0;
             this.isSuccess = false;
@@ -438,10 +535,28 @@ document.addEventListener('alpine:init', () => {
 
         async submitForm() {
             this.errorMessage = '';
+            this.fieldFlashClear();
             this.calculatePrice();
+
+            const dateInputs = [this.$refs.bookingStartDateInput, this.$refs.bookingEndDateInput].filter(Boolean);
+
+            if (! this.form.start_date || ! this.form.end_date) {
+                this.errorMessage = 'Укажите даты начала и возврата.';
+                this.flashFieldGroup(dateInputs);
+
+                return;
+            }
 
             if (this.calculatedDays <= 0) {
                 this.errorMessage = 'Дата возврата не может быть раньше даты выдачи.';
+                this.flashFieldGroup(dateInputs);
+
+                return;
+            }
+
+            if (! (this.form.customer_name || '').trim()) {
+                this.errorMessage = 'Укажите ваше имя.';
+                this.flashFieldGroup(this.$refs.bookingCustomerNameInput);
 
                 return;
             }
@@ -454,13 +569,25 @@ document.addEventListener('alpine:init', () => {
             }
             if (typeof window.TenantIntlPhone?.validatePhone !== 'function' || ! window.TenantIntlPhone.validatePhone(this.form.phone)) {
                 this.errorMessage = 'Укажите корректный номер телефона с кодом страны (для России — 10 цифр после +7 или ввод с 8).';
+                this.flashFieldGroup(this.$refs.bookingPhoneInput);
 
                 return;
+            }
+
+            if (this.selectedNeedsExtraValue()) {
+                const v = (this.form.preferred_contact_value || '').trim();
+                if (! v) {
+                    this.errorMessage = 'Укажите контакт для выбранного способа связи (см. подсказку под полем).';
+                    this.flashFieldGroup(this.$refs.bookingPrefValueInput);
+
+                    return;
+                }
             }
 
             const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
             if (! csrf) {
                 this.errorMessage = 'Не удалось отправить заявку. Обновите страницу и попробуйте снова.';
+                this.$nextTick(() => this.flashFieldGroup(this.$refs.bookingErrorBanner));
 
                 return;
             }
@@ -483,6 +610,8 @@ document.addEventListener('alpine:init', () => {
                         rental_date_from: this.form.start_date,
                         rental_date_to: this.form.end_date,
                         source: 'booking_form',
+                        preferred_contact_channel: this.form.preferred_contact_channel,
+                        preferred_contact_value: this.selectedNeedsExtraValue() ? (this.form.preferred_contact_value || '').trim() : null,
                     }),
                 });
 
@@ -496,6 +625,7 @@ document.addEventListener('alpine:init', () => {
                 window.TenantDatePickers?.destroyModal?.();
             } catch (error) {
                 this.errorMessage = error.message;
+                this.$nextTick(() => this.flashFieldGroup(this.$refs.bookingErrorBanner));
             } finally {
                 this.isLoading = false;
             }

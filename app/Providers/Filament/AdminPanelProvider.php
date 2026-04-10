@@ -4,6 +4,7 @@ namespace App\Providers\Filament;
 
 use App\Filament\Tenant\Pages\TenantDashboard;
 use App\Filament\Tenant\Pages\TenantLogin;
+use App\Filament\Tenant\Pages\TenantProductChangelogPage;
 use App\Filament\Tenant\Widgets\StatsOverviewWidget;
 use App\Http\Controllers\Filament\TenantSpatieMediaStreamController;
 use App\Http\Controllers\Tenant\TenantNotificationPushSubscriptionController;
@@ -12,7 +13,6 @@ use App\Http\Middleware\EnsureTenantMembership;
 use App\Http\Middleware\FilamentTenantPanelAuthenticate;
 use App\Http\Middleware\ResolveTenantFromDomain;
 use App\Http\Middleware\SetTenantFilamentLocale;
-use App\Filament\Tenant\Pages\TenantProductChangelogPage;
 use App\Models\TenantSetting;
 use App\Terminology\DomainTermKeys;
 use App\Terminology\TenantTerminologyService;
@@ -42,6 +42,7 @@ class AdminPanelProvider extends PanelProvider
     {
         $panel
             ->renderHook(PanelsRenderHook::BODY_START, fn (): string => View::make('components.filament-access-denied-banner')->render())
+            ->renderHook(PanelsRenderHook::BODY_START, fn (): string => View::make('components.scheduling-calendar-gating-banner')->render())
             ->renderHook(PanelsRenderHook::BODY_START, fn (): string => View::make('components.filament-tenant-storage-quota-banner')->render())
             ->renderHook(
                 PanelsRenderHook::HEAD_END,
@@ -121,6 +122,9 @@ class AdminPanelProvider extends PanelProvider
                 'Settings' => NavigationGroup::make()
                     ->label(self::tenantNavigationGroupLabel(DomainTermKeys::NAV_SETTINGS, 'Настройки'))
                     ->icon('heroicon-o-cog-8-tooth'),
+                'Scheduling' => NavigationGroup::make()
+                    ->label('Запись и расписание')
+                    ->icon('heroicon-o-calendar-days'),
             ])
             ->discoverResources(in: app_path('Filament/Tenant/Resources'), for: 'App\\Filament\\Tenant\\Resources')
             ->discoverPages(in: app_path('Filament/Tenant/Pages'), for: 'App\\Filament\\Tenant\\Pages')
@@ -147,6 +151,11 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->authMiddleware([
                 FilamentTenantPanelAuthenticate::class,
+            ])
+            ->spa()
+            ->spaUrlExceptions([
+                // Потоковая выдача медиа не должна перехватываться Livewire navigate.
+                '*spatie-media*',
             ])
             ->authenticatedRoutes(function (): void {
                 Route::get('/spatie-media/{media}', [TenantSpatieMediaStreamController::class, 'show'])

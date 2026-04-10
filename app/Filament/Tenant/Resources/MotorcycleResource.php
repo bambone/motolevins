@@ -2,32 +2,32 @@
 
 namespace App\Filament\Tenant\Resources;
 
-use App\Filament\Forms\Components\SeoMetaFields;
-use App\Filament\Forms\Components\TenantSpatieMediaLibraryFileUpload;
 use App\Filament\Tenant\Concerns\ResolvesDomainTermLabels;
+use App\Filament\Tenant\Forms\LinkedBookableSchedulingForm;
+use App\Filament\Tenant\Resources\MotorcycleResource\Form\MotorcycleFormFieldKit;
 use App\Filament\Tenant\Resources\MotorcycleResource\Pages;
+use App\Models\BookingSettingsPreset;
 use App\Models\Motorcycle;
-use App\Support\CatalogHighlightNormalizer;
+use App\Scheduling\BookableServiceBulkService;
+use App\Scheduling\Enums\BookableServiceSettingsApplyMode;
 use App\Support\FilamentMotorcycleThumbnail;
 use App\Terminology\DomainTermKeys;
 use Filament\Actions\Action;
+use Filament\Actions\BulkAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ForceDeleteBulkAction;
 use Filament\Actions\RestoreBulkAction;
-use Filament\Forms\Components\KeyValue;
-use Filament\Forms\Components\RichEditor;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
-use Filament\Schemas\Components\Fieldset;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
-use Filament\Schemas\Components\Utilities\Set;
+use Filament\Schemas\Components\Tabs;
+use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\ImageColumn;
@@ -36,12 +36,8 @@ use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Support\Facades\Cookie;
-use Illuminate\Support\Str;
-use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
-use Throwable;
 use UnitEnum;
 
 class MotorcycleResource extends Resource
@@ -74,298 +70,62 @@ class MotorcycleResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema
-            ->columns(['default' => 1, 'lg' => 12])
+            ->columns(1)
             ->components([
-                // Левая колонка 8/12 — основной контент
-                Section::make()
-                    ->schema([
-                        Section::make('Основная информация')
-                            ->description('Название, идентификатор и краткое описание карточки')
+                Tabs::make('Карточка')
+                    ->persistTabInQueryString(LinkedBookableSchedulingForm::MOTORCYCLE_TAB_QUERY_KEY)
+                    ->tabs([
+                        'main' => Tab::make('Основное')
+                            ->id(LinkedBookableSchedulingForm::TAB_KEY_MAIN)
                             ->schema([
-                                TextInput::make('name')
-                                    ->label('Название')
-                                    ->id('motorcycle-name')
-                                    ->required()
-                                    ->maxLength(255)
-                                    ->live(onBlur: true)
-                                    ->afterStateUpdated(function (Set $set, ?string $state, string $operation) {
-                                        if ($operation === 'create' && $state) {
-                                            $set('slug', Str::slug($state));
-                                        }
-                                    }),
-                                TextInput::make('slug')
-                                    ->label('URL-идентификатор')
-                                    ->id('motorcycle-slug')
-                                    ->required()
-                                    ->maxLength(255)
-                                    ->unique(ignoreRecord: true)
-                                    ->helperText('Адрес карточки в каталоге, например /catalog/your-slug. Латиница, цифры и дефис.'),
-                                TextInput::make('brand')
-                                    ->label('Бренд')
-                                    ->id('motorcycle-brand')
-                                    ->maxLength(255),
-                                TextInput::make('model')
-                                    ->label('Модель')
-                                    ->id('motorcycle-model')
-                                    ->maxLength(255),
-                                Textarea::make('short_description')
-                                    ->label('Позиционирование в каталоге')
-                                    ->id('motorcycle-short-description')
-                                    ->rows(3)
-                                    ->helperText('1–2 короткие строки: для какого сценария модель и чем отличается от соседних. Только правдивый маркетинговый смысл, без выдуманных цифр.')
-                                    ->columnSpanFull(),
-                                TextInput::make('catalog_scenario')
-                                    ->label('Сценарий / кому подойдёт')
-                                    ->id('motorcycle-catalog-scenario')
-                                    ->maxLength(120)
-                                    ->placeholder('Например: Туристу и трассе')
-                                    ->columnSpanFull(),
-                                Fieldset::make('Быстрые преимущества (чипы в каталоге, словарь на сайте)')
+                                LinkedBookableSchedulingForm::motorcycleCreateNotice(),
+                                Grid::make(['default' => 1, 'lg' => 12])
                                     ->schema([
-                                        Grid::make(3)
+                                        Section::make()
                                             ->schema([
-                                                Select::make('catalog_highlight_1')
-                                                    ->label('Чип 1')
-                                                    ->id('motorcycle-catalog-highlight-1')
-                                                    ->placeholder('—')
-                                                    ->formatStateUsing(fn (?string $state): ?string => CatalogHighlightNormalizer::normalizeToKey($state))
-                                                    ->options(fn (): array => CatalogHighlightNormalizer::selectOptions()),
-                                                Select::make('catalog_highlight_2')
-                                                    ->label('Чип 2')
-                                                    ->id('motorcycle-catalog-highlight-2')
-                                                    ->placeholder('—')
-                                                    ->formatStateUsing(fn (?string $state): ?string => CatalogHighlightNormalizer::normalizeToKey($state))
-                                                    ->options(fn (): array => CatalogHighlightNormalizer::selectOptions()),
-                                                Select::make('catalog_highlight_3')
-                                                    ->label('Чип 3')
-                                                    ->id('motorcycle-catalog-highlight-3')
-                                                    ->placeholder('—')
-                                                    ->formatStateUsing(fn (?string $state): ?string => CatalogHighlightNormalizer::normalizeToKey($state))
-                                                    ->options(fn (): array => CatalogHighlightNormalizer::selectOptions()),
-                                            ]),
-                                    ])
-                                    ->columnSpanFull(),
-                                TextInput::make('catalog_price_note')
-                                    ->label('Подпись под ценой в каталоге')
-                                    ->id('motorcycle-catalog-price-note')
-                                    ->maxLength(80)
-                                    ->placeholder('Только реальное условие')
-                                    ->helperText('Необязательно. Например: «за сутки», «бронь по предоплате» — только если это действительно так.')
-                                    ->columnSpanFull(),
-                            ])
-                            ->columns(2),
+                                                Section::make('Основная информация')
+                                                    ->description('Название, идентификатор и краткое описание карточки')
+                                                    ->schema(MotorcycleFormFieldKit::mainInfoFields())
+                                                    ->columns(2),
 
-                        Section::make('Страница модели (/moto/…)')
-                            ->description('Блоки на публичной карточке техники. Пустые поля скрываются; тезисы по сценарию при отсутствии данных можно подтянуть из категории (см. конфиг tenant_landing).')
-                            ->schema([
-                                Textarea::make('detail_audience')
-                                    ->label('Кому подойдёт')
-                                    ->id('motorcycle-detail-audience')
-                                    ->rows(3)
-                                    ->helperText('1–3 предложения. Если пусто — на сайте используется сценарий из поля выше.')
-                                    ->columnSpanFull(),
-                                Textarea::make('detail_use_case_bullets')
-                                    ->label('Сценарий: тезисы (по одному на строку, до 4)')
-                                    ->id('motorcycle-detail-use-case')
-                                    ->rows(5)
-                                    ->formatStateUsing(function ($state): string {
-                                        if (is_array($state)) {
-                                            return implode("\n", array_filter($state, 'filled'));
-                                        }
+                                                Section::make('Страница модели (/moto/…)')
+                                                    ->description('Блоки на публичной карточке техники. Пустые поля скрываются; тезисы по сценарию при отсутствии данных можно подтянуть из категории (см. конфиг tenant_landing).')
+                                                    ->schema(MotorcycleFormFieldKit::pageModelFields())
+                                                    ->collapsed()
+                                                    ->collapsible(),
 
-                                        return '';
-                                    })
-                                    ->dehydrateStateUsing(function (?string $state): array {
-                                        if ($state === null || trim($state) === '') {
-                                            return [];
-                                        }
-                                        $lines = preg_split('/\r\n|\r|\n/', $state) ?: [];
-                                        $lines = array_values(array_filter(array_map('trim', $lines), fn (string $l): bool => $l !== ''));
+                                                Section::make('Полное описание')
+                                                    ->description('Подробное описание для карточки мотоцикла')
+                                                    ->schema(MotorcycleFormFieldKit::fullDescriptionField()),
 
-                                        return array_slice($lines, 0, 4);
-                                    })
-                                    ->columnSpanFull(),
-                                Textarea::make('detail_advantage_bullets')
-                                    ->label('Ключевые плюсы (по одному на строку, до 6)')
-                                    ->id('motorcycle-detail-advantages')
-                                    ->rows(6)
-                                    ->formatStateUsing(function ($state): string {
-                                        if (is_array($state)) {
-                                            return implode("\n", array_filter($state, 'filled'));
-                                        }
+                                                Section::make('Характеристики')
+                                                    ->description('Технические параметры мотоцикла')
+                                                    ->schema(MotorcycleFormFieldKit::specsSections())
+                                                    ->columns(1),
 
-                                        return '';
-                                    })
-                                    ->dehydrateStateUsing(function (?string $state): array {
-                                        if ($state === null || trim($state) === '') {
-                                            return [];
-                                        }
-                                        $lines = preg_split('/\r\n|\r|\n/', $state) ?: [];
-                                        $lines = array_values(array_filter(array_map('trim', $lines), fn (string $l): bool => $l !== ''));
+                                                MotorcycleFormFieldKit::seoSnippetPreviewPlaceholder(),
+                                                MotorcycleFormFieldKit::seoMetaSection(),
+                                            ])
+                                            ->columnSpan(['default' => 12, 'lg' => 8]),
 
-                                        return array_slice($lines, 0, 6);
-                                    })
-                                    ->columnSpanFull(),
-                                Textarea::make('detail_rental_notes')
-                                    ->label('Аренда: примечания к этой модели')
-                                    ->id('motorcycle-detail-rental')
-                                    ->rows(4)
-                                    ->helperText('Только проверяемые формулировки. Общие условия — на странице «Правила аренды».')
-                                    ->columnSpanFull(),
-                            ])
-                            ->collapsed()
-                            ->collapsible(),
-
-                        Section::make('Полное описание')
-                            ->description('Подробное описание для карточки мотоцикла')
-                            ->schema([
-                                RichEditor::make('full_description')
-                                    ->label('Описание')
-                                    ->id('motorcycle-full-description')
-                                    ->columnSpanFull(),
+                                        Section::make('Управление карточкой')
+                                            ->description('Публикация, цены и медиа')
+                                            ->schema([
+                                                ...MotorcycleFormFieldKit::publishingFields(),
+                                                Section::make('Режим учёта и локации')
+                                                    ->description('Единицы парка настраиваются после первого сохранения карточки. Локации — справочник «Инфраструктура → Локации».')
+                                                    ->schema(MotorcycleFormFieldKit::fleetAndLocationCardFields())
+                                                    ->columns(1)
+                                                    ->compact(),
+                                                ...MotorcycleFormFieldKit::mediaUploadFields(),
+                                            ])
+                                            ->columns(1)
+                                            ->columnSpan(['default' => 12, 'lg' => 4]),
+                                    ]),
                             ]),
-
-                        Section::make('Характеристики')
-                            ->description('Технические параметры мотоцикла')
-                            ->schema([
-                                Section::make('Базовые параметры')
-                                    ->schema([
-                                        Grid::make(3)
-                                            ->schema([
-                                                TextInput::make('engine_cc')
-                                                    ->label('Объём двигателя')
-                                                    ->id('motorcycle-engine-cc')
-                                                    ->numeric()
-                                                    ->suffix('см³'),
-                                                TextInput::make('power')
-                                                    ->label('Мощность')
-                                                    ->id('motorcycle-power')
-                                                    ->numeric()
-                                                    ->suffix('л.с.'),
-                                                TextInput::make('transmission')
-                                                    ->label('Трансмиссия')
-                                                    ->id('motorcycle-transmission')
-                                                    ->maxLength(255),
-                                                TextInput::make('year')
-                                                    ->label('Год выпуска')
-                                                    ->id('motorcycle-year')
-                                                    ->numeric(),
-                                                TextInput::make('mileage')
-                                                    ->label('Пробег')
-                                                    ->id('motorcycle-mileage')
-                                                    ->numeric()
-                                                    ->suffix('км'),
-                                            ]),
-                                    ])
-                                    ->columns(1)
-                                    ->compact()
-                                    ->secondary(),
-                                Section::make('Дополнительные характеристики (расширенный режим)')
-                                    ->description('Пары «название — значение» для редких полей. Основные поля выше предпочтительнее. Не используйте без необходимости — опечатки в ключах не попадут на сайт автоматически.')
-                                    ->schema([
-                                        KeyValue::make('specs_json')
-                                            ->label('Произвольные параметры')
-                                            ->id('motorcycle-specs-json')
-                                            ->keyLabel('Название')
-                                            ->valueLabel('Значение')
-                                            ->reorderable(),
-                                    ])
-                                    ->columns(1)
-                                    ->compact()
-                                    ->secondary()
-                                    ->collapsed()
-                                    ->collapsible(),
-                            ])
-                            ->columns(1),
-
-                        SeoMetaFields::make(useTabs: true),
+                        LinkedBookableSchedulingForm::TAB_KEY_ONLINE_BOOKING => LinkedBookableSchedulingForm::motorcycleOnlineBookingTab(),
                     ])
-                    ->columnSpan(['default' => 12, 'lg' => 8]),
-
-                // Правая колонка 4/12 — единый sidebar модуль
-                Section::make('Управление карточкой')
-                    ->description('Публикация, цены и медиа')
-                    ->schema([
-                        Select::make('status')
-                            ->label('Статус')
-                            ->id('motorcycle-status')
-                            ->options(Motorcycle::statuses())
-                            ->required()
-                            ->default('available'),
-                        TextInput::make('sort_order')
-                            ->label('Порядок сортировки')
-                            ->id('motorcycle-sort-order')
-                            ->numeric()
-                            ->default(0),
-                        Toggle::make('show_on_home')
-                            ->label('Показывать на главной')
-                            ->id('motorcycle-show-on-home')
-                            ->default(false),
-                        Toggle::make('show_in_catalog')
-                            ->label('Показывать в каталоге')
-                            ->id('motorcycle-show-in-catalog')
-                            ->default(true),
-                        Toggle::make('is_recommended')
-                            ->label('Рекомендуемый')
-                            ->id('motorcycle-is-recommended')
-                            ->default(false),
-                        Select::make('category_id')
-                            ->label('Категория')
-                            ->id('motorcycle-category')
-                            ->relationship('category', 'name')
-                            ->searchable()
-                            ->preload(),
-                        TextInput::make('price_per_day')
-                            ->label('Цена за день')
-                            ->id('motorcycle-price-per-day')
-                            ->numeric()
-                            ->required()
-                            ->default(0)
-                            ->suffix('₽'),
-                        TextInput::make('price_2_3_days')
-                            ->label('2–3 дня')
-                            ->id('motorcycle-price-2-3-days')
-                            ->numeric()
-                            ->suffix('₽'),
-                        TextInput::make('price_week')
-                            ->label('Неделя')
-                            ->id('motorcycle-price-week')
-                            ->numeric()
-                            ->suffix('₽'),
-                        TenantSpatieMediaLibraryFileUpload::make('cover')
-                            ->collection('cover')
-                            ->disk(config('media-library.disk_name'))
-                            ->visibility('public')
-                            ->conversionsDisk(config('media-library.disk_name'))
-                            ->image()
-                            ->label('Обложка')
-                            ->helperText('Основное изображение карточки. Рекомендуется 16:9. При редактировании файл сохраняется в медиатеку сразу после успешной загрузки. При создании новой карточки — после первого сохранения формы.')
-                            ->id('motorcycle-cover')
-                            ->columnSpanFull()
-                            ->fetchFileInformation(false)
-                            ->orientImagesFromExif(false)
-                            ->maxSize(15360)
-                            ->afterStateUpdated(self::persistMotorcycleMediaAfterUpload(...)),
-                        TenantSpatieMediaLibraryFileUpload::make('gallery')
-                            ->collection('gallery')
-                            ->disk(config('media-library.disk_name'))
-                            ->visibility('public')
-                            ->conversionsDisk(config('media-library.disk_name'))
-                            ->image()
-                            ->multiple()
-                            ->maxFiles(10)
-                            ->reorderable()
-                            ->label('Галерея')
-                            ->helperText('Дополнительные изображения для слайдера. На экране редактирования новые файлы сохраняются сразу после загрузки.')
-                            ->id('motorcycle-gallery')
-                            ->columnSpanFull()
-                            ->fetchFileInformation(false)
-                            ->orientImagesFromExif(false)
-                            ->maxSize(15360)
-                            ->afterStateUpdated(self::persistMotorcycleMediaAfterUpload(...)),
-                    ])
-                    ->columns(1)
-                    ->columnSpan(['default' => 12, 'lg' => 4]),
+                    ->columnSpan(['default' => 12, 'lg' => 12]),
             ]);
     }
 
@@ -477,6 +237,55 @@ class MotorcycleResource extends Resource
             ])
             ->bulkActions([
                 BulkActionGroup::make([
+                    BulkAction::make('enable_online_booking_by_preset')
+                        ->label('Включить онлайн-запись по группе')
+                        ->icon('heroicon-o-calendar-days')
+                        ->visible(fn (): bool => LinkedBookableSchedulingForm::schedulingFormEditable())
+                        ->form([
+                            Select::make('preset_id')
+                                ->label('Группа настроек')
+                                ->options(fn (): array => BookingSettingsPreset::query()
+                                    ->where('tenant_id', currentTenant()?->id)
+                                    ->orderBy('name')
+                                    ->pluck('name', 'id')
+                                    ->all())
+                                ->searchable()
+                                ->preload()
+                                ->required(),
+                            Toggle::make('sync_title_from_source')
+                                ->label('Синхронизировать название услуги с моделью')
+                                ->default(true),
+                        ])
+                        ->modalDescription('Действие активирует связанную услугу и цель расписания. При необходимости будет создана услуга записи для карточки. Чтобы клиенты видели слоты, у целей должны быть настроены ресурсы расписания и правила доступности.')
+                        ->action(function (BulkAction $action, array $data): void {
+                            $preset = BookingSettingsPreset::query()->find((int) ($data['preset_id'] ?? 0));
+                            if ($preset === null) {
+                                Notification::make()->title('Группа не найдена')->danger()->send();
+
+                                return;
+                            }
+                            $syncTitle = (bool) ($data['sync_title_from_source'] ?? true);
+                            $bulk = app(BookableServiceBulkService::class);
+                            foreach ($action->getSelectedRecords() as $record) {
+                                if (! $record instanceof Motorcycle) {
+                                    continue;
+                                }
+                                try {
+                                    $bulk->applyPresetToMotorcycle(
+                                        $record,
+                                        $preset,
+                                        true,
+                                        BookableServiceSettingsApplyMode::Replace,
+                                        $syncTitle,
+                                    );
+                                } catch (\InvalidArgumentException) {
+                                    Notification::make()->title('Ошибка: проверьте принадлежность карточек клиенту.')->danger()->send();
+
+                                    return;
+                                }
+                            }
+                            Notification::make()->title('Онлайн-запись включена по выбранным карточкам')->success()->send();
+                        }),
                     DeleteBulkAction::make(),
                     ForceDeleteBulkAction::make(),
                     RestoreBulkAction::make(),
@@ -486,46 +295,6 @@ class MotorcycleResource extends Resource
             ->emptyStateHeading('В каталоге пока пусто')
             ->emptyStateDescription('Добавьте карточку техники — её увидят посетители, если включён показ в каталоге.')
             ->emptyStateIcon('heroicon-o-truck');
-    }
-
-    /**
-     * После изменения состояния FileUpload: сразу синхронизировать медиатеку (как при «Сохранить»),
-     * если карточка уже существует в БД. На создании записи record ещё нет — файлы сохранятся при первом submit.
-     */
-    protected static function persistMotorcycleMediaAfterUpload(TenantSpatieMediaLibraryFileUpload $component): void
-    {
-        $record = $component->getRecord();
-        if (! $record instanceof Model || ! $record->exists) {
-            return;
-        }
-
-        $rawState = $component->getRawState() ?? [];
-        $hadTemporaryUpload = collect($rawState)->contains(
-            fn (mixed $file): bool => $file instanceof TemporaryUploadedFile
-        );
-
-        try {
-            $component->deleteAbandonedFiles();
-            $component->saveUploadedFiles();
-        } catch (Throwable $e) {
-            report($e);
-            Notification::make()
-                ->title('Не удалось сохранить файл в хранилище')
-                ->body(config('app.debug') ? $e->getMessage() : 'Проверьте MEDIA_DISK, очередь конверсий и логи сервера.')
-                ->danger()
-                ->persistent()
-                ->send();
-
-            return;
-        }
-
-        if ($hadTemporaryUpload) {
-            Notification::make()
-                ->title('Изображение сохранено')
-                ->success()
-                ->duration(3500)
-                ->send();
-        }
     }
 
     public static function getRelations(): array

@@ -20,7 +20,6 @@ class LeadExporter extends Exporter
             ExportColumn::make('name'),
             ExportColumn::make('phone'),
             ExportColumn::make('email'),
-            ExportColumn::make('messenger'),
             ExportColumn::make('comment'),
             ExportColumn::make('motorcycle.name'),
             ExportColumn::make('rental_date_from'),

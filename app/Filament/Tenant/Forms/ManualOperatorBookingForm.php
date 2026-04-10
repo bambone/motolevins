@@ -4,6 +4,7 @@ namespace App\Filament\Tenant\Forms;
 
 use App\Models\Booking;
 use App\Models\CrmRequest;
+use App\Models\Lead;
 use App\Models\Motorcycle;
 use App\Models\RentalUnit;
 use App\Product\CRM\DTO\ManualBookingCreateData;
@@ -63,10 +64,6 @@ final class ManualOperatorBookingForm
                 ->maxLength(255),
             self::operatorPhoneTextInput(),
             self::operatorEmailTextInput(),
-            TextInput::make('messenger')
-                ->label('Мессенджер')
-                ->maxLength(255)
-                ->helperText('Ник или канал: WhatsApp, Telegram и т.д.'),
             Textarea::make('comment')
                 ->label('Комментарий')
                 ->rows(3)
@@ -140,9 +137,6 @@ final class ManualOperatorBookingForm
                 ->maxLength(255),
             self::operatorPhoneTextInput(),
             self::operatorEmailTextInput(),
-            TextInput::make('messenger')
-                ->label('Мессенджер')
-                ->maxLength(255),
             Textarea::make('comment')
                 ->label('Комментарий')
                 ->rows(2)
@@ -176,6 +170,53 @@ final class ManualOperatorBookingForm
      *
      * @return array<int, Component>
      */
+    /**
+     * Подстановка полей модалки «Бронирование» из существующего {@see Lead}.
+     *
+     * @return array<string, mixed>
+     */
+    public static function bookingFromLeadFormDefaults(Lead $record): array
+    {
+        $defaults = [];
+
+        if ($record->motorcycle_id !== null) {
+            $motorcycleId = (int) $record->motorcycle_id;
+            if ($motorcycleId > 0) {
+                $defaults['motorcycle_id'] = $motorcycleId;
+                $unitId = self::firstActiveRentalUnitIdForMotorcycle($motorcycleId);
+                if ($unitId !== null) {
+                    $defaults['rental_unit_id'] = $unitId;
+                }
+            }
+        }
+
+        if ($record->rental_date_from !== null) {
+            $defaults['start_date'] = $record->rental_date_from;
+        }
+        if ($record->rental_date_to !== null) {
+            $defaults['end_date'] = $record->rental_date_to;
+        }
+
+        return $defaults;
+    }
+
+    private static function firstActiveRentalUnitIdForMotorcycle(int $motorcycleId): ?int
+    {
+        $tenant = currentTenant();
+        if ($tenant === null) {
+            return null;
+        }
+
+        $id = RentalUnit::query()
+            ->where('tenant_id', $tenant->id)
+            ->where('motorcycle_id', $motorcycleId)
+            ->where('status', 'active')
+            ->orderBy('id')
+            ->value('id');
+
+        return $id !== null ? (int) $id : null;
+    }
+
     public static function bookingFromLeadComponents(): array
     {
         return [
@@ -338,7 +379,6 @@ final class ManualOperatorBookingForm
             phone: (string) $data['phone'],
             email: $data['email'] ?? null,
             comment: $data['comment'] ?? null,
-            messenger: $data['messenger'] ?? null,
             createLead: true,
             createCrm: $createCrm,
         ));

@@ -41,9 +41,13 @@
 
     // Select: custom/non-native UI often has no input id matching `for` (see motolevins-core / filament-livewire).
     // Toggle: switch is a <button>; some browsers flag label[for] when ids drift after Livewire partials — omit `for` like Select.
+    // RichEditor / MarkdownEditor / CodeEditor: no single native control with field id (TipTap/CodeMirror); label uses id="{fieldId}-label" for aria-labelledby.
     $omitLabelForAttribute = ($field instanceof \Filament\Forms\Components\Select
         && ($field->isSearchable() || $field->isMultiple() || ! $field->isNative()))
-        || $field instanceof \Filament\Forms\Components\Toggle;
+        || $field instanceof \Filament\Forms\Components\Toggle
+        || $field instanceof \Filament\Forms\Components\RichEditor
+        || $field instanceof \Filament\Forms\Components\MarkdownEditor
+        || $field instanceof \Filament\Forms\Components\CodeEditor;
 
     $aboveLabelSchema = $field?->getChildSchema($field::ABOVE_LABEL_SCHEMA_KEY)?->toHtmlString();
     $belowLabelSchema = $field?->getChildSchema($field::BELOW_LABEL_SCHEMA_KEY)?->toHtmlString();

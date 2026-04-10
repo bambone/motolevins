@@ -47,6 +47,7 @@ final class TenantAbilityRegistry
             'manage_notification_destinations' => 'Получатели уведомлений',
             'manage_notification_subscriptions' => 'Правила уведомлений',
             'manage_push_devices' => 'Push-устройства',
+            'manage_scheduling' => 'Запись и расписание (scheduling)',
         ];
     }
 

@@ -3,6 +3,7 @@
 use App\Http\Controllers\BookingController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\LeadController;
+use App\Http\Controllers\LocationLandingController;
 use App\Http\Controllers\MotorcycleController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\PlatformLlmsTxtController;
@@ -11,14 +12,19 @@ use App\Http\Controllers\PlatformMarketingRobotsController;
 use App\Http\Controllers\PlatformMarketingSitemapController;
 use App\Http\Controllers\PublicBookingController;
 use App\Http\Controllers\RobotsController;
+use App\Http\Controllers\Scheduling\GoogleCalendarOAuthController;
+use App\Http\Controllers\SeoLandingPageController;
 use App\Http\Controllers\SitemapController;
+use App\Http\Controllers\Tenant\TenantPublicSchedulingController;
 use App\Http\Controllers\TenantLlmsTxtController;
-use App\Http\Controllers\TenantPublicFaqController;
 use App\Http\Controllers\TenantPublicBookingAvailabilityController;
+use App\Http\Controllers\TenantPublicFaqController;
 use App\Http\Controllers\TenantPublicPageController;
+use App\Http\Controllers\TenantPublicReviewsController;
 use App\Http\Controllers\TenantPublicStorageFileController;
 use App\Http\Controllers\ThemePlatformAssetController;
 use App\Http\Middleware\EnsureTenantContext;
+use App\Http\Middleware\RememberTenantCatalogLocation;
 use App\Http\Middleware\ResolveTenantPublicSeo;
 use App\Models\TenantDomain;
 use Illuminate\Support\Facades\Route;
@@ -32,6 +38,13 @@ foreach (config('tenancy.central_domains', []) as $h) {
 }
 
 // РљРѕСЂРµРЅСЊ PLATFORM_HOST РѕР±СЂР°Р±Р°С‚С‹РІР°РµС‚ Filament (РіРѕСЃС‚СЊ в†’ /login, РїРѕСЃР»Рµ РІС…РѕРґР° вЂ” РґРѕРјР°С€РЅСЏСЏ СЃС‚СЂР°РЅРёС†Р° РїР°РЅРµР»Рё).
+
+Route::middleware('web')->group(function () {
+    Route::get('/scheduling/oauth/google', [GoogleCalendarOAuthController::class, 'redirect'])
+        ->name('scheduling.oauth.google.redirect');
+    Route::get('/scheduling/oauth/google/callback', [GoogleCalendarOAuthController::class, 'callback'])
+        ->name('scheduling.oauth.google.callback');
+});
 
 if ($marketingHosts !== []) {
     foreach ($marketingHosts as $index => $domain) {
@@ -72,7 +85,7 @@ if ($marketingHosts !== []) {
     }
 }
 
-Route::middleware([EnsureTenantContext::class, ResolveTenantPublicSeo::class])->group(function () {
+Route::middleware([EnsureTenantContext::class, RememberTenantCatalogLocation::class, ResolveTenantPublicSeo::class])->group(function () {
     Route::get('/theme/build/{theme}/{path}', [ThemePlatformAssetController::class, 'show'])
         ->where('path', '.*')
         ->name('theme.platform.asset');
@@ -92,9 +105,14 @@ Route::middleware([EnsureTenantContext::class, ResolveTenantPublicSeo::class])->
         ->defaults('slug', 'usloviya-arenda')
         ->name('terms');
     Route::get('/motorcycles', [MotorcycleController::class, 'catalogIndex'])->name('motorcycles.index');
+    Route::get('/locations/{slug}', [LocationLandingController::class, 'show'])->name('location.show');
+    Route::get('/landings/{slug}', [SeoLandingPageController::class, 'show'])->name('seo_landing.show');
     Route::view('/prices', 'tenant.pages.prices')->name('prices');
     Route::view('/order', 'tenant.pages.order')->name('order');
-    Route::view('/reviews', 'tenant.pages.reviews')->name('reviews');
+    Route::get('/reviews', [TenantPublicReviewsController::class, 'show'])->name('reviews');
+    Route::get('/api/tenant/reviews', [TenantPublicReviewsController::class, 'apiIndex'])
+        ->middleware('throttle:120,1')
+        ->name('api.tenant.reviews');
     Route::get('/faq', TenantPublicFaqController::class)->name('faq');
     Route::get('/about', [TenantPublicPageController::class, 'show'])
         ->defaults('logical', 'pages.about')
@@ -120,5 +138,18 @@ Route::middleware([EnsureTenantContext::class, ResolveTenantPublicSeo::class])->
         ->name('api.tenant.booking.motorcycle-calendar-hints');
     Route::post('/api/bookings', [BookingController::class, 'store'])->name('api.bookings.store');
     Route::post('/api/leads', [LeadController::class, 'store'])->name('api.leads.store');
+    Route::get('/api/tenant/scheduling/bookable-services', [TenantPublicSchedulingController::class, 'bookableServices'])
+        ->middleware('throttle:60,1')
+        ->name('api.tenant.scheduling.bookable-services');
+    Route::get('/api/tenant/scheduling/bookable-services/{id}/slots', [TenantPublicSchedulingController::class, 'slots'])
+        ->whereNumber('id')
+        ->middleware('throttle:120,1')
+        ->name('api.tenant.scheduling.slots');
+    Route::post('/api/tenant/scheduling/holds', [TenantPublicSchedulingController::class, 'hold'])
+        ->middleware('throttle:30,1')
+        ->name('api.tenant.scheduling.holds');
+    Route::post('/api/tenant/scheduling/submit', [TenantPublicSchedulingController::class, 'submit'])
+        ->middleware('throttle:30,1')
+        ->name('api.tenant.scheduling.submit');
     Route::get('/{slug}', [PageController::class, 'show'])->where('slug', '[a-z0-9\-]+')->name('page.show');
 });

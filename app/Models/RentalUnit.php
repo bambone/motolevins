@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class RentalUnit extends Model
 {
@@ -17,6 +18,8 @@ class RentalUnit extends Model
         'external_id',
         'status',
         'config',
+        'unit_label',
+        'notes',
     ];
 
     protected $casts = [
@@ -31,6 +34,12 @@ class RentalUnit extends Model
     public function integration(): BelongsTo
     {
         return $this->belongsTo(Integration::class);
+    }
+
+    public function tenantLocations(): BelongsToMany
+    {
+        return $this->belongsToMany(TenantLocation::class, 'rental_unit_tenant_location')
+            ->withTimestamps();
     }
 
     public static function statuses(): array

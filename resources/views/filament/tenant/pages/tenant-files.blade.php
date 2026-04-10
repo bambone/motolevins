@@ -1,7 +1,36 @@
 <x-filament-panels::page>
     <div class="space-y-4">
+        @if (($q = $this->storageQuota))
+            <div class="rounded-xl border border-gray-200 p-4 dark:border-white/10">
+                <div class="mb-2 flex flex-wrap items-start justify-between gap-2">
+                    <div>
+                        <h2 class="text-sm font-semibold text-gray-950 dark:text-white">{{ __('Хранилище клиента') }}</h2>
+                        <p class="mt-0.5 text-xs text-gray-600 dark:text-gray-400">
+                            {{ __('Выделено') }}: {{ \Illuminate\Support\Number::fileSize($q->effectiveQuotaBytes, precision: 1) }},
+                            {{ __('занято') }}: {{ \Illuminate\Support\Number::fileSize($q->usedBytes, precision: 1) }},
+                            {{ __('свободно') }}: {{ \Illuminate\Support\Number::fileSize($q->freeBytes, precision: 1) }}
+                        </p>
+                    </div>
+                    <a
+                        href="{{ \App\Filament\Tenant\Pages\StorageMonitoringPage::getUrl() }}"
+                        class="text-xs font-medium text-amber-700 underline hover:no-underline dark:text-amber-400"
+                    >{{ __('Подробнее в мониторинге') }}</a>
+                </div>
+                <div class="mb-1 flex justify-between text-xs text-gray-600 dark:text-gray-400">
+                    <span>{{ __('Заполнено') }}</span>
+                    <span>{{ number_format($q->usedPercent, 1) }}%</span>
+                </div>
+                <div class="h-3 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700" role="presentation">
+                    @include('filament.tenant.partials.storage-quota-progress-meter', [
+                        'usedPercent' => $q->usedPercent,
+                        'tier' => $q->progressBarTier(),
+                        'variant' => 'page',
+                    ])
+                </div>
+            </div>
+        @endif
         <p class="text-sm text-gray-600 dark:text-gray-400">
-            {{ __('Файлы в зонах site, themes и media текущего клиента. Можно копировать object key или публичный URL.') }}
+            {{ __('Файлы в зонах site, themes и media текущего клиента. Список разбит на страницы: метаданные (размер и дата) запрашиваются только для текущей порции, чтобы быстрее открывать каталог на облачном диске.') }}
         </p>
         <div class="flex flex-col gap-3 sm:flex-row sm:items-end">
             <div class="min-w-0 flex-1">
@@ -111,5 +140,33 @@
                 </tbody>
             </table>
         </div>
+
+        @php
+            $tfPage = $this->filePage;
+            $tfLast = $this->fileCatalogLastPage;
+            $tfTotal = $this->fileCatalogTotal;
+        @endphp
+        @if ($tfTotal > 0)
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <p class="text-xs text-gray-600 dark:text-gray-400">
+                    {{ __('Показано :from–:to из :total', ['from' => ($tfPage - 1) * $this->filesPerPage + 1, 'to' => min($tfTotal, $tfPage * $this->filesPerPage), 'total' => $tfTotal]) }}
+                </p>
+                <div class="flex flex-wrap items-center gap-2">
+                    <button
+                        type="button"
+                        wire:click="gotoFilePage({{ $tfPage - 1 }})"
+                        @disabled($tfPage <= 1)
+                        class="fi-btn rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-800 disabled:cursor-not-allowed disabled:opacity-40 dark:border-white/10 dark:text-gray-200"
+                    >{{ __('Назад') }}</button>
+                    <span class="text-xs text-gray-600 dark:text-gray-400">{{ __('Страница :p из :last', ['p' => $tfPage, 'last' => $tfLast]) }}</span>
+                    <button
+                        type="button"
+                        wire:click="gotoFilePage({{ $tfPage + 1 }})"
+                        @disabled($tfPage >= $tfLast)
+                        class="fi-btn rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-800 disabled:cursor-not-allowed disabled:opacity-40 dark:border-white/10 dark:text-gray-200"
+                    >{{ __('Вперёд') }}</button>
+                </div>
+            </div>
+        @endif
     </div>
 </x-filament-panels::page>

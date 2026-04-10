@@ -7,6 +7,8 @@ use App\Models\Booking;
 use App\Models\Lead;
 use App\Models\Motorcycle;
 use App\Models\RentalUnit;
+use App\Services\Catalog\MotorcycleLocationCatalogService;
+use App\Services\Catalog\TenantPublicCatalogLocationService;
 use App\Support\PhoneNormalizer;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
@@ -23,6 +25,8 @@ final class TenantPublicBookingAvailabilityService
     public function __construct(
         private readonly AvailabilityService $availabilityService,
         private readonly BookingService $bookingService,
+        private readonly MotorcycleLocationCatalogService $motorcycleLocationCatalog,
+        private readonly TenantPublicCatalogLocationService $tenantPublicCatalogLocation,
     ) {}
 
     public function catalogAvailabilityForMotorcycles(int $tenantId, array $motorcycleIds, string $startDate, string $endDate): array
@@ -43,26 +47,60 @@ final class TenantPublicBookingAvailabilityService
         $start = Carbon::parse($startDate)->startOfDay();
         $end = Carbon::parse($endDate)->endOfDay();
 
+        $location = $this->tenantPublicCatalogLocation->resolve();
+
         $result = [];
         foreach ($validIds as $id) {
             $result[$id] = true;
         }
 
-        $unitsByMoto = RentalUnit::query()
-            ->whereIn('motorcycle_id', $validIds)
+        $eligibleIds = [];
+        foreach ($validIds as $id) {
+            $m = Motorcycle::query()->find($id);
+            if ($m === null) {
+                continue;
+            }
+            if ($location !== null && ! $this->motorcycleLocationCatalog->isMotorcycleVisibleAtLocation($m, $location)) {
+                $result[(int) $id] = false;
+
+                continue;
+            }
+            $eligibleIds[] = $id;
+        }
+
+        if ($eligibleIds === []) {
+            return $result;
+        }
+
+        $unitsByMotoRaw = RentalUnit::query()
+            ->whereIn('motorcycle_id', $eligibleIds)
             ->where('status', 'active')
             ->get()
             ->groupBy('motorcycle_id');
 
         $withoutUnits = [];
         $withUnits = [];
-        foreach ($validIds as $mid) {
-            $group = $unitsByMoto->get($mid, collect());
+        foreach ($eligibleIds as $mid) {
+            $m = Motorcycle::query()->find($mid);
+            $group = $unitsByMotoRaw->get($mid, collect());
             if ($group->isEmpty()) {
                 $withoutUnits[] = $mid;
-            } else {
-                $withUnits[$mid] = $group;
+
+                continue;
             }
+            if ($location !== null && $m !== null) {
+                $allowedIds = $this->motorcycleLocationCatalog->rentalUnitsQueryForPublic($m, $location)
+                    ->pluck('id')
+                    ->map(fn ($uid) => (int) $uid)
+                    ->all();
+                $group = $group->filter(fn ($u) => in_array((int) $u->id, $allowedIds, true))->values();
+            }
+            if ($group->isEmpty()) {
+                $result[(int) $mid] = false;
+
+                continue;
+            }
+            $withUnits[$mid] = $group;
         }
 
         if ($withoutUnits !== []) {
@@ -143,10 +181,40 @@ final class TenantPublicBookingAvailabilityService
         $fromDay = Carbon::parse($rangeFrom)->startOfDay();
         $toDay = Carbon::parse($rangeTo)->startOfDay();
 
+        $motorcycle = Motorcycle::query()
+            ->where('tenant_id', $tenantId)
+            ->whereKey($motorcycleId)
+            ->first();
+
+        $location = $this->tenantPublicCatalogLocation->resolve();
+        if ($motorcycle !== null && $location !== null && ! $this->motorcycleLocationCatalog->isMotorcycleVisibleAtLocation($motorcycle, $location)) {
+            $disabledDates = [];
+            foreach (CarbonPeriod::create($fromDay->toDateString(), $toDay->toDateString()) as $date) {
+                $disabledDates[] = $date->toDateString();
+            }
+
+            return [
+                'disabled_dates' => $disabledDates,
+                'is_range_available' => false,
+                'available_ranges' => [],
+                'already_booked_by_phone' => false,
+                'pending_request_dates' => [],
+                'pending_requests_on_selected_range' => false,
+            ];
+        }
+
         $units = RentalUnit::query()
             ->where('motorcycle_id', $motorcycleId)
             ->where('status', 'active')
             ->get();
+
+        if ($motorcycle !== null && $location !== null) {
+            $allowedIds = $this->motorcycleLocationCatalog->rentalUnitsQueryForPublic($motorcycle, $location)
+                ->pluck('id')
+                ->map(fn ($id) => (int) $id)
+                ->all();
+            $units = $units->filter(fn ($u) => in_array((int) $u->id, $allowedIds, true))->values();
+        }
 
         $bookingsWindow = collect();
         $blocksByUnit = collect();

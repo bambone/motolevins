@@ -27,7 +27,7 @@ final class TenantPivotPermissions
             'tenant_owner' => $all,
             'tenant_admin' => $all,
             'booking_manager' => ['manage_leads', 'export_leads', 'manage_bookings'],
-            'fleet_manager' => ['manage_motorcycles', 'manage_integrations'],
+            'fleet_manager' => ['manage_motorcycles'],
             'content_manager' => [
                 'manage_pages', 'manage_homepage', 'manage_motorcycles',
                 'manage_reviews', 'manage_faq', 'manage_contacts',

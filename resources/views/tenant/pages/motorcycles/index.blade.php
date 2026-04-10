@@ -3,17 +3,33 @@
 @section('title', 'Мотоциклы')
 
 @section('content')
+    @php
+        $catalogIntroSection = $catalogIntroSection ?? null;
+        $catalogIntroView = $catalogIntroSection instanceof \App\Models\PageSection
+            ? app(\App\Services\PageBuilder\SectionViewResolver::class)->resolveViewName($catalogIntroSection)
+            : null;
+    @endphp
     <section class="pt-24 pb-8 sm:pt-28 sm:pb-10">
         <div class="mx-auto max-w-6xl px-3 sm:px-4 md:px-8">
             <h1 class="text-balance text-2xl font-bold leading-tight text-white sm:text-3xl md:text-4xl">{{ ($resolvedSeo ?? null)?->h1 ?? 'Каталог мотоциклов' }}</h1>
-            <p class="mt-4 max-w-3xl text-sm leading-relaxed text-silver sm:text-base">
-                Здесь собраны модели Honda, доступные в прокате на побережье Чёрного моря (Геленджик, Анапа, Новороссийск).
-                Цены за сутки указаны на карточках; полные условия — в разделе
-                <a href="{{ route('terms') }}" class="font-semibold text-moto-amber underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moto-amber">условия аренды</a>.
-                Забронировать даты можно через
-                <a href="{{ route('booking.index') }}" class="font-semibold text-moto-amber underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moto-amber">онлайн-бронирование</a>
-                или с главной страницы — там же фильтры по датам и локации.
-            </p>
+            @if ($catalogIntroView !== null)
+                <div class="catalog-seo-intro mt-4 max-w-3xl">
+                    @include($catalogIntroView, [
+                        'section' => $catalogIntroSection,
+                        'data' => is_array($catalogIntroSection->data_json) ? $catalogIntroSection->data_json : [],
+                    ])
+                </div>
+            @else
+                <p class="mt-4 max-w-3xl text-sm leading-relaxed text-silver sm:text-base">
+                    Здесь собраны модели Honda, доступные в прокате на побережье Чёрного моря (Геленджик, Анапа, Новороссийск).
+                    Цены за сутки указаны на карточках; полные условия — в разделе
+                    <a href="{{ route('terms') }}" class="font-semibold text-moto-amber underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moto-amber">условия аренды</a>.
+                    Забронировать даты можно через
+                    <a href="{{ route('booking.index') }}" class="font-semibold text-moto-amber underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moto-amber">онлайн-бронирование</a>
+                    или с главной страницы — там же фильтры по датам и локации.
+                </p>
+            @endif
+            @include('tenant.partials.catalog-location-filter')
         </div>
     </section>
 
@@ -66,5 +82,6 @@
         </div>
     </section>
 
-    <x-booking-modal />
+    @php($preferredChannelFormOptions = currentTenant() ? app(\App\ContactChannels\TenantContactChannelsStore::class)->publicFormPreferredOptions(currentTenant()->id) : [])
+    <x-booking-modal :preferredChannelFormOptions="$preferredChannelFormOptions" />
 @endsection

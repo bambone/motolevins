@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="dark scroll-smooth overflow-x-clip">
+<html lang="{{ \App\Services\Seo\TenantPublicHtmlLang::attribute(tenant()) }}" class="dark scroll-smooth overflow-x-clip">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -445,6 +445,25 @@
         }
         .tenant-thin-scrollbar::-webkit-scrollbar-thumb:hover {
             background: rgba(232, 93, 4, 0.5);
+        }
+        /* Подсветка поля при ошибке валидации (модалка / формы): вспышка и возврат к обычному виду ~2 с */
+        @keyframes tenant-field-error-burst {
+            0% {
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+            }
+            35% {
+                box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.45), 0 0 22px rgba(239, 68, 68, 0.3);
+            }
+            70% {
+                box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.25);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+            }
+        }
+        .tenant-field-error-flash {
+            border-color: rgb(248 113 113) !important;
+            animation: tenant-field-error-burst 0.55s ease-out 2;
         }
     </style>
 </head>

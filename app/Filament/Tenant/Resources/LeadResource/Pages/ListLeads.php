@@ -68,7 +68,6 @@ class ListLeads extends ListRecords
                         phone: (string) $data['phone'],
                         email: $data['email'] ?? null,
                         comment: $data['comment'] ?? null,
-                        messenger: $data['messenger'] ?? null,
                         motorcycleId: $motorcycleId ?: null,
                         rentalDateFromYmd: $fromYmd,
                         rentalDateToYmd: $toYmd,

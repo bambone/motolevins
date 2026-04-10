@@ -8,7 +8,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Кабинет клиента (Filament admin) — русский UI для встроенных строк пакетов
- * (кнопки «Создать», таблицы, модалки), пока APP_LOCALE=en для остального приложения.
+ * (кнопки «Создать», таблицы, модалки). Локаль временно принудительно ru на время запроса.
  */
 final class SetTenantFilamentLocale
 {

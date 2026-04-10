@@ -43,6 +43,7 @@ trait CreatesTenantsWithDomains
             'name' => 'Tenant '.$slug,
             'slug' => $slug,
             'status' => 'active',
+            'scheduling_module_enabled' => true,
         ], $tenantAttributes));
 
         $host = $this->tenancyHostForSlug($slug);

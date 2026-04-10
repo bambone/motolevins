@@ -6,6 +6,7 @@ use App\Filament\Tenant\Resources\NotificationDestinationResource\Pages;
 use App\Models\NotificationDestination;
 use App\NotificationCenter\NotificationChannelType;
 use App\NotificationCenter\NotificationDestinationStatus;
+use App\Tenant\Filament\TenantCabinetUserPicker;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\KeyValue;
@@ -90,11 +91,11 @@ class NotificationDestinationResource extends Resource
                         ->relationship(
                             name: 'user',
                             titleAttribute: 'name',
-                            modifyQueryUsing: function ($query): void {
-                                $tid = currentTenant()?->id;
-                                if ($tid !== null) {
-                                    $query->whereHas('tenants', fn ($q) => $q->where('tenant_id', $tid));
-                                }
+                            modifyQueryUsing: function (Builder $query): void {
+                                TenantCabinetUserPicker::applyCabinetTeamScope(
+                                    $query,
+                                    currentTenant()?->id,
+                                );
                             },
                         )
                         ->searchable(false)

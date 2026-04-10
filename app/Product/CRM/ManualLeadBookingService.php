@@ -39,20 +39,6 @@ final class ManualLeadBookingService
         private readonly AvailabilityService $availabilityService,
     ) {}
 
-    /**
-     * Канал CRM для поля {@see CrmRequest::$channel}; свободный текст мессенджера маппится в обобщённый канал.
-     */
-    public static function crmChannelForMessenger(?string $messenger): string
-    {
-        $m = $messenger !== null ? strtolower(trim($messenger)) : '';
-
-        return match ($m) {
-            'whatsapp' => 'whatsapp',
-            'telegram' => 'telegram',
-            default => 'phone',
-        };
-    }
-
     private function normalizedOperatorPhone(?string $raw): string
     {
         return IntlPhoneNormalizer::normalizePhone((string) ($raw ?? ''));
@@ -106,7 +92,6 @@ final class ManualLeadBookingService
                     'name' => $data->name,
                     'phone' => $this->normalizedOperatorPhone($data->phone),
                     'email' => $this->optionalOperatorEmail($data->email),
-                    'messenger' => $data->messenger,
                     'comment' => $data->comment,
                     'motorcycle_id' => $data->motorcycleId,
                     'rental_date_from' => $data->rentalDateFromYmd,
@@ -183,7 +168,6 @@ final class ManualLeadBookingService
                         'name' => $data->name,
                         'phone' => $this->normalizedOperatorPhone($data->phone),
                         'email' => $this->optionalOperatorEmail($data->email),
-                        'messenger' => $data->messenger,
                         'comment' => $data->comment,
                         'motorcycle_id' => $data->motorcycleId,
                         'rental_date_from' => $data->startDateYmd,
@@ -280,11 +264,10 @@ final class ManualLeadBookingService
             email: $this->optionalOperatorEmail($data->email),
             message: $data->comment,
             source: 'manual',
-            channel: self::crmChannelForMessenger($data->messenger),
+            channel: 'phone',
             payloadJson: $payload,
             landingPage: '/admin',
             leadInitialStatus: 'in_progress',
-            leadMessenger: $data->messenger,
         );
     }
 
@@ -303,10 +286,9 @@ final class ManualLeadBookingService
             email: $this->optionalOperatorEmail($data->email),
             message: $data->comment,
             source: 'manual',
-            channel: self::crmChannelForMessenger($data->messenger),
+            channel: 'phone',
             payloadJson: $payload,
             landingPage: '/admin',
-            leadMessenger: $data->messenger,
             leadInitialStatus: 'in_progress',
         );
     }
@@ -320,7 +302,6 @@ final class ManualLeadBookingService
             'name' => $data->name !== '' ? $data->name : $lead->name,
             'phone' => filled($data->phone) ? $this->normalizedOperatorPhone($data->phone) : $lead->phone,
             'email' => $this->optionalOperatorEmail($data->email) ?? $lead->email,
-            'messenger' => $data->messenger ?? $lead->messenger,
             'comment' => $data->comment ?? $lead->comment,
         ])->save();
     }

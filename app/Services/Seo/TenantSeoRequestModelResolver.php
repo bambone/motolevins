@@ -2,8 +2,10 @@
 
 namespace App\Services\Seo;
 
+use App\Models\LocationLandingPage;
 use App\Models\Motorcycle;
 use App\Models\Page;
+use App\Models\SeoLandingPage;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 
@@ -30,6 +32,8 @@ final class TenantSeoRequestModelResolver
             'page.show' => $this->pageFromSlug($this->slugForPageShow($request)),
             'motorcycle.show' => $this->motorcycleFromSlug($request->route('slug'), requireAvailable: true),
             'booking.show' => $this->motorcycleFromSlug($request->route('slug'), requireAvailable: false),
+            'location.show' => $this->locationFromSlug($request->route('slug')),
+            'seo_landing.show' => $this->seoLandingFromSlug($request->route('slug')),
             default => null,
         };
     }
@@ -78,5 +82,29 @@ final class TenantSeoRequestModelResolver
         }
 
         return $q->first();
+    }
+
+    private function locationFromSlug(mixed $slug): ?LocationLandingPage
+    {
+        if (! is_string($slug) || $slug === '') {
+            return null;
+        }
+
+        return LocationLandingPage::query()
+            ->where('slug', $slug)
+            ->where('is_published', true)
+            ->first();
+    }
+
+    private function seoLandingFromSlug(mixed $slug): ?SeoLandingPage
+    {
+        if (! is_string($slug) || $slug === '') {
+            return null;
+        }
+
+        return SeoLandingPage::query()
+            ->where('slug', $slug)
+            ->where('is_published', true)
+            ->first();
     }
 }

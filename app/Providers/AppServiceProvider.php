@@ -12,6 +12,7 @@ use App\Models\Lead;
 use App\Models\Motorcycle;
 use App\Models\Page;
 use App\Models\PageSection;
+use App\Models\RentalUnit;
 use App\Models\Review;
 use App\Models\Setting;
 use App\Models\TenantSetting;
@@ -30,6 +31,11 @@ use App\PageBuilder\PageSectionTypeRegistry;
 use App\Product\Mail\ProductMailOrchestrator;
 use App\Product\Settings\MarketingContentResolver;
 use App\Product\Settings\ProductMailSettingsResolver;
+use App\Scheduling\Calendar\CaldavCalendarProviderAdapter;
+use App\Scheduling\Calendar\CalendarAdapterRegistry;
+use App\Scheduling\Calendar\GoogleCalendarProviderAdapter;
+use App\Scheduling\Calendar\NullCalendarProviderAdapter;
+use App\Scheduling\LinkedBookableServiceManager;
 use App\Services\CurrentTenantManager;
 use App\Services\Mail\TenantMailer;
 use App\Services\PageBuilder\PageSectionOperationsService;
@@ -86,6 +92,15 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(NotificationRouter::class);
         $this->app->singleton(NotificationEventRecorder::class);
         $this->app->singleton(NotificationChannelDriverFactory::class);
+
+        $this->app->singleton(CalendarAdapterRegistry::class, function ($app) {
+            return new CalendarAdapterRegistry([
+                $app->make(GoogleCalendarProviderAdapter::class),
+                $app->make(CaldavCalendarProviderAdapter::class),
+            ], $app->make(NullCalendarProviderAdapter::class));
+        });
+
+        $this->app->singleton(LinkedBookableServiceManager::class);
     }
 
     /**
@@ -142,6 +157,14 @@ class AppServiceProvider extends ServiceProvider
             if ($m->tenant_id) {
                 $forgetTenantHome((int) $m->tenant_id);
             }
+        });
+
+        Motorcycle::saved(static function (Motorcycle $m): void {
+            app(LinkedBookableServiceManager::class)->syncLinkedBookableFromMotorcycle($m);
+        });
+
+        RentalUnit::saved(static function (RentalUnit $unit): void {
+            app(LinkedBookableServiceManager::class)->syncLinkedBookableFromRentalUnit($unit);
         });
 
         Faq::saved(static function (Faq $faq) use ($forgetTenantHome): void {

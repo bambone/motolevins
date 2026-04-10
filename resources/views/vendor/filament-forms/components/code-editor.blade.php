@@ -1,4 +1,5 @@
 @php
+    $id = $getId();
     $fieldWrapperView = $getFieldWrapperView();
     $extraAttributeBag = $getExtraAttributeBag();
     $isDisabled = $isDisabled();
@@ -10,16 +11,20 @@
     $language = $getLanguage();
     $statePath = $getStatePath();
     $livewireKey = $getLivewireKey();
+
+    $codeEditorInputWrapperAttributes = \Filament\Support\prepare_inherited_attributes($extraAttributeBag)
+        ->merge([
+            'aria-labelledby' => $id . '-label',
+            'role' => 'group',
+        ], escape: false)
+        ->class(['fi-fo-code-editor']);
 @endphp
 
 <x-dynamic-component :component="$fieldWrapperView" :field="$field">
     <x-filament::input.wrapper
         :disabled="$isDisabled"
         :valid="! $errors->has($statePath)"
-        :attributes="
-            \Filament\Support\prepare_inherited_attributes($extraAttributeBag)
-                ->class(['fi-fo-code-editor'])
-        "
+        :attributes="$codeEditorInputWrapperAttributes"
     >
         <div
             x-load

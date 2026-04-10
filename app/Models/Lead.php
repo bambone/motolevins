@@ -18,8 +18,10 @@ class Lead extends Model
         'crm_request_id',
         'name',
         'phone',
+        'preferred_contact_channel',
+        'preferred_contact_value',
+        'visitor_contact_channels_json',
         'email',
-        'messenger',
         'comment',
         'motorcycle_id',
         'customer_id',
@@ -40,6 +42,7 @@ class Lead extends Model
     protected $casts = [
         'rental_date_from' => 'date',
         'rental_date_to' => 'date',
+        'visitor_contact_channels_json' => 'array',
     ];
 
     protected static function booted(): void

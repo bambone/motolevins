@@ -2,9 +2,11 @@
 
 namespace App\Services\Seo;
 
+use App\Models\LocationLandingPage;
 use App\Models\Motorcycle;
 use App\Models\Page;
 use App\Models\PageSection;
+use App\Models\SeoLandingPage;
 use App\Models\SeoMeta;
 use App\Models\Tenant;
 
@@ -114,6 +116,58 @@ final class SitemapUrlProvider
                 'changefreq' => 'weekly',
                 'priority' => '0.7',
                 'lastmod' => $moto->updated_at?->format('Y-m-d'),
+            ];
+        }
+
+        $locations = LocationLandingPage::query()
+            ->where('tenant_id', $tenant->id)
+            ->where('is_published', true)
+            ->whereNotNull('slug')
+            ->where('slug', '!=', '')
+            ->with('seoMeta')
+            ->get();
+
+        foreach ($locations as $locRow) {
+            if (! $this->isSeoIndexable($locRow->seoMeta)) {
+                continue;
+            }
+            $slug = trim((string) $locRow->slug);
+            $loc = $base.'/locations/'.rawurlencode($slug);
+            if (isset($seen[$loc])) {
+                continue;
+            }
+            $seen[$loc] = true;
+            $out[] = [
+                'loc' => $loc,
+                'changefreq' => 'monthly',
+                'priority' => '0.6',
+                'lastmod' => $locRow->updated_at?->format('Y-m-d'),
+            ];
+        }
+
+        $landings = SeoLandingPage::query()
+            ->where('tenant_id', $tenant->id)
+            ->where('is_published', true)
+            ->whereNotNull('slug')
+            ->where('slug', '!=', '')
+            ->with('seoMeta')
+            ->get();
+
+        foreach ($landings as $landing) {
+            if (! $this->isSeoIndexable($landing->seoMeta)) {
+                continue;
+            }
+            $slug = trim((string) $landing->slug);
+            $loc = $base.'/landings/'.rawurlencode($slug);
+            if (isset($seen[$loc])) {
+                continue;
+            }
+            $seen[$loc] = true;
+            $out[] = [
+                'loc' => $loc,
+                'changefreq' => 'monthly',
+                'priority' => '0.55',
+                'lastmod' => $landing->updated_at?->format('Y-m-d'),
             ];
         }
 

@@ -2,8 +2,10 @@
 
 namespace App\Services\Seo;
 
+use App\Models\LocationLandingPage;
 use App\Models\Motorcycle;
 use App\Models\Page;
+use App\Models\SeoLandingPage;
 use App\Models\SeoMeta;
 use App\Models\Tenant;
 use App\Models\TenantSetting;
@@ -17,6 +19,7 @@ final class TenantSeoResolver
         private FallbackSeoGenerator $fallback,
         private TenantCanonicalPublicBaseUrl $canonicalBase,
         private JsonLdGenerator $jsonLd,
+        private TenantPublicOgImageResolver $ogImageResolver,
     ) {}
 
     /**
@@ -84,8 +87,11 @@ final class TenantSeoResolver
         $ogTitle = (string) TenantSeoMerge::firstFilled($seo?->og_title, $title);
         $ogDescription = (string) TenantSeoMerge::firstFilled($seo?->og_description, $description);
 
-        $ogImage = TenantSeoMerge::isFilled($seo?->og_image) ? trim((string) $seo->og_image) : null;
-        $ogType = TenantSeoMerge::isFilled($seo?->og_type) ? trim((string) $seo->og_type) : 'website';
+        $ogImage = $this->ogImageResolver->resolve($seo, $model, $tenant);
+        $defaultOgType = ($model instanceof Motorcycle && in_array($routeName, ['motorcycle.show', 'booking.show'], true))
+            ? 'product'
+            : 'website';
+        $ogType = TenantSeoMerge::isFilled($seo?->og_type) ? trim((string) $seo->og_type) : $defaultOgType;
         $twitterCard = TenantSeoMerge::isFilled($seo?->twitter_card) ? trim((string) $seo->twitter_card) : 'summary_large_image';
         $metaKeywords = TenantSeoMerge::isFilled($seo?->meta_keywords) ? trim((string) $seo->meta_keywords) : null;
 
@@ -133,6 +139,12 @@ final class TenantSeoResolver
         if ($model instanceof Motorcycle) {
             return $this->fallback->forMotorcycle($tenant, $model);
         }
+        if ($model instanceof LocationLandingPage) {
+            return $this->fallback->forLocationLandingPage($tenant, $model);
+        }
+        if ($model instanceof SeoLandingPage) {
+            return $this->fallback->forSeoLandingPage($tenant, $model);
+        }
 
         return $this->fallback->forRouteOnly($tenant, $routeName);
     }
@@ -157,6 +169,11 @@ final class TenantSeoResolver
         return $this->defaultCanonicalForRequest($request, $tenant);
     }
 
+    /**
+     * Canonical policy for public tenant pages: absolute URL on the tenant public host,
+     * path from {@see Request::path()} (no query string / fragments). Detail pages stay self-canonical
+     * on their stable public path; meta/registry overrides must also be query-free after normalization.
+     */
     private function defaultCanonicalForRequest(Request $request, Tenant $tenant): string
     {
         $base = rtrim($this->canonicalBase->resolve($tenant), '/');
@@ -227,21 +244,59 @@ final class TenantSeoResolver
     /**
      * @return array<string, string>
      */
+    /**
+     * Placeholders for {@see config('seo_routes')}; empty string when data is missing (no fake values).
+     *
+     * @return array<string, string>
+     */
     private function interpolationVars(Tenant $tenant, string $routeName, ?Model $model, string $siteName): array
     {
         $pageName = '';
         $motorcycleName = '';
+        $motorcycleBrand = '';
+        $motorcycleModel = '';
+        $fromPrice = '';
+
         if ($model instanceof Page) {
             $pageName = trim((string) $model->name) ?: (string) $model->slug;
         }
+        $leadForTitle = '';
         if ($model instanceof Motorcycle) {
             $motorcycleName = trim((string) $model->name) ?: (string) $model->slug;
+            $motorcycleBrand = trim((string) $model->brand);
+            $motorcycleModel = trim((string) $model->model);
+            $price = (int) ($model->price_per_day ?? 0);
+            if ($price > 0) {
+                $fromPrice = number_format($price, 0, ',', ' ');
+            }
+            $leadForTitle = trim($motorcycleBrand.' '.$motorcycleModel);
+            if ($leadForTitle === '') {
+                $leadForTitle = $motorcycleName;
+            }
         }
+        if ($model instanceof LocationLandingPage || $model instanceof SeoLandingPage) {
+            $pageName = trim((string) $model->title) ?: (string) $model->slug;
+        }
+
+        $primaryCity = trim((string) TenantSetting::getForTenant($tenant->id, 'general.primary_city', ''));
+        $regionName = trim((string) TenantSetting::getForTenant($tenant->id, 'general.region_name', ''));
+        $catalogHeadline = $primaryCity !== ''
+            ? 'Аренда мотоциклов в '.$primaryCity
+            : 'Каталог мотоциклов';
+        $catalogGeoPhrase = $primaryCity !== '' ? ' в '.$primaryCity : '';
 
         return [
             'site_name' => $siteName,
             'page_name' => $pageName,
             'motorcycle_name' => $motorcycleName,
+            'motorcycle_brand' => $motorcycleBrand,
+            'motorcycle_model' => $motorcycleModel,
+            'from_price' => $fromPrice,
+            'primary_city' => $primaryCity,
+            'region_name' => $regionName,
+            'catalog_headline' => $catalogHeadline,
+            'catalog_geo_phrase' => $catalogGeoPhrase,
+            'lead_for_title' => $leadForTitle,
         ];
     }
 }

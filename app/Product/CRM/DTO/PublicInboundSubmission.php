@@ -29,6 +29,9 @@ final class PublicInboundSubmission
         public readonly ?string $ip = null,
         public readonly ?string $userAgent = null,
         public readonly ?string $leadInitialStatus = null,
-        public readonly ?string $leadMessenger = null,
+        public readonly ?string $preferredContactChannel = null,
+        public readonly ?string $preferredContactValue = null,
+        /** @var list<array<string, mixed>>|null */
+        public readonly ?array $visitorContactChannelsJson = null,
     ) {}
 }

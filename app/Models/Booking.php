@@ -40,6 +40,9 @@ class Booking extends Model
         'payment_status',
         'customer_name',
         'phone',
+        'preferred_contact_channel',
+        'preferred_contact_value',
+        'visitor_contact_channels_json',
         'phone_normalized',
         'source',
         'customer_comment',
@@ -56,6 +59,7 @@ class Booking extends Model
         'total_price' => 'integer',
         'deposit_amount' => 'integer',
         'pricing_snapshot_json' => 'array',
+        'visitor_contact_channels_json' => 'array',
     ];
 
     protected static function booted(): void

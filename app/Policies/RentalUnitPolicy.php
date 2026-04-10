@@ -9,36 +9,36 @@ class RentalUnitPolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->can('manage_integrations');
+        return $user->can('manage_motorcycles') || $user->can('manage_integrations');
     }
 
     public function view(User $user, RentalUnit $rentalUnit): bool
     {
-        return $user->can('manage_integrations');
+        return $user->can('manage_motorcycles') || $user->can('manage_integrations');
     }
 
     public function create(User $user): bool
     {
-        return $user->can('manage_integrations');
+        return $user->can('manage_motorcycles') || $user->can('manage_integrations');
     }
 
     public function update(User $user, RentalUnit $rentalUnit): bool
     {
-        return $user->can('manage_integrations');
+        return $user->can('manage_motorcycles') || $user->can('manage_integrations');
     }
 
     public function delete(User $user, RentalUnit $rentalUnit): bool
     {
-        return $user->can('manage_integrations');
+        return $user->can('manage_motorcycles') || $user->can('manage_integrations');
     }
 
     public function restore(User $user, RentalUnit $rentalUnit): bool
     {
-        return $user->can('manage_integrations');
+        return $user->can('manage_motorcycles') || $user->can('manage_integrations');
     }
 
     public function forceDelete(User $user, RentalUnit $rentalUnit): bool
     {
-        return $user->can('manage_integrations');
+        return $user->can('manage_motorcycles') || $user->can('manage_integrations');
     }
 }

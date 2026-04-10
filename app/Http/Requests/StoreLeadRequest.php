@@ -2,9 +2,12 @@
 
 namespace App\Http\Requests;
 
+use App\ContactChannels\ContactChannelType;
+use App\ContactChannels\TenantContactChannelsStore;
 use App\Support\Phone\IntlPhoneNormalizer;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreLeadRequest extends FormRequest
 {
@@ -20,6 +23,10 @@ class StoreLeadRequest extends FormRequest
                 'phone' => IntlPhoneNormalizer::normalizePhone((string) $this->input('phone')),
             ]);
         }
+
+        $this->merge([
+            'preferred_contact_channel' => $this->input('preferred_contact_channel', ContactChannelType::Phone->value),
+        ]);
     }
 
     /**
@@ -27,6 +34,11 @@ class StoreLeadRequest extends FormRequest
      */
     public function rules(): array
     {
+        $tenant = currentTenant();
+        $allowed = $tenant !== null
+            ? app(TenantContactChannelsStore::class)->allowedPreferredChannelIds($tenant->id)
+            : [ContactChannelType::Phone->value];
+
         return [
             'motorcycle_id' => ['nullable', 'exists:motorcycles,id'],
             'rental_date_from' => ['nullable', 'date'],
@@ -46,6 +58,8 @@ class StoreLeadRequest extends FormRequest
             'comment' => ['nullable', 'string', 'max:1000'],
             'source' => ['nullable', 'string', 'max:50'],
             'page_url' => ['nullable', 'string', 'max:500'],
+            'preferred_contact_channel' => ['required', 'string', Rule::in($allowed)],
+            'preferred_contact_value' => ['nullable', 'string', 'max:500'],
         ];
     }
 }

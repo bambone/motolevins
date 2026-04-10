@@ -3,7 +3,9 @@
 namespace App\Services\Seo;
 
 use App\Models\Faq;
+use App\Models\LocationLandingPage;
 use App\Models\Motorcycle;
+use App\Models\SeoLandingPage;
 use App\Models\Tenant;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
@@ -16,6 +18,8 @@ final class TenantSeoJsonLdFactory
     public function __construct(
         private TenantCanonicalPublicBaseUrl $canonicalBase,
         private FallbackSeoGenerator $fallback,
+        private PublicBreadcrumbsBuilder $breadcrumbs,
+        private TenantHomePublicFaqJsonLdEligibility $homeFaqEligibility,
     ) {}
 
     /**
@@ -33,15 +37,23 @@ final class TenantSeoJsonLdFactory
         $siteUrl = $base.'/';
 
         if ($routeName === 'home') {
-            return $this->organizationAndWebSite($tenant, $siteUrl);
+            return $this->homeGraph($tenant, $siteUrl);
         }
 
         if ($model instanceof Motorcycle && in_array($routeName, ['motorcycle.show', 'booking.show'], true)) {
-            return [$this->productFromMotorcycle($tenant, $model, $canonicalUrl)];
+            $product = $this->productFromMotorcycle($tenant, $model, $canonicalUrl);
+            $crumbs = $this->breadcrumbs->forMotorcycle($tenant, $model);
+            $out = [$product];
+            $bc = $this->breadcrumbListFromCrumbs($crumbs);
+            if ($bc !== null) {
+                $out[] = $bc;
+            }
+
+            return $out;
         }
 
         if ($routeName === 'motorcycles.index' && is_array($itemListEntries) && $itemListEntries !== []) {
-            return [$this->itemList($itemListEntries)];
+            return $this->catalogGraph($tenant, $canonicalUrl, $itemListEntries);
         }
 
         if ($routeName === 'faq') {
@@ -51,7 +63,125 @@ final class TenantSeoJsonLdFactory
             }
         }
 
+        if ($model instanceof LocationLandingPage && $routeName === 'location.show') {
+            return $this->locationLandingGraph($tenant, $model, $canonicalUrl);
+        }
+
+        if ($model instanceof SeoLandingPage && $routeName === 'seo_landing.show') {
+            return $this->seoLandingGraph($tenant, $model, $canonicalUrl);
+        }
+
         return [];
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function homeGraph(Tenant $tenant, string $siteUrl): array
+    {
+        $graph = $this->organizationAndWebSite($tenant, $siteUrl);
+        $faqs = $this->homeFaqEligibility->eligiblePublishedFaqsForHome($tenant);
+        if ($faqs !== null && $faqs->isNotEmpty()) {
+            $faqBlock = $this->faqPageBlockFromFaqs($faqs);
+            if ($faqBlock !== null) {
+                $graph[] = $faqBlock;
+            }
+        }
+
+        return $graph;
+    }
+
+    /**
+     * @param  list<array{url: string, name: string}>  $itemListEntries
+     * @return list<array<string, mixed>>
+     */
+    private function catalogGraph(Tenant $tenant, string $canonicalUrl, array $itemListEntries): array
+    {
+        $name = $this->fallback->siteName($tenant);
+        $collection = [
+            '@type' => 'CollectionPage',
+            'url' => $canonicalUrl,
+            'name' => 'Каталог мотоциклов'.($name !== '' ? ' — '.$name : ''),
+        ];
+
+        return [
+            $collection,
+            $this->itemList($itemListEntries),
+        ];
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function locationLandingGraph(Tenant $tenant, LocationLandingPage $page, string $canonicalUrl): array
+    {
+        $out = [
+            [
+                '@type' => 'WebPage',
+                'url' => $canonicalUrl,
+                'name' => trim((string) $page->title) ?: (string) $page->slug,
+            ],
+        ];
+        $bc = $this->breadcrumbListFromCrumbs($this->breadcrumbs->forLocationLanding($tenant, $page));
+        if ($bc !== null) {
+            $out[] = $bc;
+        }
+
+        return $out;
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function seoLandingGraph(Tenant $tenant, SeoLandingPage $page, string $canonicalUrl): array
+    {
+        $out = [
+            [
+                '@type' => 'WebPage',
+                'url' => $canonicalUrl,
+                'name' => trim((string) $page->title) ?: (string) $page->slug,
+            ],
+        ];
+        $bc = $this->breadcrumbListFromCrumbs($this->breadcrumbs->forSeoLanding($tenant, $page));
+        if ($bc !== null) {
+            $out[] = $bc;
+        }
+
+        return $out;
+    }
+
+    /**
+     * @param  list<array{name: string, url: string}>  $crumbs
+     */
+    private function breadcrumbListFromCrumbs(array $crumbs): ?array
+    {
+        if ($crumbs === []) {
+            return null;
+        }
+        $elements = [];
+        $pos = 1;
+        foreach ($crumbs as $c) {
+            $name = trim((string) ($c['name'] ?? ''));
+            $url = trim((string) ($c['url'] ?? ''));
+            if ($name === '' || $url === '') {
+                continue;
+            }
+            $elements[] = [
+                '@type' => 'ListItem',
+                'position' => $pos++,
+                'name' => $name,
+                'item' => $url,
+            ];
+        }
+
+        if ($elements === []) {
+            return null;
+        }
+
+        return [
+            '@type' => 'BreadcrumbList',
+            'itemListElement' => $elements,
+        ];
     }
 
     /**
@@ -93,10 +223,16 @@ final class TenantSeoJsonLdFactory
             ->limit($max)
             ->get(['question', 'answer']);
 
-        if ($faqs->isEmpty()) {
-            return [];
-        }
+        $block = $this->faqPageBlockFromFaqs($faqs);
 
+        return $block !== null ? [$block] : [];
+    }
+
+    /**
+     * @param  Collection<int, Faq>  $faqs
+     */
+    private function faqPageBlockFromFaqs(Collection $faqs): ?array
+    {
         $mainEntity = [];
         foreach ($faqs as $faq) {
             $q = trim(strip_tags((string) $faq->question));
@@ -115,14 +251,12 @@ final class TenantSeoJsonLdFactory
         }
 
         if ($mainEntity === []) {
-            return [];
+            return null;
         }
 
         return [
-            [
-                '@type' => 'FAQPage',
-                'mainEntity' => $mainEntity,
-            ],
+            '@type' => 'FAQPage',
+            'mainEntity' => $mainEntity,
         ];
     }
 
@@ -154,18 +288,100 @@ final class TenantSeoJsonLdFactory
             $product['image'] = [(string) $m->cover_url];
         }
 
+        $brand = trim((string) $m->brand);
+        if ($brand !== '') {
+            $product['brand'] = [
+                '@type' => 'Brand',
+                'name' => $brand,
+            ];
+        }
+
+        $m->loadMissing('category');
+        if ($m->category !== null && TenantSeoMerge::isFilled($m->category->name)) {
+            $product['category'] = (string) $m->category->name;
+        }
+
+        $slug = trim((string) $m->slug);
+        if ($slug !== '') {
+            $product['sku'] = $slug;
+        }
+
+        $additional = $this->motorcycleAdditionalPropertiesWhitelist($m);
+        if ($additional !== []) {
+            $product['additionalProperty'] = $additional;
+        }
+
         $price = (int) ($m->price_per_day ?? 0);
         $currency = $this->resolveOfferCurrencyCode($tenant);
         if ($price > 0 && $currency !== null) {
-            $product['offers'] = [
+            $availability = $this->schemaAvailabilityForMotorcycle($m);
+            $offer = [
                 '@type' => 'Offer',
                 'priceCurrency' => $currency,
                 'price' => (string) $price,
                 'url' => $canonicalUrl,
             ];
+            if ($availability !== null) {
+                $offer['availability'] = $availability;
+            }
+            $product['offers'] = $offer;
         }
 
         return $product;
+    }
+
+    /**
+     * Documented mapping only: public catalog + available → InStock; otherwise OutOfStock when listed in catalog.
+     *
+     * @return non-empty-string|null
+     */
+    private function schemaAvailabilityForMotorcycle(Motorcycle $m): ?string
+    {
+        if (! $m->show_in_catalog) {
+            return null;
+        }
+
+        return $m->status === 'available'
+            ? 'https://schema.org/InStock'
+            : 'https://schema.org/OutOfStock';
+    }
+
+    /**
+     * @return list<array<string, string>>
+     */
+    private function motorcycleAdditionalPropertiesWhitelist(Motorcycle $m): array
+    {
+        $out = [];
+        if (filled($m->engine_cc)) {
+            $out[] = [
+                '@type' => 'PropertyValue',
+                'name' => 'engineDisplacement',
+                'value' => number_format((int) $m->engine_cc, 0, ',', ' ').' см³',
+            ];
+        }
+        if (filled($m->power)) {
+            $out[] = [
+                '@type' => 'PropertyValue',
+                'name' => 'power',
+                'value' => (string) $m->power.' л.с.',
+            ];
+        }
+        if (TenantSeoMerge::isFilled($m->transmission)) {
+            $out[] = [
+                '@type' => 'PropertyValue',
+                'name' => 'transmission',
+                'value' => (string) $m->transmission,
+            ];
+        }
+        if (filled($m->year)) {
+            $out[] = [
+                '@type' => 'PropertyValue',
+                'name' => 'modelYear',
+                'value' => (string) $m->year,
+            ];
+        }
+
+        return $out;
     }
 
     private function resolveOfferCurrencyCode(Tenant $tenant): ?string

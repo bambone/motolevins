@@ -2,11 +2,13 @@
 
 namespace App\Models;
 
+use App\Enums\MotorcycleLocationMode;
 use App\Models\Concerns\BelongsToTenant;
 use App\Support\CatalogHighlightNormalizer;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -54,6 +56,8 @@ class Motorcycle extends Model implements HasMedia
         'is_recommended',
         'created_by',
         'updated_by',
+        'uses_fleet_units',
+        'location_mode',
     ];
 
     protected static function booted(): void
@@ -94,6 +98,8 @@ class Motorcycle extends Model implements HasMedia
         'show_on_home' => 'boolean',
         'show_in_catalog' => 'boolean',
         'is_recommended' => 'boolean',
+        'uses_fleet_units' => 'boolean',
+        'location_mode' => MotorcycleLocationMode::class,
     ];
 
     public function category(): BelongsTo
@@ -109,6 +115,12 @@ class Motorcycle extends Model implements HasMedia
     public function rentalUnits(): HasMany
     {
         return $this->hasMany(RentalUnit::class);
+    }
+
+    public function tenantLocations(): BelongsToMany
+    {
+        return $this->belongsToMany(TenantLocation::class, 'motorcycle_tenant_location')
+            ->withTimestamps();
     }
 
     public function registerMediaCollections(): void

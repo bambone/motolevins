@@ -40,14 +40,18 @@ class FaqResource extends Resource
     {
         return $schema
             ->components([
-                Section::make()
+                Section::make('Вопрос и ответ')
                     ->schema([
                         TextInput::make('question')->required()->maxLength(255),
                         Textarea::make('answer')->required()->rows(4),
-                        TextInput::make('category')->maxLength(255),
+                        TextInput::make('category')
+                            ->maxLength(255)
+                            ->helperText('Необязательная группа на странице /faq (например «Аренда», «Доставка»).'),
                         TextInput::make('sort_order')->numeric()->default(0),
                         Select::make('status')->options(Faq::statuses())->required()->default('published'),
-                        Toggle::make('show_on_home')->default(false),
+                        Toggle::make('show_on_home')
+                            ->label('Показывать на главной')
+                            ->helperText('Если включено, пункт может попасть в блок FAQ на главной странице сайта (виджет/секция темы). Полный список — на публичной странице /faq.'),
                     ])->columns(2),
             ]);
     }

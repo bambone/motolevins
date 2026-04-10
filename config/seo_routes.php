@@ -30,8 +30,8 @@ return [
             'h1' => 'Условия аренды',
         ],
         'motorcycles.index' => [
-            'title' => 'Каталог мотоциклов — {site_name}',
-            'description' => 'Все модели в прокате: характеристики, сценарии поездок и цены за сутки. Выберите байк и перейдите к бронированию на сайте {site_name}.',
+            'title' => '{catalog_headline} — {site_name}',
+            'description' => 'Каталог моделей в прокате{catalog_geo_phrase}: цены за сутки, сценарии поездок и бронирование на сайте {site_name}.',
             'h1' => 'Каталог мотоциклов',
         ],
         'prices' => [
@@ -70,9 +70,19 @@ return [
             'h1' => 'Доставка в Геленджик',
         ],
         'motorcycle.show' => [
-            'title' => '{motorcycle_name} — аренда — {site_name}',
+            'title' => '{lead_for_title} — аренда — {site_name}',
             'description' => 'Характеристики и условия проката {motorcycle_name}. Забронируйте даты на сайте {site_name}.',
             'h1' => '{motorcycle_name}',
+        ],
+        'location.show' => [
+            'title' => '{page_name} — {site_name}',
+            'description' => '{page_name}: аренда мотоциклов и условия на сайте {site_name}.',
+            'h1' => '{page_name}',
+        ],
+        'seo_landing.show' => [
+            'title' => '{page_name} — {site_name}',
+            'description' => '{page_name} — материалы и предложения проката на {site_name}.',
+            'h1' => '{page_name}',
         ],
         'booking.index' => [
             'title' => 'Онлайн-бронирование — {site_name}',

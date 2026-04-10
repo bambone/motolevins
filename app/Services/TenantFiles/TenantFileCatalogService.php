@@ -26,17 +26,17 @@ final class TenantFileCatalogService
     private const IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'avif', 'ico'];
 
     /**
+     * Листинг путей без обращений {@code size}/{@code lastModified} к диску (важно для S3/R2).
+     *
      * @return list<array{
      *     path: string,
      *     name: string,
-     *     size: int,
-     *     last_modified: int|null,
      *     segment: 'site'|'themes'|'media',
      *     is_image: bool,
      *     public_url: string|null
      * }>
      */
-    public function listForTenant(int $tenantId, string $typeFilter = self::FILTER_ALL, ?string $search = null): array
+    public function listLightForTenant(int $tenantId, string $typeFilter = self::FILTER_ALL, ?string $search = null): array
     {
         $disk = Storage::disk(TenantStorageDisks::publicDiskName());
         $ts = TenantStorage::forTrusted($tenantId);
@@ -84,9 +84,6 @@ final class TenantFileCatalogService
                     continue;
                 }
 
-                $size = (int) ($disk->size($path) ?: 0);
-                $lastModified = $disk->lastModified($path);
-
                 $publicUrl = null;
                 try {
                     if (preg_match('#^tenants/\d+/public/(.+)$#', $path, $m) === 1) {
@@ -99,8 +96,6 @@ final class TenantFileCatalogService
                 $out[] = [
                     'path' => $path,
                     'name' => $basename,
-                    'size' => $size,
-                    'last_modified' => $lastModified ?: null,
                     'segment' => $segment,
                     'is_image' => $isImage,
                     'public_url' => $publicUrl,
@@ -111,6 +106,61 @@ final class TenantFileCatalogService
         usort($out, static fn (array $a, array $b): int => strcmp($b['path'], $a['path']));
 
         return $out;
+    }
+
+    /**
+     * Дополняет строки из {@see listLightForTenant} размером и датой изменения (по одному запросу к диску на файл).
+     *
+     * @param  list<array{path: string, name: string, segment: string, is_image: bool, public_url: string|null}>  $lightRows
+     * @return list<array{
+     *     path: string,
+     *     name: string,
+     *     size: int,
+     *     last_modified: int|null,
+     *     segment: string,
+     *     is_image: bool,
+     *     public_url: string|null
+     * }>
+     */
+    public function hydrateFileMetadata(int $tenantId, array $lightRows): array
+    {
+        unset($tenantId);
+        $disk = Storage::disk(TenantStorageDisks::publicDiskName());
+        $out = [];
+        foreach ($lightRows as $row) {
+            $path = $row['path'];
+            $size = (int) ($disk->size($path) ?: 0);
+            $lastModified = $disk->lastModified($path);
+            $out[] = [
+                'path' => $path,
+                'name' => $row['name'],
+                'size' => $size,
+                'last_modified' => $lastModified ?: null,
+                'segment' => $row['segment'],
+                'is_image' => $row['is_image'],
+                'public_url' => $row['public_url'],
+            ];
+        }
+
+        return $out;
+    }
+
+    /**
+     * @return list<array{
+     *     path: string,
+     *     name: string,
+     *     size: int,
+     *     last_modified: int|null,
+     *     segment: 'site'|'themes'|'media',
+     *     is_image: bool,
+     *     public_url: string|null
+     * }>
+     */
+    public function listForTenant(int $tenantId, string $typeFilter = self::FILTER_ALL, ?string $search = null): array
+    {
+        $light = $this->listLightForTenant($tenantId, $typeFilter, $search);
+
+        return $this->hydrateFileMetadata($tenantId, $light);
     }
 
     public function isAllowedObjectKey(int $tenantId, string $path): bool

@@ -13,7 +13,6 @@ final class ManualLeadCreateData
         public readonly ?string $phone = null,
         public readonly ?string $email = null,
         public readonly ?string $comment = null,
-        public readonly ?string $messenger = null,
         public readonly ?int $motorcycleId = null,
         public readonly ?string $rentalDateFromYmd = null,
         public readonly ?string $rentalDateToYmd = null,

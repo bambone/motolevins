@@ -45,6 +45,9 @@ class CrmRequest extends Model
         'tenant_id',
         'name',
         'phone',
+        'preferred_contact_channel',
+        'preferred_contact_value',
+        'visitor_contact_channels_json',
         'email',
         'message',
         'request_type',
@@ -74,6 +77,7 @@ class CrmRequest extends Model
     ];
 
     protected $casts = [
+        'visitor_contact_channels_json' => 'array',
         'payload_json' => 'array',
         'last_activity_at' => 'datetime',
         'closed_at' => 'datetime',

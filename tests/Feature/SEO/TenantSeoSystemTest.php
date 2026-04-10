@@ -4,8 +4,10 @@ namespace Tests\Feature\SEO;
 
 use App\Models\Category;
 use App\Models\Faq;
+use App\Models\LocationLandingPage;
 use App\Models\Motorcycle;
 use App\Models\Page;
+use App\Models\PageSection;
 use App\Models\SeoMeta;
 use App\Models\Tenant;
 use App\Models\TenantDomain;
@@ -76,6 +78,7 @@ class TenantSeoSystemTest extends TestCase
         $this->assertMatchesRegularExpression('/<title>[^<]+<\/title>/', $html);
         $this->assertStringNotContainsString(config('app.name'), $html);
         $this->assertStringContainsString('ItemList', $html);
+        $this->assertStringContainsString('CollectionPage', $html);
 
         if (preg_match('/<link rel="canonical" href="([^"]+)"/', $html, $m)
             && preg_match('/<meta property="og:url" content="([^"]+)"/', $html, $o)) {
@@ -138,6 +141,137 @@ class TenantSeoSystemTest extends TestCase
         $this->assertStringContainsString('Product', $html);
         $this->assertStringContainsString('Offer', $html);
         $this->assertStringContainsString('"priceCurrency":"RUB"', $html);
+        $this->assertStringContainsString('BreadcrumbList', $html);
+        $this->assertStringContainsString('https://schema.org/InStock', $html);
+    }
+
+    public function test_motorcycle_canonical_ignores_utm_query_params(): void
+    {
+        $tenant = $this->seedTenantWithDomain('seocanon.apex.test', 'seocanon');
+
+        $cat = Category::query()->create([
+            'tenant_id' => $tenant->id,
+            'name' => 'Road',
+            'slug' => 'road',
+        ]);
+
+        Motorcycle::query()->create([
+            'tenant_id' => $tenant->id,
+            'category_id' => $cat->id,
+            'name' => 'Canon Bike',
+            'slug' => 'canon-bike',
+            'status' => 'available',
+            'show_in_catalog' => true,
+        ]);
+
+        $html = $this->call('GET', 'http://seocanon.apex.test/moto/canon-bike?utm_source=test&utm_medium=x')
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString('<link rel="canonical" href="https://seocanon.apex.test/moto/canon-bike"', $html);
+    }
+
+    public function test_public_html_lang_uses_tenant_locale_bcp47(): void
+    {
+        $tenant = $this->seedTenantWithDomain('seolang.apex.test', 'seolang');
+        $tenant->forceFill(['locale' => 'ru_RU'])->save();
+
+        $html = $this->call('GET', 'http://seolang.apex.test/')
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString('<html lang="ru-RU"', $html);
+    }
+
+    public function test_home_includes_faqpage_json_ld_when_visible_faq_block_and_db_faqs(): void
+    {
+        $tenant = $this->seedTenantWithDomain('seohomefaq.apex.test', 'seohomefaq');
+
+        $page = Page::query()->create([
+            'tenant_id' => $tenant->id,
+            'name' => 'Главная',
+            'slug' => 'home',
+            'template' => 'default',
+            'status' => 'published',
+            'published_at' => now(),
+        ]);
+
+        PageSection::query()->create([
+            'tenant_id' => $tenant->id,
+            'page_id' => $page->id,
+            'section_key' => 'faq_block',
+            'section_type' => 'text_section',
+            'sort_order' => 1,
+            'is_visible' => true,
+            'status' => 'published',
+            'data_json' => [],
+        ]);
+
+        Faq::query()->create([
+            'tenant_id' => $tenant->id,
+            'question' => 'Видимый вопрос?',
+            'answer' => '<p>Видимый ответ.</p>',
+            'status' => 'published',
+            'show_on_home' => true,
+            'sort_order' => 1,
+        ]);
+
+        $html = $this->call('GET', 'http://seohomefaq.apex.test/')
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString('FAQPage', $html);
+        $this->assertStringContainsString('Видимый вопрос?', $html);
+    }
+
+    public function test_home_does_not_emit_faqpage_when_faq_block_but_no_db_faqs(): void
+    {
+        $tenant = $this->seedTenantWithDomain('seohomenofaq.apex.test', 'seohomenofaq');
+
+        $page = Page::query()->create([
+            'tenant_id' => $tenant->id,
+            'name' => 'Главная',
+            'slug' => 'home',
+            'template' => 'default',
+            'status' => 'published',
+            'published_at' => now(),
+        ]);
+
+        PageSection::query()->create([
+            'tenant_id' => $tenant->id,
+            'page_id' => $page->id,
+            'section_key' => 'faq_block',
+            'section_type' => 'text_section',
+            'sort_order' => 1,
+            'is_visible' => true,
+            'status' => 'published',
+            'data_json' => [],
+        ]);
+
+        $html = $this->call('GET', 'http://seohomenofaq.apex.test/')
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringNotContainsString('FAQPage', $html);
+    }
+
+    public function test_sitemap_includes_published_location_landing(): void
+    {
+        $tenant = $this->seedTenantWithDomain('seolocmap.apex.test', 'seolocmap');
+
+        LocationLandingPage::query()->create([
+            'tenant_id' => $tenant->id,
+            'slug' => 'gelendzhik',
+            'title' => 'Геленджик',
+            'is_published' => true,
+            'sort_order' => 0,
+        ]);
+
+        $xml = $this->call('GET', 'http://seolocmap.apex.test/sitemap.xml')
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString('/locations/gelendzhik', $xml);
     }
 
     public function test_faq_page_includes_faqpage_json_ld_when_faqs_exist(): void

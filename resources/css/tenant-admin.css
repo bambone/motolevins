@@ -123,6 +123,39 @@ select.psb-select {
     border-radius: 0.75rem;
 }
 
+/* Linked scheduling: summary на карточке мото / единицы парка — отдельная «плитка», не сливается с фоном секции */
+.linked-scheduling-summary {
+    border-radius: 0.65rem;
+    background-color: #fafafa;
+    border-color: rgb(228 228 231) !important;
+}
+
+.dark .linked-scheduling-summary {
+    background-color: #161822 !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    box-shadow:
+        0 2px 8px rgba(0, 0, 0, 0.38),
+        inset 3px 0 0 0 rgba(161, 161, 170, 0.55) !important;
+}
+
+.dark .linked-scheduling-summary--on {
+    box-shadow:
+        0 2px 8px rgba(0, 0, 0, 0.38),
+        inset 3px 0 0 0 rgba(34, 197, 94, 0.75) !important;
+}
+
+.dark .linked-scheduling-summary--warning {
+    box-shadow:
+        0 2px 8px rgba(0, 0, 0, 0.38),
+        inset 3px 0 0 0 rgba(234, 179, 8, 0.85) !important;
+}
+
+.dark .linked-scheduling-summary--locked {
+    box-shadow:
+        0 2px 8px rgba(0, 0, 0, 0.38),
+        inset 3px 0 0 0 rgba(113, 113, 122, 0.55) !important;
+}
+
 /* Базовая плитка stat (без тяжёлой тени — премиум-дашборд ниже) */
 .dark .fi-wi-stats-overview-stat {
     background-color: #161822 !important;
@@ -316,6 +349,81 @@ select.psb-select {
 
 .dark .fi-lead-stale {
     background-color: rgba(245, 158, 11, 0.04) !important;
+}
+
+/* Lead edit (таблица «Обращения»): ширина slide-over = 50vw + 200px, не шире экрана */
+@media (min-width: 641px) {
+    .fi-modal-window.fi-lead-edit-slide-over {
+        width: min(calc(50vw + 200px), 100vw) !important;
+        max-width: min(calc(50vw + 200px), 100vw) !important;
+    }
+}
+
+/* JSON каналов: без растягивания на остаток высоты модалки */
+.fi-modal-window.fi-lead-edit-slide-over .fi-lead-visitor-json-field,
+.fi-modal-window.fi-lead-edit-slide-over .fi-lead-visitor-channels-json {
+    flex: 0 0 auto !important;
+    min-height: 0 !important;
+}
+
+.fi-modal-window.fi-lead-edit-slide-over .fi-lead-visitor-json-field .fi-fo-field-content {
+    min-height: 0 !important;
+}
+
+/*
+ * Форма обращения (Lead): Filament v4 — колонки в .fi-sc внутри Grid (.fi-lead-form-row).
+ * Без привязки только к slide-over: то же на любой странице с этой формой.
+ * Выровнять зону ввода в паре при разной высоте label/helper.
+ */
+.fi-lead-form-row .fi-sc {
+    align-items: stretch !important;
+}
+
+.fi-lead-form-row .fi-sc > * {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    min-width: 0;
+}
+
+.fi-lead-form-row .fi-sc > * > .fi-sc-component {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    min-width: 0;
+}
+
+.fi-lead-form-row .fi-fo-field.fi-lead-slideover-paired-field {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.fi-lead-form-row .fi-fo-field.fi-lead-slideover-paired-field .fi-fo-field-content-col {
+    margin-top: auto;
+}
+
+/*
+ * «Детали заявки» (Lead): один grid 2×2. Для остальных .fi-lead-form-row margin-top:auto на контенте
+ * выравнивает контролы по нижнему краю ячейки — при разной высоте hint соседние поля и строки «уезжают».
+ * Здесь оставляем верхний поток и не растягиваем .fi-sc-component на всю высоту ячейки.
+ */
+.fi-lead-form-row.fi-lead-details-grid .fi-sc {
+    align-items: start !important;
+}
+
+.fi-lead-form-row.fi-lead-details-grid .fi-sc > * > .fi-sc-component {
+    flex: 0 0 auto;
+}
+
+.fi-lead-form-row.fi-lead-details-grid .fi-fo-field.fi-lead-slideover-paired-field {
+    flex: 0 0 auto;
+}
+
+.fi-lead-form-row.fi-lead-details-grid .fi-fo-field.fi-lead-slideover-paired-field .fi-fo-field-content-col {
+    margin-top: 0 !important;
 }
 
 /* Lead slide-over: timeline rail (линия и узлы слева, текст с отступом; стрелка вверх = от старых к новым) */

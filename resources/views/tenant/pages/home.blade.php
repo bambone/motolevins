@@ -13,6 +13,9 @@
 @section('content')
     <!-- Alpine App State -->
     <div x-data="globalBookingState()" data-bike-ids="{{ $bikeIdsJson }}" class="w-full min-w-0" x-init="$nextTick(() => { const s = Alpine.store('tenantBooking'); if (s.filters.start_date && s.filters.end_date) { setTimeout(() => s.applyCatalogSearch({ scrollToCatalog: false }), 0); } })">
+        <div class="mx-auto max-w-7xl px-3 pt-20 sm:px-4 sm:pt-24 md:px-8">
+            @include('tenant.partials.catalog-location-filter')
+        </div>
         @forelse ($homeLayoutSections as $section)
             @include('tenant.pages.partials.home-section-slot', [
                 'section' => $section,
@@ -32,7 +35,8 @@
             ])
         @endforelse
 
-        <x-booking-modal />
+        @php($preferredChannelFormOptions = currentTenant() ? app(\App\ContactChannels\TenantContactChannelsStore::class)->publicFormPreferredOptions(currentTenant()->id) : [])
+        <x-booking-modal :preferredChannelFormOptions="$preferredChannelFormOptions" />
     </div>
 
     <script>

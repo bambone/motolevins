@@ -4,6 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\Motorcycle;
 use App\Models\TenantSetting;
+use App\Services\Catalog\MotorcycleLocationCatalogService;
+use App\Services\Catalog\TenantPublicCatalogLocationService;
+use App\Services\Seo\CatalogPublicIntroResolver;
+use App\Services\Seo\PublicBreadcrumbsBuilder;
+use App\Services\Seo\RelatedMotorcyclesService;
 use App\Support\RussianPhone;
 
 class MotorcycleController extends Controller
@@ -11,16 +16,21 @@ class MotorcycleController extends Controller
     /**
      * Публичный каталог мотоциклов (отдельный URL /motorcycles): тот же парк, что на главной, без фильтров по датам.
      */
-    public function catalogIndex()
-    {
+    public function catalogIndex(
+        TenantPublicCatalogLocationService $catalogLocation,
+        MotorcycleLocationCatalogService $locationScope,
+    ) {
         abort_if(tenant() === null, 404);
 
-        $bikes = Motorcycle::query()
+        $bikesQuery = Motorcycle::query()
             ->where('show_in_catalog', true)
             ->where('status', 'available')
-            ->with(['category', 'media'])
-            ->orderBy('sort_order')
-            ->get();
+            ->with(['category', 'media']);
+        $selectedCatalogLocation = $catalogLocation->resolve();
+        if ($selectedCatalogLocation !== null) {
+            $locationScope->scopeMotorcyclesVisibleAtLocation($bikesQuery, $selectedCatalogLocation);
+        }
+        $bikes = $bikesQuery->orderBy('sort_order')->get();
 
         $badges = [
             'Хит',
@@ -33,18 +43,34 @@ class MotorcycleController extends Controller
             'Лучший выбор',
         ];
 
+        $tenant = tenant();
+        $catalogIntroSection = $tenant !== null
+            ? app(CatalogPublicIntroResolver::class)->resolveSection($tenant)
+            : null;
+
         return tenant_view('pages.motorcycles.index', [
             'bikes' => $bikes,
             'badges' => $badges,
+            'catalogIntroSection' => $catalogIntroSection,
+            'catalogLocations' => $catalogLocation->activeLocationsForCurrentTenant(),
+            'selectedCatalogLocation' => $selectedCatalogLocation,
+            'catalogLocationFormAction' => route('motorcycles.index'),
         ]);
     }
 
-    public function show(string $slug)
-    {
+    public function show(
+        string $slug,
+        TenantPublicCatalogLocationService $catalogLocation,
+        MotorcycleLocationCatalogService $locationScope,
+    ) {
         $motorcycle = Motorcycle::where('slug', $slug)
             ->where('show_in_catalog', true)
             ->with(['category', 'media'])
             ->firstOrFail();
+
+        $selectedCatalogLocation = $catalogLocation->resolve();
+        $visibleAtSelectedLocation = $selectedCatalogLocation === null
+            || $locationScope->isMotorcycleVisibleAtLocation($motorcycle, $selectedCatalogLocation);
 
         $galleryUrls = [];
         if ($motorcycle->cover_url) {
@@ -55,26 +81,12 @@ class MotorcycleController extends Controller
         }
         $galleryUrls = array_values(array_unique($galleryUrls));
 
-        $relatedQuery = Motorcycle::query()
-            ->where('tenant_id', $motorcycle->tenant_id)
-            ->where('show_in_catalog', true)
-            ->where('status', 'available')
-            ->where('id', '!=', $motorcycle->id)
-            ->with(['category', 'media'])
-            ->orderBy('sort_order');
+        $related = app(RelatedMotorcyclesService::class)->forMotorcycle($motorcycle, 3);
 
-        $related = (clone $relatedQuery)
-            ->when($motorcycle->category_id, fn ($q) => $q->where('category_id', $motorcycle->category_id))
-            ->limit(3)
-            ->get();
-
-        if ($related->count() < 3) {
-            $more = $relatedQuery
-                ->whereNotIn('id', $related->pluck('id'))
-                ->limit(3 - $related->count())
-                ->get();
-            $related = $related->concat($more);
-        }
+        $tenant = tenant();
+        $breadcrumbs = $tenant !== null
+            ? app(PublicBreadcrumbsBuilder::class)->forMotorcycle($tenant, $motorcycle)
+            : [];
 
         $tenantId = $motorcycle->tenant_id;
         $contactPhoneRaw = TenantSetting::getForTenant($tenantId, 'contacts.phone', '');
@@ -84,10 +96,15 @@ class MotorcycleController extends Controller
             'motorcycle' => $motorcycle,
             'galleryUrls' => $galleryUrls,
             'relatedMotorcycles' => $related,
+            'publicBreadcrumbs' => $breadcrumbs,
             'specGroups' => $motorcycle->specGroupsForPublic(),
             'detailContent' => $motorcycle->detailContentForView(),
             'contactTelHref' => RussianPhone::normalize($contactPhoneRaw),
             'contactEmail' => trim((string) $contactEmail),
+            'catalogLocations' => $catalogLocation->activeLocationsForCurrentTenant(),
+            'selectedCatalogLocation' => $selectedCatalogLocation,
+            'catalogLocationFormAction' => route('motorcycles.index'),
+            'visibleAtSelectedLocation' => $visibleAtSelectedLocation,
         ]);
     }
 }
