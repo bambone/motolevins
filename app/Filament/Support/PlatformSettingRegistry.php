@@ -86,6 +86,12 @@ final class PlatformSettingRegistry
                 'description' => 'Сливается поверх config/platform_marketing.php. Редактирование удобнее на странице «Маркетинг и контент».',
                 'type' => 'json',
             ],
+            'marketing.integrations.analytics' => [
+                'group' => self::GROUP_MARKETING,
+                'label' => 'Аналитика маркетингового сайта (JSON)',
+                'description' => 'Тот же формат, что integrations.analytics у клиента. Удобнее править на странице «Маркетинг и контент».',
+                'type' => 'json',
+            ],
             'tenant_storage.default_base_quota_bytes' => [
                 'group' => self::GROUP_STORAGE,
                 'label' => 'Базовая квота хранилища для новых клиентов (байты)',

@@ -1,1 +1,1 @@
-{!! app(\App\Services\Analytics\AnalyticsSnippetRenderer::class)->renderHeadHtml() !!}
+@include('partials.analytics-snippet-head')

@@ -3,14 +3,20 @@
 namespace App\Filament\Platform\Pages;
 
 use App\Filament\Platform\Pages\Concerns\GrantsPlatformPageAccess;
+use App\Filament\Shared\TenantAnalyticsFormSchema;
 use App\Models\PlatformSetting;
+use App\Models\User;
+use App\Services\Analytics\PlatformMarketingAnalyticsPersistence;
+use App\Support\Analytics\AnalyticsSettingsFormMapper;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Validation\ValidationException;
 use JsonException;
 use UnitEnum;
 
@@ -20,7 +26,7 @@ class PlatformMarketingSettingsPage extends Page
 
     protected static ?string $navigationLabel = 'Маркетинг и контент';
 
-    protected static ?string $title = 'Маркетинг, SEO и почта форм';
+    protected static ?string $title = 'Маркетинг: контент, почта и аналитика';
 
     protected static ?string $slug = 'marketing-settings';
 
@@ -43,19 +49,26 @@ class PlatformMarketingSettingsPage extends Page
             ? json_encode($overlay, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT)
             : '';
 
-        $this->getSchema('form')->fill([
+        $fill = [
             'email_contact_form_recipients' => (string) PlatformSetting::get('email.contact_form_recipients', ''),
             'email_default_from_address' => (string) PlatformSetting::get('email.default_from_address', ''),
             'email_default_from_name' => (string) PlatformSetting::get('email.default_from_name', ''),
             'marketing_config_overlay' => $overlayJson,
-        ]);
+        ];
+        if ($this->canEditMarketingAnalytics()) {
+            $fill = array_merge(
+                $fill,
+                AnalyticsSettingsFormMapper::toFormState(
+                    app(PlatformMarketingAnalyticsPersistence::class)->load()
+                )
+            );
+        }
+        $this->getSchema('form')->fill($fill);
     }
 
     public function form(Schema $schema): Schema
     {
-        return $schema
-            ->statePath('data')
-            ->components([
+        $components = [
                 Section::make('Почта входящих форм')
                     ->description('Куда уходит уведомление о заявке с маркетингового сайта и от чьего имени отправляется письмо сотрудникам.')
                     ->schema([
@@ -72,14 +85,23 @@ class PlatformMarketingSettingsPage extends Page
                             ->maxLength(255),
                     ]),
                 Section::make('Контент лендинга (оверлей)')
-                    ->description('JSON поверх config/platform_marketing.php. Ключи совпадают со структурой конфига; перезаписываются рекурсивно.')
+                    ->description('JSON поверх config/platform_marketing.php. Ключи совпадают со структурой конфига; перезаписываются рекурсивно. Техническое SEO (robots, sitemap, llms) — на странице «SEO маркетинга».')
                     ->schema([
                         Textarea::make('marketing_config_overlay')
                             ->label('marketing.config_overlay')
                             ->rows(14)
                             ->helperText('Оставьте пустым, чтобы использовать только файл конфигурации.'),
                     ]),
-            ]);
+        ];
+        if ($this->canEditMarketingAnalytics()) {
+            $components[] = TenantAnalyticsFormSchema::section(true)
+                ->heading('Аналитика маркетингового сайта')
+                ->description('Счётчики на доменах из TENANCY_CENTRAL_DOMAINS (главный лендинг платформы). Тот же модуль и шаблоны сниппетов, что у публичного сайта клиента.');
+        }
+
+        return $schema
+            ->statePath('data')
+            ->components($components);
     }
 
     public function save(): void
@@ -130,9 +152,25 @@ class PlatformMarketingSettingsPage extends Page
             PlatformSetting::set('marketing.config_overlay', $decoded, 'json');
         }
 
+        if ($this->canEditMarketingAnalytics()) {
+            try {
+                $analytics = AnalyticsSettingsFormMapper::toValidatedData($state);
+                app(PlatformMarketingAnalyticsPersistence::class)->save($analytics, Auth::user());
+            } catch (ValidationException $e) {
+                throw $e;
+            }
+        }
+
         Notification::make()
             ->title('Сохранено')
             ->success()
             ->send();
+    }
+
+    private function canEditMarketingAnalytics(): bool
+    {
+        $u = Auth::user();
+
+        return $u instanceof User && $u->hasAnyRole(['platform_owner', 'platform_admin']);
     }
 }

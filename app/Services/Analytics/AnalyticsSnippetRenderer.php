@@ -2,6 +2,7 @@
 
 namespace App\Services\Analytics;
 
+use App\Models\TenantDomain;
 use App\Support\Analytics\AnalyticsSettingsData;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\View;
@@ -10,6 +11,7 @@ final class AnalyticsSnippetRenderer
 {
     public function __construct(
         private readonly AnalyticsSettingsPersistence $persistence,
+        private readonly PlatformMarketingAnalyticsPersistence $platformMarketingPersistence,
     ) {}
 
     public function shouldRenderForRequest(?Request $request = null): bool
@@ -90,17 +92,42 @@ final class AnalyticsSnippetRenderer
             return '';
         }
 
+        $data = $this->resolveSettingsData($request);
+        if ($data === null || ! $this->hasRenderableProviders($data)) {
+            return '';
+        }
+
+        return $this->buildSnippetsHtml($data);
+    }
+
+    private function resolveSettingsData(Request $request): ?AnalyticsSettingsData
+    {
         $tenant = currentTenant();
-        if ($tenant === null) {
-            return '';
+        if ($tenant !== null) {
+            return $this->persistence->load((int) $tenant->id);
         }
 
-        $data = $this->persistence->load((int) $tenant->id);
-
-        if (! $this->hasRenderableProviders($data)) {
-            return '';
+        if ($this->requestHostIsCentralMarketing($request)) {
+            return $this->platformMarketingPersistence->load();
         }
 
+        return null;
+    }
+
+    private function requestHostIsCentralMarketing(Request $request): bool
+    {
+        $host = TenantDomain::normalizeHost($request->getHost());
+        foreach (config('tenancy.central_domains', []) as $h) {
+            if ($host === TenantDomain::normalizeHost((string) $h)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function buildSnippetsHtml(AnalyticsSettingsData $data): string
+    {
         $parts = [];
 
         if (config('analytics.providers.ga4.enabled', true) && $data->hasRenderableGa4()) {
@@ -120,6 +147,5 @@ final class AnalyticsSnippetRenderer
         }
 
         return implode("\n", array_filter($parts));
-
     }
 }

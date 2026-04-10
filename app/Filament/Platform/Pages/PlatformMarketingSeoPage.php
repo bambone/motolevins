@@ -61,7 +61,7 @@ class PlatformMarketingSeoPage extends Page
             ->statePath('data')
             ->components([
                 Section::make('Публичные URL')
-                    ->description('Контур central domains (маркетинг). Файлы отдаются «живыми» контроллерами, без снимков как у тенантов.')
+                    ->description('Контур central domains (маркетинг). Файлы отдаются «живыми» контроллерами, без снимков как у тенантов. Счётчики Яндекс Метрики и GA4 — на странице «Маркетинг и контент».')
                     ->schema([
                         Placeholder::make('url_robots')
                             ->label('robots.txt')

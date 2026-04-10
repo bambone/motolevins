@@ -10,8 +10,8 @@ use Filament\Schemas\Components\Section;
 use Illuminate\Support\Facades\View;
 
 /**
- * Shared "Аналитика" fields for tenant Settings and Platform TenantResource.
- * Form keys must stay in sync with App\Support\Analytics\AnalyticsSettingsFormMapper.
+ * Shared «Аналитика» fields: кабинет клиента, карточка клиента в платформе, маркетинг платформы (PlatformMarketingSettingsPage).
+ * Form keys must stay in sync with {@see \App\Support\Analytics\AnalyticsSettingsFormMapper}.
  */
 final class TenantAnalyticsFormSchema
 {

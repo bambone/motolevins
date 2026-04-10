@@ -58,6 +58,7 @@
         #hero-heading { margin: 0; text-wrap: balance; color: #0f172a; font-weight: 800; line-height: 1.1; letter-spacing: -0.025em; font-size: clamp(2.25rem, 5vw, 3.75rem); }
     </style>
     @vite(['resources/css/platform-marketing.css', 'resources/js/platform-marketing.js'])
+    @include('partials.analytics-snippet-head')
     @stack('jsonld')
 </head>
 <body class="{{ trim('pm-body pm-marketing-with-sticky '.trim($__env->yieldContent('body_class'))) }}">

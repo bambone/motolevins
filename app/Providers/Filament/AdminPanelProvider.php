@@ -152,11 +152,11 @@ class AdminPanelProvider extends PanelProvider
             ->authMiddleware([
                 FilamentTenantPanelAuthenticate::class,
             ])
-            ->spa()
-            ->spaUrlExceptions([
-                // Потоковая выдача медиа не должна перехватываться Livewire navigate.
-                '*spatie-media*',
-            ])
+            /*
+             * SPA (wire:navigate) отключён: после логина и на первом заходе в панель у части браузеров
+             * интерфейс оставался «мёртвым» до полной перезагрузки (дубликат вкладки). См. обсуждения
+             * filamentphp/filament вокруг SPA + Livewire navigate. Навигация — полными перезагрузками.
+             */
             ->authenticatedRoutes(function (): void {
                 Route::get('/spatie-media/{media}', [TenantSpatieMediaStreamController::class, 'show'])
                     ->name('spatie-media.show');
