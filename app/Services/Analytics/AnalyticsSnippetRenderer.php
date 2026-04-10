@@ -107,14 +107,18 @@ final class AnalyticsSnippetRenderer
             return $this->persistence->load((int) $tenant->id);
         }
 
-        if ($this->requestHostIsCentralMarketing($request)) {
+        if ($this->requestIsPlatformMarketingPublicContext($request)) {
             return $this->platformMarketingPersistence->load();
         }
 
         return null;
     }
 
-    private function requestHostIsCentralMarketing(Request $request): bool
+    /**
+     * Настройки маркетингового счётчика: домены из TENANCY_CENTRAL_DOMAINS или любой запрос к именованным маршрутам platform.*
+     * (иначе при расхождении www/apex и env счётчик не попадал в HTML и проверка ?_ym_status-check не срабатывала).
+     */
+    private function requestIsPlatformMarketingPublicContext(Request $request): bool
     {
         $host = TenantDomain::normalizeHost($request->getHost());
         foreach (config('tenancy.central_domains', []) as $h) {
@@ -123,7 +127,9 @@ final class AnalyticsSnippetRenderer
             }
         }
 
-        return false;
+        $routeName = $request->route()?->getName();
+
+        return is_string($routeName) && str_starts_with($routeName, 'platform.');
     }
 
     private function buildSnippetsHtml(AnalyticsSettingsData $data): string

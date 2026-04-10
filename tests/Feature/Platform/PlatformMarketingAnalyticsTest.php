@@ -50,8 +50,9 @@ class PlatformMarketingAnalyticsTest extends TestCase
             ->getContent();
 
         $this->assertStringContainsString('googletagmanager.com/gtag/js?id=G-PMTEST001', $html);
-        $this->assertStringContainsString('mc.yandex.ru/metrika/tag.js', $html);
-        $this->assertStringContainsString('ym(123456', $html);
+        $this->assertStringContainsString('mc.yandex.ru/metrika/tag.js?id=123456', $html);
+        $this->assertStringContainsString('"counterId":123456', $html);
+        $this->assertStringContainsString('mc.yandex.ru/watch/123456', $html);
     }
 
     public function test_marketing_home_has_no_snippets_without_platform_settings(): void
@@ -63,7 +64,7 @@ class PlatformMarketingAnalyticsTest extends TestCase
             ->getContent();
 
         $this->assertStringNotContainsString('googletagmanager.com/gtag/js', $html);
-        $this->assertStringNotContainsString('mc.yandex.ru/metrika/tag.js', $html);
+        $this->assertStringNotContainsString('mc.yandex.ru/metrika/tag.js?', $html);
     }
 
     public function test_renderer_force_render_uses_platform_settings_on_central_host(): void
@@ -89,7 +90,7 @@ class PlatformMarketingAnalyticsTest extends TestCase
         $renderer = app(AnalyticsSnippetRenderer::class);
         $html = $renderer->renderHeadHtml(Request::create('https://apex.test/'));
 
-        $this->assertStringContainsString('mc.yandex.ru/metrika/tag.js', $html);
-        $this->assertStringContainsString('ym(987654', $html);
+        $this->assertStringContainsString('mc.yandex.ru/metrika/tag.js?id=987654', $html);
+        $this->assertStringContainsString('"counterId":987654', $html);
     }
 }
