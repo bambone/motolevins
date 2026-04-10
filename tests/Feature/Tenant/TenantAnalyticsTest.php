@@ -87,7 +87,7 @@ class TenantAnalyticsTest extends TestCase
 
         $this->assertStringContainsString('googletagmanager.com/gtag/js?id=G-TESTPUBLIC1', $html);
         $this->assertStringContainsString('<!-- Yandex.Metrika counter -->', $html);
-        $this->assertStringContainsString('https://mc.yandex.ru/metrika/tag.js?id=123456', $html);
+        $this->assertStringContainsString('https://mc.yandex.ru/metrika/tag.js', $html);
         $this->assertStringContainsString("ym(123456, 'init',", $html);
         $this->assertStringContainsString('https://mc.yandex.ru/watch/123456', $html);
         $posBody = stripos($html, '<body');

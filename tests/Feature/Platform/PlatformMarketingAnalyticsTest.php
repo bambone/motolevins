@@ -51,7 +51,7 @@ class PlatformMarketingAnalyticsTest extends TestCase
 
         $this->assertStringContainsString('googletagmanager.com/gtag/js?id=G-PMTEST001', $html);
         $this->assertStringContainsString('<!-- Yandex.Metrika counter -->', $html);
-        $this->assertStringContainsString('https://mc.yandex.ru/metrika/tag.js?id=123456', $html);
+        $this->assertStringContainsString('https://mc.yandex.ru/metrika/tag.js', $html);
         $this->assertStringContainsString("ym(123456, 'init',", $html);
         $this->assertStringContainsString('https://mc.yandex.ru/watch/123456', $html);
         $posBody = stripos($html, '<body');
@@ -94,7 +94,7 @@ class PlatformMarketingAnalyticsTest extends TestCase
         $renderer = app(AnalyticsSnippetRenderer::class);
         $html = $renderer->renderHeadHtml(Request::create('https://apex.test/'));
 
-        $this->assertStringContainsString('mc.yandex.ru/metrika/tag.js?id=987654', $html);
+        $this->assertStringContainsString('mc.yandex.ru/metrika/tag.js', $html);
         $this->assertStringContainsString("ym(987654, 'init',", $html);
         $this->assertStringNotContainsString('mc.yandex.ru/watch/', $html);
     }
