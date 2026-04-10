@@ -33,7 +33,7 @@
     <div>
         <h3 class="mb-2 text-base font-semibold text-gray-950 dark:text-white">Проверка установки в Метрике</h3>
         <p class="mb-2 text-gray-600 dark:text-gray-400">
-            В конструкторе Метрики используется загрузка <code class="rounded bg-black/5 px-1 py-0.5 text-xs dark:bg-white/10">tag.js?id=…</code> и блок <code class="rounded bg-black/5 px-1 py-0.5 text-xs dark:bg-white/10">noscript</code> — платформа выводит такой же формат. Проверка вида <code class="rounded bg-black/5 px-1 py-0.5 text-xs dark:bg-white/10">?_ym_status-check=ID</code> должна видеть счётчик в HTML публичной страницы (не в админке).
+            В разметке остаётся строка вида <code class="rounded bg-black/5 px-1 py-0.5 text-xs dark:bg-white/10">ym(НОМЕР, 'init', …)</code> с <strong>явным номером счётчика</strong>, загрузка <code class="rounded bg-black/5 px-1 py-0.5 text-xs dark:bg-white/10">tag.js?id=…</code> и блок <code class="rounded bg-black/5 px-1 py-0.5 text-xs dark:bg-white/10">noscript</code> — так проверка <code class="rounded bg-black/5 px-1 py-0.5 text-xs dark:bg-white/10">?_ym_status-check=ID</code> в Метрике находит установку. Проверяйте публичную страницу (не админку).
         </p>
         <p class="text-gray-600 dark:text-gray-400">
             Для <strong>главного сайта платформы</strong> домен сайта должен совпадать с одним из значений <code class="rounded bg-black/5 px-1 py-0.5 text-xs dark:bg-white/10">TENANCY_CENTRAL_DOMAINS</code> на сервере (включая вариант с <code class="rounded bg-black/5 px-1 py-0.5 text-xs dark:bg-white/10">www</code>, если им пользуются), иначе настройки маркетингового счётчика не подставятся в разметку.

@@ -51,7 +51,7 @@ class PlatformMarketingAnalyticsTest extends TestCase
 
         $this->assertStringContainsString('googletagmanager.com/gtag/js?id=G-PMTEST001', $html);
         $this->assertStringContainsString('mc.yandex.ru/metrika/tag.js?id=123456', $html);
-        $this->assertStringContainsString('"counterId":123456', $html);
+        $this->assertStringContainsString('ym(123456', $html);
         $this->assertStringContainsString('mc.yandex.ru/watch/123456', $html);
     }
 
@@ -91,6 +91,6 @@ class PlatformMarketingAnalyticsTest extends TestCase
         $html = $renderer->renderHeadHtml(Request::create('https://apex.test/'));
 
         $this->assertStringContainsString('mc.yandex.ru/metrika/tag.js?id=987654', $html);
-        $this->assertStringContainsString('"counterId":987654', $html);
+        $this->assertStringContainsString('ym(987654', $html);
     }
 }
