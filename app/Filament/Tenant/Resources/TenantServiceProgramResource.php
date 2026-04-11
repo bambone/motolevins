@@ -100,12 +100,12 @@ class TenantServiceProgramResource extends Resource
                             ->columnSpanFull(),
                     ])->columns(1),
                 Section::make('Обложка карточки программы (R2)')
-                    ->description('Рекомендуемый путь: expert_auto/programs/{slug}/card-cover-desktop.webp и card-cover-mobile.webp (публичный диск тенанта).')
+                    ->description('Рекомендуемый путь: site/expert_auto/programs/{slug}/card-cover-desktop.webp и card-cover-mobile.webp (публичный диск тенанта).')
                     ->schema([
                         TenantPublicImagePicker::make('cover_image_ref')
                             ->label('Desktop (портретная панель, ~1200×1500)')
                             ->uploadPublicSiteSubdirectory(fn (Get $get): string => 'expert_auto/programs/'.trim((string) ($get('slug') ?: 'draft')))
-                            ->helperText('Ключ вида tenants/{id}/public/expert_auto/programs/{slug}/card-cover-desktop.webp или относительный путь под public.')
+                            ->helperText('Ключ вида tenants/{id}/public/site/expert_auto/programs/{slug}/… (зона PublicSite).')
                             ->columnSpanFull(),
                         TenantPublicImagePicker::make('cover_mobile_ref')
                             ->label('Mobile (широкий crop, ~1280×720), опционально')

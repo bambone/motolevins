@@ -66,11 +66,15 @@
         @endif
 
         <div @class([
-            'expert-hero-cinematic__stage-inner relative z-10 mx-auto flex w-full max-w-[100rem] flex-col px-4 pb-6 pt-4 sm:px-8 sm:pb-10 sm:pt-6 lg:min-h-[min(88vh,52rem)] lg:flex-row lg:items-center lg:justify-start lg:px-12 lg:pb-16 lg:pt-10 xl:px-14 xl:pt-14',
+            'expert-hero-cinematic__stage-inner relative z-10 mx-auto flex w-full max-w-[100rem] flex-col px-4 pb-[max(1.25rem,env(safe-area-inset-bottom,0px))] pt-1 sm:px-8 sm:pb-10 sm:pt-6 lg:min-h-[min(88vh,52rem)] lg:flex-row lg:items-center lg:justify-start lg:px-12 lg:pb-16 lg:pt-10 xl:px-14 xl:pt-14',
             'min-h-0 flex-1 justify-end' => $hasPhoto,
             'lg:flex-none' => $hasPhoto,
         ])>
-            <div class="expert-hero-cinematic__copy relative z-20 flex min-w-0 w-full max-w-[min(100%,32rem)] flex-col justify-center sm:max-w-2xl md:max-w-3xl lg:max-w-[min(48rem,56vw)] lg:flex-1 lg:pr-6 xl:max-w-[min(52rem,54vw)] xl:pr-8">
+            @if($hasPhoto)
+                {{-- Mobile: забирает свободную высоту — типографика и CTA прижимаются к низу первого viewport (poster). --}}
+                <div class="expert-hero-cinematic__poster-spacer min-h-0 w-full flex-1 basis-0 lg:hidden" aria-hidden="true"></div>
+            @endif
+            <div class="expert-hero-cinematic__copy relative z-20 flex min-w-0 w-full max-w-[min(100%,32rem)] shrink-0 flex-col justify-center sm:max-w-2xl md:max-w-3xl lg:max-w-[min(48rem,56vw)] lg:flex-1 lg:pr-6 xl:max-w-[min(52rem,54vw)] xl:pr-8">
                 <p class="mb-2 text-[0.6rem] font-bold uppercase tracking-[0.2em] text-moto-amber/90 sm:mb-4 sm:text-xs">Инструктор • Челябинск и область</p>
                 <h1 class="expert-hero-cinematic__headline text-pretty text-[clamp(1.4rem,4.2vw,2.5rem)] font-extrabold leading-[1.14] tracking-tight text-white sm:text-5xl sm:leading-[1.12] lg:text-[clamp(2.5rem,3.6vw,3.35rem)] lg:leading-[1.1] xl:text-[clamp(2.75rem,3.4vw,3.75rem)] xl:leading-[1.08]">{{ $headingDisplay }}</h1>
                 @if($sub !== '')

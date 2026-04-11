@@ -336,8 +336,9 @@ final class AflyatunovExpertBootstrap
                 'visibility' => 'public',
                 'ContentType' => 'image/webp',
             ]);
-            $keyDesktop = 'tenants/'.$tenantId.'/public/'.$relDesktop;
-            $keyMobile = 'tenants/'.$tenantId.'/public/'.$relMobile;
+            // Ключи должны совпадать с {@see TenantStorage::putInArea(PublicSite)} → префикс site/ под public/.
+            $keyDesktop = 'tenants/'.$tenantId.'/public/site/'.$relDesktop;
+            $keyMobile = 'tenants/'.$tenantId.'/public/site/'.$relMobile;
 
             $payload = [
                 'cover_image_ref' => $keyDesktop,

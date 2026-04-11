@@ -508,6 +508,7 @@
             </button>
         </div>
     @else
+        {{-- Mobile + hero: нижняя CTA и WA/TG скрыты на первом экране (классы body expert-auto-* ниже по разметке). --}}
         {{-- Если на странице нет секции формы (нет #expert-sticky-cta), показываем ссылку на заявку с главной --}}
         <div id="expert-sticky-cta-fallback" class="expert-sticky-cta hidden" hidden>
             <div class="expert-sticky-cta__inner">
@@ -521,6 +522,43 @@
                 if (!fb) return;
                 fb.classList.remove('hidden');
                 fb.removeAttribute('hidden');
+            })();
+        </script>
+    @endif
+
+    @if ($__tenantExpertAuto)
+        <script>
+            (function () {
+                if (!document.querySelector('[data-expert-hero="1"]')) {
+                    return;
+                }
+                var mq = window.matchMedia('(max-width: 1023px)');
+
+                function vh() {
+                    return (window.visualViewport && window.visualViewport.height) || window.innerHeight || 640;
+                }
+
+                function sync() {
+                    if (!mq.matches) {
+                        document.body.classList.add('expert-auto-past-first-screen');
+                        return;
+                    }
+                    var past = window.scrollY > Math.max(32, vh() * 0.88);
+                    document.body.classList.toggle('expert-auto-past-first-screen', past);
+                }
+
+                mq.addEventListener('change', sync);
+                window.addEventListener('scroll', sync, { passive: true });
+                window.addEventListener('resize', sync);
+                if (window.visualViewport) {
+                    window.visualViewport.addEventListener('resize', sync);
+                    window.visualViewport.addEventListener('scroll', sync);
+                }
+                if (document.readyState === 'loading') {
+                    document.addEventListener('DOMContentLoaded', sync);
+                } else {
+                    sync();
+                }
             })();
         </script>
     @endif

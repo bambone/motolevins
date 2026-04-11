@@ -3,11 +3,16 @@
 namespace App\Support\Storage;
 
 use App\Models\Tenant;
+use Illuminate\Support\Facades\Route;
 use Throwable;
 
 /**
  * Разрешение значений из JSON секций / настроек в публичный URL для img и CSS background.
  * Поддерживает legacy http(s) URL и object keys вида {@code tenants/{id}/public/...} на tenant public disk.
+ *
+ * В HTTP-запросе (публичный сайт, предпросмотр в админке) для ключей и относительных путей отдаётся
+ * same-origin URL {@code /storage/tenants/{id}/public/...}, чтобы {@see TenantPublicStorageFileController}
+ * выставил корректный {@code Content-Type} и не срабатывал {@code ERR_BLOCKED_BY_ORB} на прямых ссылках R2/CDN.
  */
 final class TenantPublicAssetResolver
 {
@@ -48,7 +53,7 @@ final class TenantPublicAssetResolver
     private static function safePublicUrl(int $tenantId, string $pathUnderPublicSegment): ?string
     {
         try {
-            $url = TenantStorage::forTrusted($tenantId)->publicUrl($pathUnderPublicSegment);
+            $url = self::publicAssetUrlForRequestContext($tenantId, $pathUnderPublicSegment);
             $url = trim($url);
 
             return $url !== '' ? $url : null;
@@ -57,6 +62,31 @@ final class TenantPublicAssetResolver
 
             return null;
         }
+    }
+
+    /**
+     * @throws Throwable
+     */
+    private static function publicAssetUrlForRequestContext(int $tenantId, string $pathUnderPublicSegment): string
+    {
+        $pathUnderPublicSegment = ltrim(str_replace('\\', '/', $pathUnderPublicSegment), '/');
+        if ($pathUnderPublicSegment === '' || str_contains($pathUnderPublicSegment, '..')) {
+            return '';
+        }
+
+        // Legacy: файлы в зоне PublicSite лежат под site/…; старые ключи без префикса давали 404.
+        if (str_starts_with($pathUnderPublicSegment, 'expert_auto/')) {
+            $pathUnderPublicSegment = 'site/'.$pathUnderPublicSegment;
+        }
+
+        if (! app()->runningInConsole() && Route::has('tenant.public.storage')) {
+            return route('tenant.public.storage', [
+                'tenantId' => $tenantId,
+                'path' => $pathUnderPublicSegment,
+            ], absolute: true);
+        }
+
+        return TenantStorage::forTrusted($tenantId)->publicUrl($pathUnderPublicSegment);
     }
 
     public static function resolveForCurrentTenant(?string $value): ?string
@@ -100,7 +130,8 @@ final class TenantPublicAssetResolver
         $ts = TenantStorage::forTrusted($tenant);
         $themeKey = $tenant->themeKey();
 
-        $urlIfExists = function (string $relativeUnderPublic) use ($ts): ?string {
+        $tenantId = (int) $tenant->id;
+        $urlIfExists = function (string $relativeUnderPublic) use ($ts, $tenantId): ?string {
             $relativeUnderPublic = ltrim(str_replace('\\', '/', $relativeUnderPublic), '/');
             if ($relativeUnderPublic === '') {
                 return null;
@@ -109,11 +140,16 @@ final class TenantPublicAssetResolver
                 return null;
             }
 
-            return $ts->publicUrl($relativeUnderPublic);
+            try {
+                $url = self::publicAssetUrlForRequestContext($tenantId, $relativeUnderPublic);
+            } catch (Throwable) {
+                return null;
+            }
+
+            return $url !== '' ? $url : null;
         };
 
-        $tid = (int) $tenant->id;
-        if (preg_match('#^tenants/'.$tid.'/public/(.+)$#', $v, $m)) {
+        if (preg_match('#^tenants/'.$tenantId.'/public/(.+)$#', $v, $m)) {
             return $urlIfExists($m[1]);
         }
 

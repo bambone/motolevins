@@ -54,6 +54,20 @@ class TenantPublicAssetResolverTest extends TestCase
         $this->assertStringContainsString('tenants/5/public/site/logo/a.png', $out);
     }
 
+    public function test_legacy_expert_auto_paths_get_site_prefix_under_public(): void
+    {
+        config(['tenant_storage.public_cdn_base_url' => 'https://cdn.example']);
+
+        $rel = TenantPublicAssetResolver::resolve('expert_auto/programs/single-session/card-cover-mobile.webp', 5);
+        $this->assertNotNull($rel);
+        $this->assertStringContainsString('tenants/5/public/site/expert_auto/programs/single-session/card-cover-mobile.webp', $rel);
+
+        $key = 'tenants/5/public/expert_auto/programs/single-session/card-cover-mobile.webp';
+        $full = TenantPublicAssetResolver::resolve($key, 5);
+        $this->assertNotNull($full);
+        $this->assertStringContainsString('site/expert_auto/programs/single-session/card-cover-mobile.webp', $full);
+    }
+
     public function test_resolve_hero_video_https_passthrough(): void
     {
         $tenant = Tenant::query()->create([

@@ -2,12 +2,14 @@
 
 namespace App\Tenant\Expert;
 
+use App\Models\Tenant;
 use App\Models\TenantSetting;
+use App\Support\Storage\TenantPublicAssetResolver;
 use App\Support\Storage\TenantStorage;
 
 /**
  * Нормализует URL бренд-фото expert_auto: в БД могут быть устаревшие пути (другой tenant_id, удалённый public/tenants/…).
- * Актуальный URL — {@see TenantStorage::publicUrl} для {@code site/brand/…} (локальный диск или R2 / {@code TENANT_STORAGE_PUBLIC_CDN_URL}).
+ * Публичные URL собираются через {@see TenantPublicAssetResolver} (same-origin /storage/tenants/… при HTTP), чтобы не ловить ORB на R2/CDN.
  */
 final class ExpertBrandMediaUrl
 {
@@ -30,9 +32,16 @@ final class ExpertBrandMediaUrl
             return $stored;
         }
 
+        $tenantId = (int) $tenant->id;
+
+        $viaResolver = TenantPublicAssetResolver::resolveForCurrentTenant($stored);
+        if ($viaResolver !== null && $viaResolver !== '') {
+            return self::appendIntroVideoVersion($viaResolver, $stored, $tenant);
+        }
+
         $path = parse_url($stored, PHP_URL_PATH);
         $path = is_string($path) ? $path : $stored;
-        if (! preg_match('#([^/]+\.(?:jpe?g|mp4|webm))$#i', $path, $m)) {
+        if (! preg_match('#([^/]+\.(?:jpe?g|png|gif|webp|avif|mp4|webm))$#i', $path, $m)) {
             return $stored;
         }
         $file = $m[1];
@@ -43,19 +52,32 @@ final class ExpertBrandMediaUrl
             return $stored;
         }
 
-        $fresh = TenantStorage::forTrusted($tenant)->publicUrl('site/brand/'.$file);
+        $fresh = TenantPublicAssetResolver::resolve('site/brand/'.$file, $tenantId)
+            ?? TenantStorage::forTrusted($tenant)->publicUrl('site/brand/'.$file);
 
-        // video-intro.mp4: сброс CDN/браузерного кеша при замене файла по тому же пути
-        if (strtolower($file) === 'video-intro.mp4') {
-            $ver = TenantSetting::getForTenant((int) $tenant->id, 'brand.intro_video_ver', '');
-            if (is_string($ver) && $ver !== '') {
-                $sep = str_contains($fresh, '?') ? '&' : '?';
+        return self::appendIntroVideoVersion($fresh, $stored, $tenant);
+    }
 
-                return $fresh.$sep.'v='.rawurlencode($ver);
-            }
+    private static function appendIntroVideoVersion(string $fresh, string $stored, Tenant $tenant): string
+    {
+        $path = parse_url($fresh, PHP_URL_PATH);
+        $path = is_string($path) ? $path : $fresh;
+        $fromStored = parse_url($stored, PHP_URL_PATH);
+        $fromStored = is_string($fromStored) ? $fromStored : $stored;
+
+        $isIntro = str_ends_with(strtolower($path), 'video-intro.mp4')
+            || str_ends_with(strtolower($fromStored), 'video-intro.mp4');
+        if (! $isIntro) {
+            return $fresh;
         }
 
-        return $fresh;
+        $ver = TenantSetting::getForTenant((int) $tenant->id, 'brand.intro_video_ver', '');
+        if (! is_string($ver) || $ver === '') {
+            return $fresh;
+        }
+        $sep = str_contains($fresh, '?') ? '&' : '?';
+
+        return $fresh.$sep.'v='.rawurlencode($ver);
     }
 
     private static function isKnownBrandFile(string $file): bool
