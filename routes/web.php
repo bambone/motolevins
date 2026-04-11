@@ -102,6 +102,7 @@ Route::middleware([EnsureTenantContext::class, RememberTenantCatalogLocation::cl
     Route::get('/contacts', [PageController::class, 'show'])
         ->defaults('slug', 'contacts')
         ->name('contacts');
+    Route::permanentRedirect('/kontakty', '/contacts');
     Route::get('/usloviya-arenda', [PageController::class, 'show'])
         ->defaults('slug', 'usloviya-arenda')
         ->name('terms');

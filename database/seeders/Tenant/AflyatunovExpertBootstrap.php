@@ -410,11 +410,30 @@ final class AflyatunovExpertBootstrap
      */
     private static function ensureExpertMenuPages(int $tenantId, $now): void
     {
+        // Совпадение с фиксированным маршрутом `/contacts` (routes/web.php) и ожиданиями SEO/тестов.
+        $legacyKontaktyId = (int) DB::table('pages')
+            ->where('tenant_id', $tenantId)
+            ->where('slug', 'kontakty')
+            ->value('id');
+        if ($legacyKontaktyId > 0) {
+            $contactsTaken = DB::table('pages')
+                ->where('tenant_id', $tenantId)
+                ->where('slug', 'contacts')
+                ->where('id', '!=', $legacyKontaktyId)
+                ->exists();
+            if (! $contactsTaken) {
+                DB::table('pages')->where('id', $legacyKontaktyId)->update([
+                    'slug' => 'contacts',
+                    'updated_at' => $now,
+                ]);
+            }
+        }
+
         $defs = [
             ['slug' => 'programs', 'name' => 'Программы', 'order' => 10, 'factory' => fn (int $pid): array => self::programsPageSections($pid, $tenantId, $now)],
             ['slug' => 'o-trener', 'name' => 'О тренере', 'order' => 20, 'factory' => fn (int $pid): array => self::aboutTrainerPageSections($pid, $tenantId, $now)],
             ['slug' => 'otzyvy', 'name' => 'Отзывы', 'order' => 30, 'factory' => fn (int $pid): array => self::reviewsPageSections($pid, $tenantId, $now)],
-            ['slug' => 'kontakty', 'name' => 'Контакты', 'order' => 40, 'factory' => fn (int $pid): array => self::contactsPageSections($pid, $tenantId, $now)],
+            ['slug' => 'contacts', 'name' => 'Контакты', 'order' => 40, 'factory' => fn (int $pid): array => self::contactsPageSections($pid, $tenantId, $now)],
         ];
 
         foreach ($defs as $def) {

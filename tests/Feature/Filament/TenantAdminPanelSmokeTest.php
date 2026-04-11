@@ -73,7 +73,8 @@ class TenantAdminPanelSmokeTest extends TestCase
         File::ensureDirectoryExists(dirname($this->logPath));
         file_put_contents($this->logPath, '');
 
-        $tenant = $this->createTenantWithActiveDomain('smoke');
+        // expert_auto-only resources (e.g. TenantServiceProgramResource::canAccess) require this theme key.
+        $tenant = $this->createTenantWithActiveDomain('smoke', ['theme_key' => 'expert_auto']);
         $host = $this->tenancyHostForSlug('smoke');
 
         $user = User::factory()->create(['status' => 'active']);

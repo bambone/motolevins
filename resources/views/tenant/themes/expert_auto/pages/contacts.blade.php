@@ -3,8 +3,9 @@
 @section('title', ($resolvedSeo ?? null)?->title ?? 'Контакты')
 
 @section('content')
-    <main class="expert-auto-theme min-w-0 pb-24 sm:pb-32">
-        <section class="relative overflow-hidden pb-10 pt-[calc(4.5rem+1.5rem)] sm:pb-14 sm:pt-[calc(5rem+2rem)] lg:pb-16 lg:pt-[calc(5.5rem+2.5rem)]">
+    {{-- Не вкладывать <main> в layout main; отступы под фиксированную шапку expert_auto (3.75 / 5 / 5.5 rem). --}}
+    <div class="expert-contacts-page expert-auto-theme min-w-0 pb-24 sm:pb-32">
+        <section class="relative overflow-hidden pb-10 pt-[calc(3.75rem+1.25rem)] sm:pb-14 md:pt-[calc(5rem+2rem)] lg:pb-16 lg:pt-[calc(5.5rem+2.5rem)]">
             <div class="pointer-events-none absolute -left-40 top-0 h-[40rem] w-[40rem] rounded-full bg-moto-amber/5 blur-[120px]" aria-hidden="true"></div>
             
             <div class="relative z-10 mx-auto max-w-6xl px-4 text-center sm:px-6 md:px-8">
@@ -102,5 +103,5 @@
                 </div>
             </div>
         </section>
-    </main>
+    </div>
 @endsection

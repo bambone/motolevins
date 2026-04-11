@@ -55,7 +55,7 @@
                         <a href="{{ $a1 }}" class="inline-flex min-h-[2.85rem] w-full shrink-0 items-center justify-center rounded-xl bg-moto-amber px-5 text-[14px] font-bold text-black shadow-lg shadow-moto-amber/18 transition-transform hover:scale-[1.02] sm:min-h-[3.15rem] sm:w-auto sm:rounded-2xl sm:px-8 sm:text-[15px]">{{ $p1 }}</a>
                     @endif
                     @if($p2 !== '' && $a2 !== '')
-                        <a href="{{ $a2 }}" class="hidden min-h-[3rem] items-center justify-center rounded-2xl border border-white/15 px-6 text-sm font-semibold text-white/85 transition hover:border-moto-amber/35 hover:text-white sm:inline-flex sm:w-auto">{{ $p2 }}</a>
+                        <a href="{{ $a2 }}" class="inline-flex min-h-[2.85rem] w-full shrink-0 items-center justify-center rounded-xl border border-white/15 px-5 text-[14px] font-semibold text-white/85 transition hover:border-moto-amber/35 hover:text-white sm:min-h-[3rem] sm:w-auto sm:rounded-2xl sm:px-6 sm:text-sm">{{ $p2 }}</a>
                     @endif
                     @if($hasVideo)
                         <button
