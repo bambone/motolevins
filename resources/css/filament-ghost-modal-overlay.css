@@ -1,0 +1,12 @@
+/**
+ * Filament: полноэкранный scrim (.fi-modal-close-overlay) задаётся в теме (bg + fixed),
+ * а видимость — через Alpine x-show. После morph Livewire / редиректа после логина
+ * x-show иногда не синхронизируется с DOM — остаётся «пустое» затемнение без окна.
+ * Класс .fi-modal-open выставляется только при isOpen === true.
+ *
+ * @see https://github.com/filamentphp/filament/issues/15285
+ */
+.fi-modal:not(.fi-modal-open) > .fi-modal-close-overlay {
+    display: none !important;
+    pointer-events: none !important;
+}

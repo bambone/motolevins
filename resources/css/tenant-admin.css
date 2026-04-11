@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@import "./filament-ghost-modal-overlay.css";
+
 /* Как у Filament: тёмные утилиты только при class="dark" на <html>, а не по prefers-color-scheme.
    Иначе при явной светлой теме и тёмной ОС блоки с dark:* (напр. «Требует внимания») остаются чёрными. */
 @custom-variant dark (&:where(.dark, .dark *));

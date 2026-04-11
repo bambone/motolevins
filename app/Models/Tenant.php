@@ -187,6 +187,11 @@ class Tenant extends Model
             return 'default';
         }
 
+        // Плейсхолдер в админке платформы: каталог tenant/themes/auto без шаблонов — не использовать для рендера.
+        if ($raw === 'auto') {
+            return 'default';
+        }
+
         if (! preg_match('/^[a-z0-9][a-z0-9_-]{0,62}$/', $raw)) {
             return 'default';
         }

@@ -59,6 +59,13 @@ body.expert-auto-theme .expert-auto-floating-chats {
     bottom: calc(4.85rem + env(safe-area-inset-bottom, 0px));
 }
 
+/* На узкой ширине — больше зазор от hero / sticky, чтобы FAB не спорили с контентом */
+@media (max-width: 1023px) {
+    body.expert-auto-theme .expert-auto-floating-chats {
+        bottom: calc(6.35rem + env(safe-area-inset-bottom, 0px));
+    }
+}
+
 @media (min-width: 1024px) {
     .expert-sticky-cta {
         display: none !important;
@@ -191,6 +198,240 @@ body.expert-auto-theme .tenant-thin-scrollbar::-webkit-scrollbar-thumb:hover {
     margin-left: calc(50% - 50vw);
     margin-right: calc(50% - 50vw);
     overflow: clip;
+}
+
+/* Full-background фото + многослойные оверлеи (desktop: инструктор справа; mobile: другой crop) */
+.expert-hero-cinematic__bleed--stage {
+    min-height: min(78dvh, 34rem);
+}
+
+@media (min-width: 640px) {
+    .expert-hero-cinematic__bleed--stage {
+        min-height: min(82dvh, 40rem);
+    }
+}
+
+@media (min-width: 1024px) {
+    .expert-hero-cinematic__bleed--stage {
+        min-height: 0;
+    }
+}
+
+.expert-hero-cinematic__photo {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    /* Единый crop на всех ширинах: инструктор справа, чуть выше центра по вертикали */
+    object-position: 76% 10%;
+    transform: scale(1.02);
+    filter: saturate(0.92) contrast(1.05) brightness(0.92);
+}
+
+.expert-hero-cinematic--photo .expert-hero-cinematic__photo {
+    filter: saturate(0.96) contrast(1.03) brightness(1.04);
+}
+
+@media (min-width: 1024px) {
+    .expert-hero-cinematic__photo {
+        transform: scale(1.03);
+        filter: saturate(0.94) contrast(1.04) brightness(0.9);
+    }
+
+    .expert-hero-cinematic--photo .expert-hero-cinematic__photo {
+        filter: saturate(0.98) contrast(1.02) brightness(1.08);
+    }
+}
+
+/*
+ * <lg + фото: высокий кадр, герой сверху без «мута», типографика внизу на сильном нижнем градиенте;
+ * без карточки/blur под текстом.
+ */
+@media (max-width: 1023px) {
+    .expert-hero-cinematic--photo .expert-hero-cinematic__bleed--stage {
+        display: flex;
+        flex-direction: column;
+        min-height: min(92dvh, 42rem);
+    }
+
+    @media (min-width: 640px) {
+        .expert-hero-cinematic--photo .expert-hero-cinematic__bleed--stage {
+            min-height: min(90dvh, 44rem);
+        }
+    }
+
+    /* Верх кадра — лицо/фигура читаются; масштаб чуть крупнее по вертикали */
+    .expert-hero-cinematic--photo .expert-hero-cinematic__photo {
+        object-position: 82% 18%;
+        transform: scale(1.06);
+        transform-origin: 78% 22%;
+        filter: saturate(0.98) contrast(1.04) brightness(1.06);
+    }
+
+    /* Лёгкий общий tint, без равномерного «каши» по лицу */
+    .expert-hero-cinematic--photo .expert-hero-cinematic__overlay-base {
+        background: linear-gradient(
+            180deg,
+            rgba(4, 7, 14, 0.1) 0%,
+            rgba(4, 7, 14, 0.04) 42%,
+            rgba(4, 7, 14, 0.02) 58%,
+            transparent 72%
+        );
+        -webkit-mask-image: none;
+        mask-image: none;
+    }
+
+    /* Левый градиент не давим — только мягкая подложка к низу слева под текст */
+    .expert-hero-cinematic--photo .expert-hero-cinematic__overlay-left {
+        background: linear-gradient(
+            165deg,
+            transparent 0%,
+            transparent 42%,
+            rgba(3, 5, 12, 0.35) 72%,
+            rgba(3, 5, 12, 0.55) 100%
+        );
+        opacity: 1;
+    }
+
+    /* Основная читаемость: плотное затемнение снизу, к верху растворяется */
+    .expert-hero-cinematic--photo .expert-hero-cinematic__overlay-bottom {
+        background: linear-gradient(
+            to top,
+            rgba(2, 4, 12, 0.97) 0%,
+            rgba(2, 4, 12, 0.9) 12%,
+            rgba(2, 4, 12, 0.72) 26%,
+            rgba(2, 4, 12, 0.38) 44%,
+            rgba(2, 4, 12, 0.12) 62%,
+            transparent 82%
+        );
+    }
+
+    .expert-hero-cinematic--photo .expert-hero-cinematic__overlay-right-soft {
+        opacity: 0.45;
+    }
+
+    .expert-hero-cinematic--photo .expert-hero-cinematic__headline,
+    .expert-hero-cinematic--photo .expert-hero-cinematic__lead {
+        text-shadow:
+            0 2px 20px rgba(0, 0, 0, 0.65),
+            0 1px 4px rgba(0, 0, 0, 0.55);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .expert-hero-cinematic__photo {
+        transform: none;
+    }
+}
+
+/* 1) Базовое затемнение всего кадра */
+.expert-hero-cinematic__overlay-base {
+    z-index: 1;
+    background: rgba(4, 7, 14, 0.38);
+}
+
+/* «Окно» в затемнении справа: фигура тренера остаётся светлее (маска градиента). */
+.expert-hero-cinematic--photo .expert-hero-cinematic__overlay-base {
+    background: rgba(4, 7, 14, 0.44);
+    -webkit-mask-image: radial-gradient(
+        ellipse 58% 95% at 80% 34%,
+        transparent 0%,
+        transparent 20%,
+        rgba(0, 0, 0, 0.4) 48%,
+        black 76%
+    );
+    mask-image: radial-gradient(
+        ellipse 58% 95% at 80% 34%,
+        transparent 0%,
+        transparent 20%,
+        rgba(0, 0, 0, 0.4) 48%,
+        black 76%
+    );
+}
+
+/* 2) Плотный левый градиент под типографику */
+.expert-hero-cinematic__overlay-left {
+    z-index: 2;
+    background: linear-gradient(
+        100deg,
+        rgba(5, 8, 16, 0.94) 0%,
+        rgba(5, 8, 16, 0.82) 32%,
+        rgba(5, 8, 16, 0.45) 55%,
+        rgba(5, 8, 16, 0.12) 72%,
+        transparent 88%
+    );
+}
+
+@media (min-width: 1024px) {
+    .expert-hero-cinematic__overlay-left {
+        /* Шире тёмная зона под расширенный текстовый блок */
+        background: linear-gradient(
+            95deg,
+            rgba(6, 9, 18, 0.96) 0%,
+            rgba(6, 9, 18, 0.9) 34%,
+            rgba(6, 9, 18, 0.58) 58%,
+            rgba(6, 9, 18, 0.2) 78%,
+            transparent 92%
+        );
+    }
+}
+
+/* 3) Нижний градиент под CTA / снег / светлый низ кадра */
+.expert-hero-cinematic__overlay-bottom {
+    z-index: 2;
+    background: linear-gradient(
+        to top,
+        rgba(3, 5, 10, 0.88) 0%,
+        rgba(3, 5, 10, 0.45) 28%,
+        rgba(3, 5, 10, 0.12) 52%,
+        transparent 74%
+    );
+}
+
+@media (min-width: 1024px) {
+    .expert-hero-cinematic__overlay-bottom {
+        background: linear-gradient(
+            to top,
+            rgba(3, 5, 10, 0.82) 0%,
+            rgba(3, 5, 10, 0.35) 22%,
+            transparent 55%
+        );
+    }
+}
+
+/* Справа: без доп. затемнения поверх лица; лёгкий подъём яркости в зоне фигуры */
+.expert-hero-cinematic__overlay-right-soft {
+    z-index: 2;
+    background: radial-gradient(
+        ellipse 70% 90% at 92% 45%,
+        transparent 20%,
+        rgba(3, 6, 12, 0.18) 100%
+    );
+}
+
+.expert-hero-cinematic--photo .expert-hero-cinematic__overlay-right-soft {
+    background: radial-gradient(
+        ellipse 48% 72% at 86% 36%,
+        rgba(255, 252, 245, 0.09) 0%,
+        rgba(255, 252, 245, 0.03) 38%,
+        transparent 62%
+    );
+    mix-blend-mode: soft-light;
+}
+
+.expert-hero-cinematic__headline {
+    overflow-wrap: break-word;
+    /* Снижает «висячки» на последней строке (лучше, чем только balance для длинных заголовков). */
+    text-wrap: pretty;
+}
+
+.expert-hero-cinematic__headline,
+.expert-hero-cinematic__lead {
+    text-shadow:
+        0 2px 28px rgba(0, 0, 0, 0.55),
+        0 1px 3px rgba(0, 0, 0, 0.45);
 }
 
 .expert-hero-cinematic__bg {

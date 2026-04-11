@@ -95,11 +95,11 @@ class TenantResource extends Resource
                             ->options([
                                 'default' => 'По умолчанию',
                                 'moto' => 'Мото',
-                                'auto' => 'Авто',
+                                'expert_auto' => 'Инструктор / автошкола (expert_auto)',
                             ])
                             ->default('default')
                             ->required()
-                            ->helperText('Пресет Blade в tenant/themes/{ключ}.'),
+                            ->helperText('Ключ = каталог Blade tenant/themes/{ключ}. Не используйте пустой плейсхолдер «auto» в БД — для мотопроката: moto или default; для лендинга инструктора: expert_auto.'),
                         Select::make('domain_localization_preset_id')
                             ->label('Терминология интерфейса')
                             ->relationship(

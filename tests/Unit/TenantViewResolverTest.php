@@ -33,6 +33,15 @@ class TenantViewResolverTest extends TestCase
         $this->assertSame('tenant.themes.default.pages.home', $resolved);
     }
 
+    public function test_auto_theme_key_normalizes_to_default(): void
+    {
+        $tenant = new Tenant(['theme_key' => 'auto']);
+        $this->assertSame('default', $tenant->themeKey());
+
+        $resolved = app(TenantViewResolver::class)->resolve('pages.home', $tenant);
+        $this->assertSame('tenant.themes.default.pages.home', $resolved);
+    }
+
     public function test_invalid_theme_key_characters_normalize_to_default(): void
     {
         $tenant = new Tenant(['theme_key' => '../evil']);

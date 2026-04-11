@@ -87,7 +87,7 @@ class ExpertAutoTenantTest extends TestCase
             'section_type' => 'expert_hero',
             'title' => 'Hero',
             'data_json' => [
-                'heading' => 'Уникальный заголовок эксперта для теста',
+                'heading' => 'Уникальный заголовок эксперта — тест героя',
                 'subheading' => 'Подзаголовок',
             ],
             'sort_order' => 10,
@@ -97,7 +97,7 @@ class ExpertAutoTenantTest extends TestCase
 
         $this->getWithHost($host, '/')
             ->assertOk()
-            ->assertSee('Уникальный заголовок эксперта для теста', false);
+            ->assertSee('Уникальный заголовок эксперта — тест героя', false);
     }
 
     public function test_pricing_cards_section_not_rendered_without_programs_or_manual(): void
