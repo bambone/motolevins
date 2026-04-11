@@ -47,7 +47,7 @@
                         $collapseOnMobile = $index >= 3;
                     @endphp
                     <article
-                        class="expert-problem-card relative flex min-h-0 min-w-0 flex-col rounded-[1.35rem] border p-5 transition-all duration-300 hover:-translate-y-0.5 sm:rounded-[1.5rem] sm:p-7 sm:hover:-translate-y-1 {{ $featured ? 'border-moto-amber/25 bg-gradient-to-br from-moto-amber/[0.06] to-transparent shadow-[0_12px_40px_-16px_rgba(201,168,124,0.2)]' : 'border-white/[0.04] bg-white/[0.015] hover:bg-white/[0.03]' }} {{ $isOdd && count($items) > 1 ? 'sm:mt-8 lg:mt-12' : '' }}"
+                        class="expert-problem-card relative flex min-h-0 min-w-0 flex-col rounded-[1.35rem] border p-5 transition-all duration-300 hover:-translate-y-0.5 sm:rounded-[1.5rem] sm:p-7 sm:hover:-translate-y-1 {{ $featured ? 'border-moto-amber/25 bg-gradient-to-br from-moto-amber/[0.05] to-transparent shadow-[0_18px_44px_-14px_rgba(0,0,0,0.55)] ring-1 ring-inset ring-white/[0.04]' : 'border-white/[0.04] bg-white/[0.015] hover:bg-white/[0.03]' }} {{ $isOdd && count($items) > 1 ? 'sm:mt-8 lg:mt-12' : '' }}"
                         @if($collapseOnMobile)
                             x-bind:class="{ 'max-lg:hidden': !problemsMore }"
                         @endif

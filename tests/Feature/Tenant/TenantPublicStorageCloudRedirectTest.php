@@ -29,6 +29,7 @@ class TenantPublicStorageCloudRedirectTest extends TestCase
         $nonLocal = Mockery::mock(FilesystemAdapter::class);
         $fly = Mockery::mock(\League\Flysystem\FilesystemAdapter::class);
         $nonLocal->shouldReceive('getAdapter')->andReturn($fly);
+        $nonLocal->shouldReceive('exists')->with($relative)->andReturn(true);
         $nonLocal->shouldReceive('url')->with($relative)->andReturn('https://cdn.example/'.$relative);
 
         Storage::partialMock()
@@ -47,9 +48,39 @@ class TenantPublicStorageCloudRedirectTest extends TestCase
         $response = $this->get('http://'.$host.'/storage/tenants/'.$tenant->id.'/public/site/x.txt');
 
         $response->assertRedirect('https://cdn.example/'.$relative);
+        $response->assertHeader('Cache-Control');
     }
 
-    public function test_tenant_public_storage_streams_image_when_disk_is_not_local(): void
+    public function test_tenant_public_storage_redirects_image_when_disk_is_not_local(): void
+    {
+        $tenant = $this->createTenantWithActiveDomain('cloudimgredir');
+        $relative = 'tenants/'.$tenant->id.'/public/site/brand/hero.jpg';
+
+        $nonLocal = Mockery::mock(FilesystemAdapter::class);
+        $fly = Mockery::mock(\League\Flysystem\FilesystemAdapter::class);
+        $nonLocal->shouldReceive('getAdapter')->andReturn($fly);
+        $nonLocal->shouldReceive('exists')->with($relative)->andReturn(true);
+        $nonLocal->shouldReceive('url')->with($relative)->andReturn('https://cdn.example/'.$relative);
+
+        Storage::partialMock()
+            ->shouldReceive('disk')
+            ->andReturnUsing(function (string $name) use ($nonLocal) {
+                if ($name === 'r2-pub-img-redir-test') {
+                    return $nonLocal;
+                }
+
+                return (new FilesystemManager($this->app))->disk($name);
+            });
+
+        config(['tenant_storage.public_disk' => 'r2-pub-img-redir-test']);
+
+        $host = $this->tenancyHostForSlug('cloudimgredir');
+        $response = $this->get('http://'.$host.'/storage/tenants/'.$tenant->id.'/public/site/brand/hero.jpg');
+
+        $response->assertRedirect('https://cdn.example/'.$relative);
+    }
+
+    public function test_tenant_public_storage_streams_image_when_stream_flag_enabled(): void
     {
         $tenant = $this->createTenantWithActiveDomain('cloudstreamimg');
         $relative = 'tenants/'.$tenant->id.'/public/site/brand/hero.jpg';
@@ -78,7 +109,10 @@ class TenantPublicStorageCloudRedirectTest extends TestCase
                 return (new FilesystemManager($this->app))->disk($name);
             });
 
-        config(['tenant_storage.public_disk' => 'r2-pub-stream-test']);
+        config([
+            'tenant_storage.public_disk' => 'r2-pub-stream-test',
+            'tenant_storage.stream_public_through_origin' => true,
+        ]);
 
         $host = $this->tenancyHostForSlug('cloudstreamimg');
         $response = $this->get('http://'.$host.'/storage/tenants/'.$tenant->id.'/public/site/brand/hero.jpg');

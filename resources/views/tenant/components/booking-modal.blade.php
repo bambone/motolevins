@@ -169,7 +169,11 @@
                                         <label for="booking-modal-pref-value" class="mb-1.5 block text-sm font-medium text-zinc-400">Контакт в мессенджере *</label>
                                         <input id="booking-modal-pref-value" type="text" x-model="form.preferred_contact_value" autocomplete="off"
                                                x-ref="bookingPrefValueInput"
+                                               :lang="(['telegram','vk'].includes(form.preferred_contact_channel) ? 'en' : null)"
                                                :placeholder="preferredValuePlaceholder()"
+                                               @beforeinput="onBookingPrefValueBeforeInput($event)"
+                                               @paste="onBookingPrefValuePaste($event)"
+                                               @compositionend="stripPrefContactValueToAscii()"
                                                class="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-base text-white outline-none transition-colors placeholder:text-zinc-500 focus:border-moto-amber/50 focus:ring-1 focus:ring-moto-amber">
                                         <p class="mt-2 text-xs leading-relaxed text-zinc-500" x-show="preferredValueHint()" x-text="preferredValueHint()"></p>
                                     </div>
@@ -229,6 +233,9 @@ document.addEventListener('alpine:init', () => {
                     root.classList.remove('overflow-hidden');
                     body.classList.remove('overflow-hidden');
                 }
+            });
+            this.$watch('form.preferred_contact_channel', () => {
+                this.stripPrefContactValueToAscii();
             });
         },
 
@@ -330,6 +337,70 @@ document.addEventListener('alpine:init', () => {
             return (o && o.value_placeholder) ? o.value_placeholder : '';
         },
 
+        stripPrefContactValueToAscii() {
+            const N = window.RentBaseVisitorContactNormalize;
+            if (! N || typeof N.stripToAsciiContactTyping !== 'function') {
+                return;
+            }
+            const ch = this.form.preferred_contact_channel;
+            if (ch !== 'telegram' && ch !== 'vk') {
+                return;
+            }
+            const cur = this.form.preferred_contact_value ?? '';
+            const next = N.stripToAsciiContactTyping(cur);
+            if (cur !== next) {
+                this.form.preferred_contact_value = next;
+            }
+        },
+
+        onBookingPrefValueBeforeInput(e) {
+            if (! this.selectedNeedsExtraValue()) {
+                return;
+            }
+            const ch = this.form.preferred_contact_channel;
+            if (ch !== 'telegram' && ch !== 'vk') {
+                return;
+            }
+            if (e.isComposing) {
+                return;
+            }
+            if (e.inputType === 'insertText' && e.data && /[^\x20-\x7E]/.test(e.data)) {
+                e.preventDefault();
+            }
+        },
+
+        onBookingPrefValuePaste(e) {
+            if (! this.selectedNeedsExtraValue()) {
+                return;
+            }
+            const ch = this.form.preferred_contact_channel;
+            if (ch !== 'telegram' && ch !== 'vk') {
+                return;
+            }
+            const text = (e.clipboardData || window.clipboardData)?.getData('text') || '';
+            if (! /[^\x20-\x7E]/.test(text)) {
+                return;
+            }
+            e.preventDefault();
+            const N = window.RentBaseVisitorContactNormalize;
+            const cleaned = N && typeof N.stripToAsciiContactTyping === 'function' ? N.stripToAsciiContactTyping(text) : text.replace(/[^\x20-\x7E]/g, '');
+            const el = this.$refs.bookingPrefValueInput;
+            if (! el) {
+                return;
+            }
+            const start = el.selectionStart ?? 0;
+            const end = el.selectionEnd ?? 0;
+            const v = this.form.preferred_contact_value ?? '';
+            this.form.preferred_contact_value = v.slice(0, start) + cleaned + v.slice(end);
+            this.$nextTick(() => {
+                const pos = start + cleaned.length;
+                try {
+                    el.setSelectionRange(pos, pos);
+                } catch (err) {}
+            });
+        },
+
+        /** См. TenantIntlPhone.attachPublicTelField — тот же набор: handleInput + подсказка. */
         onPhoneInput() {
             const el = this.$refs.bookingPhoneInput;
             if (! el || typeof window.TenantIntlPhone?.handleInput !== 'function') {
@@ -578,6 +649,21 @@ document.addEventListener('alpine:init', () => {
                 const v = (this.form.preferred_contact_value || '').trim();
                 if (! v) {
                     this.errorMessage = 'Укажите контакт для выбранного способа связи (см. подсказку под полем).';
+                    this.flashFieldGroup(this.$refs.bookingPrefValueInput);
+
+                    return;
+                }
+                const ch = this.form.preferred_contact_channel;
+                const N = window.RentBaseVisitorContactNormalize;
+                if (ch === 'telegram' && N && typeof N.normalizeTelegramVisitorInput === 'function' && N.normalizeTelegramVisitorInput(v) === null) {
+                    this.errorMessage =
+                        'Telegram: латинский username (5–32 символа) или ссылка https://t.me/… Кириллица в нике не используется.';
+                    this.flashFieldGroup(this.$refs.bookingPrefValueInput);
+
+                    return;
+                }
+                if (ch === 'vk' && N && typeof N.normalizeVkVisitorInput === 'function' && N.normalizeVkVisitorInput(v) === null) {
+                    this.errorMessage = 'ВКонтакте: укажите ссылку на профиль или латинский id/ник (как в адресе vk.com/…).';
                     this.flashFieldGroup(this.$refs.bookingPrefValueInput);
 
                     return;

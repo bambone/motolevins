@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Storage;
 use InvalidArgumentException;
 use LogicException;
 use RuntimeException;
+use Throwable;
 
 /**
  * Логические пространства имён под дисками Laravel (см. {@see TenantStorageDisks}, {@code config('tenant_storage')}):
@@ -199,10 +200,33 @@ final class TenantStorage
         return $this->putPrivateAtomic($logical, $contents);
     }
 
+    /**
+     * Опции для PutObject на облачном public-диске: Cache-Control для edge/browser (см. tenant_storage.public_object_cache_control).
+     * На локальном Flysystem возвращает {@code $options} без изменений.
+     *
+     * @param  array<string, mixed>  $options
+     * @return array<string, mixed>
+     */
+    public static function mergedOptionsForPublicObjectWrite(Filesystem $disk, array $options = []): array
+    {
+        if (TenantStorageDisks::usesLocalFlyAdapter($disk)) {
+            return $options;
+        }
+
+        $cc = trim((string) config('tenant_storage.public_object_cache_control', ''));
+        $defaults = ['visibility' => 'public'];
+        if ($cc !== '') {
+            $defaults['CacheControl'] = $cc;
+        }
+
+        return array_merge($defaults, $options);
+    }
+
     public function putPublic(string $path, mixed $contents, array $options = []): bool
     {
         $fullKey = $this->publicPath($path);
         $disk = $this->publicDisk();
+        $options = self::mergedOptionsForPublicObjectWrite($disk, $options);
         $oldSize = $disk->exists($fullKey) ? (int) $disk->size($fullKey) : 0;
         $newSize = self::measureContentsByteLength($contents);
         $delta = $newSize - $oldSize;
@@ -282,20 +306,65 @@ final class TenantStorage
             : $this->privateDisk()->exists($key);
     }
 
+    /**
+     * Удаляет все объекты с ключами под {@code tenants/{id}/public/site/{pathUnderSite}/…}.
+     * Допустимо только для {@code expert_auto/programs} (обложки карточек программ).
+     *
+     * @return int число удалённых ключей
+     */
+    public function deleteAllPublicFilesUnderSitePath(string $pathUnderSite): int
+    {
+        $pathUnderSite = ltrim(str_replace('\\', '/', $pathUnderSite), '/');
+        if ($pathUnderSite === '' || str_contains($pathUnderSite, '..')) {
+            throw new InvalidArgumentException('Invalid site path segment.');
+        }
+        if ($pathUnderSite !== 'expert_auto/programs') {
+            throw new InvalidArgumentException('Bulk delete is only allowed for expert_auto/programs.');
+        }
+
+        $fullPrefix = $this->publicPath('site/'.$pathUnderSite);
+        $disk = $this->publicDisk();
+        $count = 0;
+        try {
+            $keys = $disk->allFiles($fullPrefix);
+        } catch (Throwable) {
+            return 0;
+        }
+
+        foreach ($keys as $key) {
+            try {
+                if ($disk->delete($key)) {
+                    $count++;
+                }
+            } catch (Throwable) {
+                // продолжаем
+            }
+        }
+
+        return $count;
+    }
+
     public function publicUrl(string $path): string
     {
         $relative = ltrim($this->publicPath($path), '/');
         $cdn = rtrim((string) config('tenant_storage.public_cdn_base_url', ''), '/');
         if ($cdn !== '') {
-            return $cdn.'/'.$relative;
+            $url = $cdn.'/'.$relative;
+        } else {
+            $adapter = $this->publicDisk();
+            if (! $adapter instanceof FilesystemAdapter) {
+                throw new RuntimeException('TenantStorage::publicUrl() requires a disk adapter that supports URL generation.');
+            }
+
+            $url = $adapter->url($this->publicPath($path));
         }
 
-        $adapter = $this->publicDisk();
-        if (! $adapter instanceof FilesystemAdapter) {
-            throw new RuntimeException('TenantStorage::publicUrl() requires a disk adapter that supports URL generation.');
+        $bust = trim((string) config('tenant_storage.public_url_version', ''));
+        if ($bust !== '') {
+            $url .= (str_contains($url, '?') ? '&' : '?').$bust;
         }
 
-        return $adapter->url($this->publicPath($path));
+        return $url;
     }
 
     /**

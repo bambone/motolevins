@@ -13,9 +13,9 @@ class TenantPublicStorageFileController extends Controller
     /**
      * Tenant public files under {@code tenants/{id}/public/…} on the configured public disk.
      *
-     * Local disk: {@code response()->file()}. Cloud (R2/S3): изображения и видео стримятся через приложение
-     * с явным {@code Content-Type} (избегаем {@code ERR_BLOCKED_BY_ORB} при неверных метаданных на CDN);
-     * прочие типы — HTTP 302 на канонический URL объекта.
+     * Local disk: {@code response()->file()}. Cloud (R2/S3): по умолчанию HTTP 302 на канонический URL объекта
+     * (браузер тянет файл с CDN/R2). Опционально {@see config('tenant_storage.stream_public_through_origin')}
+     * включает стриминг изображений/видео через PHP при неверных Content-Type на bucket (узкий legacy-fallback).
      */
     public function show(Request $request, string $tenantId, string $path): Response
     {
@@ -44,10 +44,11 @@ class TenantPublicStorageFileController extends Controller
             return response()->file($absolute);
         }
 
-        if ($this->shouldStreamThroughOrigin($path)) {
-            if (! $disk->exists($relative)) {
-                abort(404);
-            }
+        if (! $disk->exists($relative)) {
+            abort(404);
+        }
+
+        if (config('tenant_storage.stream_public_through_origin', false) && $this->shouldStreamThroughOrigin($path)) {
             $stream = $disk->readStream($relative);
             if (! is_resource($stream)) {
                 abort(404);
@@ -69,7 +70,13 @@ class TenantPublicStorageFileController extends Controller
             ]);
         }
 
-        return redirect()->away($disk->url($relative), 302);
+        $redirect = redirect()->away($disk->url($relative), 302);
+        $cc = trim((string) config('tenant_storage.public_storage_redirect_cache_control', ''));
+        if ($cc !== '') {
+            $redirect->headers->set('Cache-Control', $cc);
+        }
+
+        return $redirect;
     }
 
     private function shouldStreamThroughOrigin(string $path): bool

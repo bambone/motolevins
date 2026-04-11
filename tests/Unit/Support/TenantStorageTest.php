@@ -4,8 +4,10 @@ namespace Tests\Unit\Support;
 
 use App\Models\Tenant;
 use App\Support\Storage\TenantStorage;
+use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Support\Facades\Storage;
 use InvalidArgumentException;
+use Mockery;
 use Tests\TestCase;
 
 class TenantStorageTest extends TestCase
@@ -67,5 +69,28 @@ class TenantStorageTest extends TestCase
         Storage::disk('r2-private')->assertExists('tenants/1/private/site/seo/y.txt');
         $this->assertSame('hello', $ts->getPublic('site/x.txt'));
         $this->assertSame('world', $ts->getPrivate('site/seo/y.txt'));
+    }
+
+    public function test_merged_public_write_options_adds_cache_control_for_cloud_disk(): void
+    {
+        config(['tenant_storage.public_object_cache_control' => 'public, max-age=120']);
+
+        $nonLocal = Mockery::mock(FilesystemAdapter::class);
+        $fly = Mockery::mock(\League\Flysystem\FilesystemAdapter::class);
+        $nonLocal->shouldReceive('getAdapter')->andReturn($fly);
+
+        $merged = TenantStorage::mergedOptionsForPublicObjectWrite($nonLocal, [
+            'ContentType' => 'image/webp',
+        ]);
+
+        $this->assertSame('public, max-age=120', $merged['CacheControl']);
+        $this->assertSame('image/webp', $merged['ContentType']);
+        $this->assertSame('public', $merged['visibility']);
+    }
+
+    protected function tearDown(): void
+    {
+        Mockery::close();
+        parent::tearDown();
     }
 }

@@ -6,8 +6,6 @@
     {{-- Не вкладывать <main> в layout main; отступы под фиксированную шапку expert_auto (3.75 / 5 / 5.5 rem). --}}
     <div class="expert-contacts-page expert-auto-theme min-w-0 pb-24 sm:pb-32">
         <section class="relative overflow-hidden pb-10 pt-[calc(3.75rem+1.25rem)] sm:pb-14 md:pt-[calc(5rem+2rem)] lg:pb-16 lg:pt-[calc(5.5rem+2.5rem)]">
-            <div class="pointer-events-none absolute -left-40 top-0 h-[40rem] w-[40rem] rounded-full bg-moto-amber/5 blur-[120px]" aria-hidden="true"></div>
-            
             <div class="relative z-10 mx-auto max-w-6xl px-4 text-center sm:px-6 md:px-8">
                 <span class="mb-6 inline-flex items-center justify-center rounded-full bg-moto-amber/10 px-4 py-1.5 text-[11px] font-bold uppercase tracking-widest text-moto-amber ring-1 ring-inset ring-moto-amber/30">
                     Контакты
@@ -24,9 +22,7 @@
                 <div class="grid min-w-0 gap-5 md:grid-cols-2 md:gap-6 lg:gap-8">
                     
                     {{-- Главный контактный блок --}}
-                    <div class="expert-contact-card relative min-w-0 overflow-hidden rounded-[1.5rem] border border-white/[0.08] bg-gradient-to-br from-[#12141c] to-[#0a0c12] p-6 shadow-[0_32px_80px_-24px_rgba(201,168,124,0.15)] sm:rounded-[2rem] sm:p-10 lg:p-12">
-                        <div class="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-moto-amber/10 blur-[80px]"></div>
-                        
+                    <div class="expert-contact-card relative z-10 min-w-0 overflow-hidden rounded-[1.5rem] border border-white/[0.08] bg-gradient-to-br from-[#12141c] to-[#0a0c12] p-6 shadow-[0_28px_64px_-20px_rgba(0,0,0,0.72)] ring-1 ring-inset ring-white/[0.04] sm:rounded-[2rem] sm:p-10 lg:p-12">
                         <h2 class="text-2xl font-bold text-white/95">Мои контакты</h2>
                         <p class="mt-3 text-[15px] leading-relaxed text-silver/70">Отвечаю лично, обычно в течение пары часов.</p>
                         

@@ -9,6 +9,7 @@ export const publicFormFieldErrorPriority = [
     'preferred_contact_channel',
     'phone',
     'preferred_contact_value',
+    'goal_text',
     'message',
     'company_site',
     'utm_source',

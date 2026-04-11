@@ -1,4 +1,5 @@
 import { initPublicFormValidationErrorsFromJson } from './shared/publicFormValidation.js';
+import { preferredChannelNeedsAsciiValue, stripToAsciiContactTyping } from './shared/visitorContactNormalize.js';
 
 const pmIsLowPerfDevice = () =>
     window.innerWidth < 768 || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -292,6 +293,15 @@ const initPmContactPreferredChannels = () => {
             valueInput.setAttribute('inputmode', 'text');
             valueInput.setAttribute('autocomplete', 'off');
         }
+        if (id === 'telegram' || id === 'vk') {
+            valueInput.setAttribute('lang', 'en');
+            valueInput.setAttribute('spellcheck', 'false');
+            valueInput.setAttribute('autocapitalize', 'off');
+        } else {
+            valueInput.removeAttribute('lang');
+            valueInput.removeAttribute('spellcheck');
+            valueInput.removeAttribute('autocapitalize');
+        }
 
         if (phoneHintEl) {
             const phoneHint =
@@ -305,7 +315,67 @@ const initPmContactPreferredChannels = () => {
             valueHint.textContent = hintText;
             valueHint.classList.toggle('hidden', hintText === '');
         }
+        if (needValue && preferredChannelNeedsAsciiValue(id) && valueInput.value) {
+            const stripped = stripToAsciiContactTyping(valueInput.value);
+            if (stripped !== valueInput.value) {
+                valueInput.value = stripped;
+            }
+        }
     };
+
+    const applyStripPref = () => {
+        if (!valueInput || !preferredChannelNeedsAsciiValue(selectedId())) {
+            return;
+        }
+        const v = valueInput.value;
+        const next = stripToAsciiContactTyping(v);
+        if (next === v) {
+            return;
+        }
+        const car = valueInput.selectionStart ?? next.length;
+        valueInput.value = next;
+        const delta = v.length - next.length;
+        const pos = Math.max(0, Math.min(next.length, car - delta));
+        try {
+            valueInput.setSelectionRange(pos, pos);
+        } catch (_) {}
+    };
+
+    if (valueInput && valueInput.dataset.rbAsciiPrefGuard !== '1') {
+        valueInput.dataset.rbAsciiPrefGuard = '1';
+        valueInput.addEventListener('beforeinput', (e) => {
+            if (!preferredChannelNeedsAsciiValue(selectedId())) {
+                return;
+            }
+            if (e.isComposing) {
+                return;
+            }
+            if (e.inputType === 'insertText' && e.data && /[^\x20-\x7E]/.test(e.data)) {
+                e.preventDefault();
+            }
+        });
+        valueInput.addEventListener('paste', (e) => {
+            if (!preferredChannelNeedsAsciiValue(selectedId())) {
+                return;
+            }
+            const text = (e.clipboardData || window.clipboardData)?.getData('text') || '';
+            if (!/[^\x20-\x7E]/.test(text)) {
+                return;
+            }
+            e.preventDefault();
+            const cleaned = stripToAsciiContactTyping(text);
+            const start = valueInput.selectionStart ?? 0;
+            const end = valueInput.selectionEnd ?? 0;
+            const cur = valueInput.value;
+            valueInput.value = cur.slice(0, start) + cleaned + cur.slice(end);
+            const pos = start + cleaned.length;
+            try {
+                valueInput.setSelectionRange(pos, pos);
+            } catch (_) {}
+        });
+        valueInput.addEventListener('compositionend', applyStripPref);
+        valueInput.addEventListener('input', applyStripPref);
+    }
 
     form.addEventListener('change', (e) => {
         const t = e.target;

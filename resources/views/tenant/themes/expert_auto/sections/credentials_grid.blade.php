@@ -42,7 +42,7 @@
                     <div class="mt-6 grid min-w-0 gap-2.5 sm:mt-10 sm:grid-cols-2 sm:gap-5 lg:mt-12 xl:gap-6">
                         @foreach($items as $index => $item)
                             <div
-                                class="expert-cred-mega__card group flex min-w-0 flex-col rounded-xl border px-4 py-4 transition-all duration-300 sm:rounded-2xl sm:px-6 sm:py-6 {{ $index === 0 ? 'sm:col-span-2 border-moto-amber/30 bg-gradient-to-br from-moto-amber/[0.08] to-transparent shadow-[0_8px_32px_-12px_rgba(201,168,124,0.15)] sm:px-8 sm:py-8' : 'border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04]' }}"
+                                class="expert-cred-mega__card group flex min-w-0 flex-col rounded-xl border px-4 py-4 transition-all duration-300 sm:rounded-2xl sm:px-6 sm:py-6 {{ $index === 0 ? 'sm:col-span-2 border-moto-amber/30 bg-gradient-to-br from-moto-amber/[0.05] to-transparent shadow-[0_18px_40px_-12px_rgba(0,0,0,0.55)] ring-1 ring-inset ring-white/[0.04] sm:px-8 sm:py-8' : 'border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04]' }}"
                                 @if($index >= 4)
                                     x-bind:class="{ 'max-lg:hidden': !credMore }"
                                 @endif

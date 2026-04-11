@@ -8,7 +8,7 @@
     }
 @endphp
 <section class="expert-conditions-mega relative mb-14 min-w-0 sm:mb-20 lg:mb-28">
-    <div class="relative overflow-hidden rounded-[1.5rem] border border-white/[0.05] bg-gradient-to-br from-[#0c0f17] to-[#050608] px-4 py-8 sm:rounded-[2rem] sm:px-8 sm:py-11 lg:p-14">
+    <div class="relative overflow-hidden rounded-[1.5rem] border border-white/[0.08] bg-gradient-to-br from-[#0c0f17] to-[#050608] px-4 py-8 shadow-[0_28px_64px_-20px_rgba(0,0,0,0.72)] ring-1 ring-inset ring-white/[0.04] sm:rounded-[2rem] sm:px-8 sm:py-11 lg:p-14">
         @if($h !== '')
             <div class="mb-8 flex flex-wrap items-start gap-3 sm:mb-10 sm:items-center sm:gap-4 lg:mb-12">
                 <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/[0.04] text-moto-amber ring-1 ring-inset ring-white/[0.08]" aria-hidden="true">

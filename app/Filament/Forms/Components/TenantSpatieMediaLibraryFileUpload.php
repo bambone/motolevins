@@ -3,10 +3,13 @@
 namespace App\Filament\Forms\Components;
 
 use App\Models\Tenant;
+use App\Support\Storage\TenantStorage;
+use App\Support\Storage\TenantStorageDisks;
 use App\Tenant\StorageQuota\StorageQuotaExceededException;
 use App\Tenant\StorageQuota\TenantStorageQuotaService;
 use Filament\Forms\Components\SpatieMediaLibraryFileUpload;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use League\Flysystem\UnableToCheckFileExistence;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
@@ -53,8 +56,15 @@ final class TenantSpatieMediaLibraryFileUpload extends SpatieMediaLibraryFileUpl
 
             $filename = $component->getUploadedFileNameForStorage($file);
 
+            $uploadHeaders = ['ContentType' => $file->getMimeType()];
+            $diskName = $component->getDiskName();
+            if ($diskName !== '' && $diskName !== TenantStorageDisks::privateDiskName()) {
+                $uploadDisk = Storage::disk($diskName);
+                $uploadHeaders = TenantStorage::mergedOptionsForPublicObjectWrite($uploadDisk, $uploadHeaders);
+            }
+
             $media = $mediaAdder
-                ->addCustomHeaders([...['ContentType' => $file->getMimeType()], ...$component->getCustomHeaders()])
+                ->addCustomHeaders([...$uploadHeaders, ...$component->getCustomHeaders()])
                 ->usingFileName($filename)
                 ->usingName($component->getMediaName($file) ?? pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME))
                 ->storingConversionsOnDisk($component->getConversionsDisk() ?? '')

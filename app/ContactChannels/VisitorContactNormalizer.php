@@ -7,6 +7,10 @@ namespace App\ContactChannels;
  */
 final class VisitorContactNormalizer
 {
+    /**
+     * Username Telegram: [a-zA-Z0-9_]{5,32} или t.me/… / telegram.me/… с тем же набором в сегменте.
+     * Кириллица и прочие не-ASCII в нике не допускаются (как в Telegram).
+     */
     public static function normalizeTelegram(string $raw): ?string
     {
         $s = trim($raw);

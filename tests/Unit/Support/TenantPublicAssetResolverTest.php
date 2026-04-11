@@ -4,14 +4,23 @@ namespace Tests\Unit\Support;
 
 use App\Models\Tenant;
 use App\Support\Storage\TenantPublicAssetResolver;
+use Illuminate\Filesystem\FilesystemAdapter;
+use Illuminate\Filesystem\FilesystemManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Mockery;
 use Tests\TestCase;
 
 class TenantPublicAssetResolverTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function tearDown(): void
+    {
+        Mockery::close();
+        parent::tearDown();
+    }
 
     public function test_empty_returns_null(): void
     {
@@ -24,6 +33,37 @@ class TenantPublicAssetResolverTest extends TestCase
         $u = 'https://example.com/a.png';
 
         $this->assertSame($u, TenantPublicAssetResolver::resolve($u, 1));
+    }
+
+    public function test_https_legacy_storage_url_rewrites_to_cdn_when_cloud_disk_and_cdn_set(): void
+    {
+        $diskName = 'r2-resolver-rewrite-test';
+        config([
+            'tenant_storage.public_disk' => $diskName,
+            'tenant_storage.public_cdn_base_url' => 'https://cdn.example.com',
+        ]);
+
+        $nonLocal = Mockery::mock(FilesystemAdapter::class);
+        $fly = Mockery::mock(\League\Flysystem\FilesystemAdapter::class);
+        $nonLocal->shouldReceive('getAdapter')->andReturn($fly);
+
+        Storage::partialMock()
+            ->shouldReceive('disk')
+            ->andReturnUsing(function (string $name) use ($nonLocal, $diskName) {
+                if ($name === $diskName) {
+                    return $nonLocal;
+                }
+
+                return (new FilesystemManager(app()))->disk($name);
+            });
+
+        $legacy = 'https://tenant.example/storage/tenants/2/public/site/programs/parking/card-cover-desktop.webp?v=1';
+        $out = TenantPublicAssetResolver::resolve($legacy, 2);
+
+        $this->assertSame(
+            'https://cdn.example.com/tenants/2/public/site/programs/parking/card-cover-desktop.webp?v=1',
+            $out
+        );
     }
 
     public function test_object_key_mismatch_tenant_returns_null(): void

@@ -67,8 +67,8 @@
                 $ck = $review->category_key ?? null;
                 $tag = $catLabel(is_string($ck) ? $ck : null);
             @endphp
-            <article class="expert-review expert-review--spotlight relative flex min-h-full min-w-0 flex-col overflow-hidden rounded-[1.35rem] border border-moto-amber/30 bg-gradient-to-br from-[#12141c] to-[#0a0c12] p-6 shadow-[0_32px_80px_-24px_rgba(201,168,124,0.3)] ring-1 ring-inset ring-white/[0.05] sm:rounded-[2rem] sm:p-10 {{ $sideFeatured->isEmpty() ? 'lg:col-span-12' : 'lg:col-span-7' }}">
-                <div class="pointer-events-none absolute inset-0 bg-gradient-to-br from-moto-amber/[0.08] via-transparent to-transparent"></div>
+            <article class="expert-review expert-review--spotlight relative flex min-h-full min-w-0 flex-col overflow-hidden rounded-[1.35rem] border border-moto-amber/30 bg-gradient-to-br from-[#12141c] to-[#0a0c12] p-6 shadow-[0_28px_64px_-20px_rgba(0,0,0,0.72)] ring-1 ring-inset ring-white/[0.06] sm:rounded-[2rem] sm:p-10 {{ $sideFeatured->isEmpty() ? 'lg:col-span-12' : 'lg:col-span-7' }}">
+                <div class="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/[0.04] via-transparent to-transparent"></div>
                 <div class="relative z-10 flex flex-col h-full">
                     <span class="mb-6 inline-flex w-fit items-center gap-2 rounded-full bg-moto-amber/10 px-3 py-1.5 text-[0.65rem] font-bold uppercase tracking-widest text-moto-amber ring-1 ring-inset ring-moto-amber/30">
                         <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>
@@ -94,7 +94,7 @@
                     <div class="mt-6 flex flex-col gap-4 border-t border-white/[0.06] pt-6 sm:mt-8 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3">
                         <div class="expert-review__stars flex gap-1 text-moto-amber" aria-hidden="true">
                             @for($i = 0; $i < min(5, (int) $review->rating); $i++)
-                                <svg class="h-5 w-5 drop-shadow-[0_0_8px_rgba(201,168,124,0.4)]" viewBox="0 0 20 20" fill="currentColor"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>
+                                <svg class="h-5 w-5 drop-shadow-[0_1px_2px_rgba(0,0,0,0.35)]" viewBox="0 0 20 20" fill="currentColor"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>
                             @endfor
                         </div>
                         <span class="sr-only">Оценка {{ (int) $review->rating }} из 5</span>
@@ -114,7 +114,7 @@
                                             </form>
                                         </div>
                                         <div class="expert-video-dialog__body expert-video-dialog__body--flush">
-                                            <video class="expert-video-dialog__video" controls playsinline preload="metadata" src="{{ e($vUrl) }}"></video>
+                                            <video class="expert-video-dialog__video" controls playsinline preload="none" data-expert-dialog-src="{{ e($vUrl) }}"></video>
                                         </div>
                                     </div>
                                 </dialog>
@@ -174,7 +174,7 @@
                                                     </form>
                                                 </div>
                                                 <div class="expert-video-dialog__body expert-video-dialog__body--flush">
-                                                    <video class="expert-video-dialog__video" controls playsinline preload="metadata" src="{{ e($vUrl) }}"></video>
+                                                    <video class="expert-video-dialog__video" controls playsinline preload="none" data-expert-dialog-src="{{ e($vUrl) }}"></video>
                                                 </div>
                                             </div>
                                         </dialog>
@@ -251,7 +251,7 @@
                                         </form>
                                     </div>
                                     <div class="expert-video-dialog__body expert-video-dialog__body--flush">
-                                        <video class="expert-video-dialog__video" controls playsinline preload="metadata" src="{{ e($vUrl) }}"></video>
+                                        <video class="expert-video-dialog__video" controls playsinline preload="none" data-expert-dialog-src="{{ e($vUrl) }}"></video>
                                     </div>
                                 </div>
                             </dialog>

@@ -100,27 +100,45 @@ class TenantServiceProgramResource extends Resource
                             ->columnSpanFull(),
                     ])->columns(1),
                 Section::make('Обложка карточки программы (R2)')
-                    ->description('Рекомендуемый путь: site/expert_auto/programs/{slug}/card-cover-desktop.webp и card-cover-mobile.webp (публичный диск тенанта).')
+                    ->description('В витрине: широкий баннер сверху карточки. Desktop — горизонтальный кадр (~1200×640, WebP); mobile — отдельный вертикальный (~720×1040). Для темы expert_auto массовая заливка пресетов из системного пула: php artisan tenant:sync-program-cover-bundle {slug} (пресеты в R2: tenants/_system/themes/expert_auto/program-covers/, см. expert:seed-system-program-covers / theme:push-system-bundled).')
                     ->schema([
                         TenantPublicImagePicker::make('cover_image_ref')
-                            ->label('Desktop (портретная панель, ~1200×1500)')
+                            ->label('Desktop (широкий баннер)')
                             ->uploadPublicSiteSubdirectory(fn (Get $get): string => 'expert_auto/programs/'.trim((string) ($get('slug') ?: 'draft')))
-                            ->helperText('Ключ вида tenants/{id}/public/site/expert_auto/programs/{slug}/… (зона PublicSite).')
+                            ->helperText('Рекомендуемо ~1200×640 (WebP). Путь: site/expert_auto/programs/{slug}/card-cover-desktop.webp')
                             ->columnSpanFull(),
                         TenantPublicImagePicker::make('cover_mobile_ref')
-                            ->label('Mobile (широкий crop, ~1280×720), опционально')
+                            ->label('Mobile (портрет, опционально)')
                             ->uploadPublicSiteSubdirectory(fn (Get $get): string => 'expert_auto/programs/'.trim((string) ($get('slug') ?: 'draft')))
-                            ->helperText('Если пусто — на узких экранах подставится desktop-версия.')
+                            ->helperText('Рекомендуемо ~720×1040 под узкий экран. Если пусто — используется desktop.')
                             ->columnSpanFull(),
                         TextInput::make('cover_image_alt')
                             ->label('Alt-текст для изображения')
                             ->maxLength(500)
                             ->columnSpanFull(),
+                        Select::make('cover_object_position_preset')
+                            ->label('Фокус кадра на баннере')
+                            ->helperText('Вертикаль обрезки (object-position). «Авто» ≈ center 18%. Обложки из site/brand/ после смены кропа в коде — снова tenant:sync-program-cover-bundle.')
+                            ->options([
+                                'auto' => 'Авто (рекомендуется)',
+                                'center top' => 'Верх кадра',
+                                'center 22%' => 'Сильно вверх (лица)',
+                                'center 30%' => 'Чуть выше центра',
+                                'center center' => 'Ровно по центру',
+                                'center 72%' => 'Чуть ниже центра',
+                                'center bottom' => 'Низ кадра',
+                                '__other__' => 'Свой CSS…',
+                            ])
+                            ->default('auto')
+                            ->native(false)
+                            ->live()
+                            ->columnSpanFull(),
                         TextInput::make('cover_object_position')
-                            ->label('Object position (CSS)')
+                            ->label('Свой object-position')
                             ->maxLength(64)
-                            ->placeholder('напр. center 30%')
-                            ->helperText('Только для тонкой подгонки кадра; оставьте пустым для center.')
+                            ->placeholder('напр. center 18% или 50% 20%')
+                            ->visible(fn (Get $get): bool => $get('cover_object_position_preset') === '__other__')
+                            ->required(fn (Get $get): bool => $get('cover_object_position_preset') === '__other__')
                             ->columnSpanFull(),
                     ]),
             ]);

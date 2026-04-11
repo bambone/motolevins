@@ -58,8 +58,12 @@
             </div>
             <div>
                 <label class="mb-2 block text-sm text-silver" for="checkout-phone">Телефон *</label>
-                <input id="checkout-phone" type="tel" name="phone" value="{{ old('phone') }}" required autocomplete="tel" placeholder="+7 (900) 000-00-00" maxlength="28" inputmode="tel"
+                <input id="checkout-phone" type="tel" name="phone" value="{{ old('phone') }}" required autocomplete="tel"
+                    data-rb-intl-phone="1"
+                    aria-describedby="checkout-phone-hint"
+                    placeholder="+7 (900) 000-00-00" maxlength="28" inputmode="tel"
                     class="h-12 w-full rounded-xl border border-white/10 bg-black/50 px-4 py-3 text-base text-white placeholder:text-zinc-500 outline-none focus:border-moto-amber focus:ring-1 focus:ring-moto-amber @error('phone') border-red-500 @enderror">
+                <p id="checkout-phone-hint" class="mt-2 text-xs leading-snug text-zinc-500 sm:text-sm"></p>
                 @error('phone')
                     <p class="mt-1 text-sm text-red-400">{{ $message }}</p>
                 @enderror
@@ -136,9 +140,24 @@
             const extra = document.getElementById('checkout-pref-extra');
             const input = document.getElementById('checkout-pref-value');
             const hintEl = document.getElementById('checkout-pref-hint');
-            function sync() {
+            function currentChannel() {
                 let v = 'phone';
                 radios.forEach((r) => { if (r.checked) v = r.value; });
+                return v;
+            }
+            function stripToAscii(s) {
+                var N = window.RentBaseVisitorContactNormalize;
+                if (N && typeof N.stripToAsciiContactTyping === 'function') {
+                    return N.stripToAsciiContactTyping(s);
+                }
+                return String(s || '').replace(/[^\x20-\x7E]/g, '');
+            }
+            function needsAsciiChannel() {
+                var c = currentChannel();
+                return c === 'telegram' || c === 'vk';
+            }
+            function sync() {
+                const v = currentChannel();
                 const show = needs[v] === true;
                 if (extra) extra.classList.toggle('hidden', !show);
                 if (input) input.required = show;
@@ -146,7 +165,75 @@
                     hintEl.textContent = hints[v] || '';
                     hintEl.classList.toggle('hidden', !hints[v]);
                 }
-                if (input) input.placeholder = placeholders[v] || '';
+                if (input) {
+                    input.placeholder = placeholders[v] || '';
+                    if (v === 'telegram' || v === 'vk') {
+                        input.setAttribute('lang', 'en');
+                        input.setAttribute('spellcheck', 'false');
+                        input.setAttribute('autocapitalize', 'off');
+                    } else {
+                        input.removeAttribute('lang');
+                        input.removeAttribute('spellcheck');
+                        input.removeAttribute('autocapitalize');
+                    }
+                    if (show && needsAsciiChannel() && input.value) {
+                        var st = stripToAscii(input.value);
+                        if (st !== input.value) {
+                            input.value = st;
+                        }
+                    }
+                }
+            }
+            if (input && input.dataset.rbAsciiPrefGuard !== '1') {
+                input.dataset.rbAsciiPrefGuard = '1';
+                function applyStrip() {
+                    if (!needsAsciiChannel()) {
+                        return;
+                    }
+                    var v = input.value;
+                    var next = stripToAscii(v);
+                    if (next === v) {
+                        return;
+                    }
+                    var car = input.selectionStart || 0;
+                    input.value = next;
+                    var delta = v.length - next.length;
+                    var pos = Math.max(0, Math.min(next.length, car - delta));
+                    try {
+                        input.setSelectionRange(pos, pos);
+                    } catch (e) {}
+                }
+                input.addEventListener('beforeinput', function (e) {
+                    if (!needsAsciiChannel()) {
+                        return;
+                    }
+                    if (e.isComposing) {
+                        return;
+                    }
+                    if (e.inputType === 'insertText' && e.data && /[^\x20-\x7E]/.test(e.data)) {
+                        e.preventDefault();
+                    }
+                });
+                input.addEventListener('paste', function (e) {
+                    if (!needsAsciiChannel()) {
+                        return;
+                    }
+                    var text = (e.clipboardData || window.clipboardData).getData('text') || '';
+                    if (!/[^\x20-\x7E]/.test(text)) {
+                        return;
+                    }
+                    e.preventDefault();
+                    var cleaned = stripToAscii(text);
+                    var start = input.selectionStart || 0;
+                    var end = input.selectionEnd || 0;
+                    var cur = input.value;
+                    input.value = cur.slice(0, start) + cleaned + cur.slice(end);
+                    try {
+                        input.setSelectionRange(start + cleaned.length, start + cleaned.length);
+                    } catch (err) {}
+                });
+                input.addEventListener('compositionend', applyStrip);
+                input.addEventListener('input', applyStrip);
             }
             radios.forEach((r) => r.addEventListener('change', sync));
             sync();

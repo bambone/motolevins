@@ -34,6 +34,11 @@
     $headingDisplay = RussianTypography::tiePrepositionsToNextWord($heading);
     $subDisplay = $sub !== '' ? RussianTypography::tiePrepositionsToNextWord($sub) : '';
 @endphp
+@push('tenant-preload')
+    @if($hasPhoto && $heroUrl !== '')
+        <link rel="preload" as="image" href="{{ e($heroUrl) }}" fetchpriority="high">
+    @endif
+@endpush
 {{-- Full-bleed hero: desktop — текст слева + crop справа; mobile — герой сверху чистый, типографика и CTA внизу на нижнем градиенте (без карточки-подложки). --}}
 <section
     class="expert-hero-cinematic relative z-0 mb-10 sm:mb-20 lg:mb-28 @if($hasPhoto) expert-hero-cinematic--photo @endif"
@@ -187,7 +192,7 @@
                 </form>
             </div>
             <div class="expert-video-dialog__body expert-video-dialog__body--flush">
-                <video class="expert-video-dialog__video" controls playsinline preload="auto" @if($videoPoster !== '') poster="{{ e($videoPoster) }}" @endif src="{{ e($videoUrl) }}"></video>
+                <video class="expert-video-dialog__video" controls playsinline preload="none" @if($videoPoster !== '') poster="{{ e($videoPoster) }}" @endif data-expert-dialog-src="{{ e($videoUrl) }}"></video>
             </div>
         </div>
     </dialog>
@@ -196,23 +201,36 @@
 @once('expert-video-dialog-script')
     <script>
         (function () {
+            function playVideoEl(v) {
+                try {
+                    v.muted = false;
+                    var p = v.play();
+                    if (p && typeof p.catch === 'function') {
+                        p.catch(function () {
+                            try {
+                                v.muted = true;
+                                v.play().catch(function () {});
+                            } catch (e2) {}
+                        });
+                    }
+                } catch (e) {}
+            }
             function tryPlay(dlg) {
                 requestAnimationFrame(function () {
                     requestAnimationFrame(function () {
                         var v = dlg.querySelector('video');
                         if (!v) return;
-                        try {
-                            v.muted = false;
-                            var p = v.play();
-                            if (p && typeof p.catch === 'function') {
-                                p.catch(function () {
-                                    try {
-                                        v.muted = true;
-                                        v.play().catch(function () {});
-                                    } catch (e2) {}
-                                });
-                            }
-                        } catch (e) {}
+                        var ds = v.getAttribute('data-expert-dialog-src');
+                        if (ds && !v.getAttribute('src')) {
+                            v.setAttribute('src', ds);
+                            v.removeAttribute('data-expert-dialog-src');
+                            v.addEventListener('loadeddata', function onLd() {
+                                v.removeEventListener('loadeddata', onLd);
+                                playVideoEl(v);
+                            });
+                            return;
+                        }
+                        playVideoEl(v);
                     });
                 });
             }

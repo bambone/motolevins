@@ -109,7 +109,13 @@ trait InteractsWithTenantPublicFilePicker
             return;
         }
         $name = Str::uuid()->toString().'.'.$ext;
-        Storage::disk($disk)->putFileAs($dirKey, $this->tenantPublicImageUploadBuffer, $name);
+        $adapter = Storage::disk($disk);
+        $adapter->putFileAs(
+            $dirKey,
+            $this->tenantPublicImageUploadBuffer,
+            $name,
+            TenantStorage::mergedOptionsForPublicObjectWrite($adapter),
+        );
         $objectKey = $dirKey.'/'.$name;
         $this->assignToLivewireRootState($this->tenantPublicImageUploadTargetPath, $objectKey);
         $this->tenantPublicImageUploadBuffer = null;

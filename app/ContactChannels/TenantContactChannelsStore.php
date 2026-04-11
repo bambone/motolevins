@@ -101,7 +101,7 @@ class TenantContactChannelsStore
     }
 
     /**
-     * @return list<array{id: string, label: string, needs_value: bool, value_hint: string, value_placeholder: string}>
+     * @return list<array{id: string, label: string, needs_value: bool, needs_phone: bool, value_hint: string, value_placeholder: string}>
      */
     public function publicFormPreferredOptions(int $tenantId): array
     {
@@ -109,6 +109,10 @@ class TenantContactChannelsStore
         $options = [];
         foreach ($allowed as $id) {
             $needs = ContactChannelRegistry::requiresVisitorValue($id);
+            $needsPhone = in_array($id, [
+                ContactChannelType::Phone->value,
+                ContactChannelType::Whatsapp->value,
+            ], true);
             $options[] = [
                 'id' => $id,
                 'label' => match ($id) {
@@ -116,6 +120,7 @@ class TenantContactChannelsStore
                     default => 'Предпочитаю: '.ContactChannelRegistry::label($id),
                 },
                 'needs_value' => $needs,
+                'needs_phone' => $needsPhone,
                 'value_hint' => $needs ? ContactChannelRegistry::visitorValueHintRu($id) : '',
                 'value_placeholder' => $needs ? ContactChannelRegistry::visitorValuePlaceholderRu($id) : '',
             ];

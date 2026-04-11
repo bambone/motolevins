@@ -323,6 +323,85 @@
         el.value = display;
     }
 
+    /**
+     * Публичное поле type=tel: тот же контракт, что в tenant/components/booking-modal.blade.php
+     * (onPhoneInput — @input / @change / @blur → handleInput + phoneHelperHint).
+     *
+     * Для автоподключения без отдельного бандла: input[type="tel"][data-rb-intl-phone="1"]
+     * и опционально aria-describedby → элемент подсказки.
+     *
+     * @param {HTMLInputElement} inputEl
+     * @param {{ hintEl?: Element|null, setNormalized?: (norm: string) => void }} [opts]
+     * @returns {boolean}
+     */
+    function attachPublicTelField(inputEl, opts) {
+        opts = opts || {};
+        if (!inputEl || inputEl.dataset.rbIntlPhoneUi === '1') {
+            return false;
+        }
+
+        const hintEl = opts.hintEl ?? null;
+        const setN = typeof opts.setNormalized === 'function' ? opts.setNormalized : null;
+
+        const refreshHint = () => {
+            if (!hintEl) {
+                return;
+            }
+            hintEl.textContent = phoneHelperHint(normalizePhone(inputEl.value));
+        };
+
+        const onPhoneInput = () => {
+            handleInput(inputEl, (norm) => {
+                if (setN) {
+                    setN(norm);
+                }
+            });
+            refreshHint();
+        };
+
+        inputEl.dataset.rbIntlPhoneUi = '1';
+        inputEl.addEventListener('input', onPhoneInput);
+        inputEl.addEventListener('change', onPhoneInput);
+        inputEl.addEventListener('blur', onPhoneInput);
+        if (String(inputEl.value).trim() !== '') {
+            syncInputDisplay(inputEl, normalizePhone(inputEl.value));
+        }
+        refreshHint();
+
+        return true;
+    }
+
+    /**
+     * Подключить маску ко всем подходящим tel внутри узла (ленивый HTML, SPA-вставки).
+     * Плюс fallback по id для кэшированного HTML без data-rb-intl-phone.
+     */
+    function attachPublicTelFieldsIn(container) {
+        if (!container || typeof container.querySelectorAll !== 'function') {
+            return;
+        }
+        container.querySelectorAll('input[type="tel"][data-rb-intl-phone="1"]').forEach((input) => {
+            if (input.dataset.rbIntlPhoneUi === '1') {
+                return;
+            }
+            const hintId = input.getAttribute('aria-describedby');
+            const hintEl = hintId ? document.getElementById(hintId) : null;
+            attachPublicTelField(input, { hintEl });
+        });
+        ['expert-phone', 'checkout-phone'].forEach((id) => {
+            const input = container.querySelector('#' + id);
+            if (!input || input.type !== 'tel' || input.dataset.rbIntlPhoneUi === '1') {
+                return;
+            }
+            const hintId = input.getAttribute('aria-describedby');
+            const hintEl = hintId ? document.getElementById(hintId) : null;
+            attachPublicTelField(input, { hintEl });
+        });
+    }
+
+    function bootPublicTelFieldsFromDataAttr() {
+        attachPublicTelFieldsIn(document);
+    }
+
     global.TenantIntlPhone = {
         COUNTRIES,
         sanitizePhoneInput,
@@ -334,5 +413,22 @@
         phoneHelperHint,
         handleInput,
         syncInputDisplay,
+        attachPublicTelField,
+        attachPublicTelFieldsIn,
     };
+
+    if (typeof document !== 'undefined') {
+        document.addEventListener('rentbase:tenant-dom-mounted', (ev) => {
+            const root = ev && ev.detail && ev.detail.root;
+            if (root && root.nodeType === 1) {
+                attachPublicTelFieldsIn(root);
+            }
+        });
+        const run = () => bootPublicTelFieldsFromDataAttr();
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', run);
+        } else {
+            run();
+        }
+    }
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -8,11 +8,12 @@
 | Тема / публичные ассеты под `tenants/.../public/` | `putPublic` / нормализация | ключ под `public/site/...` | тот же public disk | `tenant_theme_public_url()` | OK | OK |
 | Spatie: обложки мото, галереи, отзывы | `MotorcycleResource`, `ReviewResource`, и т.д. | `media` table, `disk` + путь от корня диска | `MEDIA_DISK` (= обычно тот же, что tenant public) | `$media->getUrl()`, conversions на том же диске | OK | OK (URL с диска, не symlink) |
 | Legacy avatar в `Review` (без Spatie) | старый импорт | колонка `avatar` = object key или legacy префикс | `TenantStorageDisks::publicDiskName()` | `getAvatarUrlAttribute` | OK | OK |
-| Same-origin «красивый» URL | маршрут | — | `TenantPublicStorageFileController` | `/storage/tenants/{id}/public/...` | `response()->file()` | **302** на канонический URL объекта |
+| Same-origin «красивый» URL | маршрут | — | `TenantPublicStorageFileController` | `/storage/tenants/{id}/public/...` | `response()->file()` | **302** на канонический URL объекта (стрим только при `TENANT_STORAGE_STREAM_PUBLIC_THROUGH_ORIGIN`) |
+| JSON секции / брендинг (resolver) | — | ключи под `tenants/.../public/` | `TENANT_STORAGE_PUBLIC_DISK` | `TenantPublicAssetResolver` | `/storage/...` на локальном диске | Прямой **CDN URL** при заданном `TENANT_STORAGE_PUBLIC_CDN_URL` и не-local public disk |
 
 ## Маршрут `/storage/tenants/{id}/public/{path}`
 
-См. `routes/web.php` и `TenantPublicStorageFileController`: при облачном public-диске ответ — редирект, поэтому закладки и относительные ссылки остаются валидными без локального symlink на объект.
+См. `routes/web.php` и `TenantPublicStorageFileController`: при облачном public-диске по умолчанию ответ — **302** на канонический URL; закладки и старые ссылки остаются валидными. Разметка публичного сайта при включённом CDN должна сразу указывать на CDN, минуя этот hop.
 
 ## Что проверить вручную на `r2-public`
 

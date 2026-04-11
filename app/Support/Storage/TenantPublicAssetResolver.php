@@ -10,9 +10,9 @@ use Throwable;
  * Разрешение значений из JSON секций / настроек в публичный URL для img и CSS background.
  * Поддерживает legacy http(s) URL и object keys вида {@code tenants/{id}/public/...} на tenant public disk.
  *
- * В HTTP-запросе (публичный сайт, предпросмотр в админке) для ключей и относительных путей отдаётся
- * same-origin URL {@code /storage/tenants/{id}/public/...}, чтобы {@see TenantPublicStorageFileController}
- * выставил корректный {@code Content-Type} и не срабатывал {@code ERR_BLOCKED_BY_ORB} на прямых ссылках R2/CDN.
+ * В HTTP-запросе: если задан {@see config('tenant_storage.public_cdn_base_url')} и публичный диск не локальный Flysystem,
+ * отдаётся прямой CDN/R2 URL (как {@see TenantStorage::publicUrl()}), иначе same-origin
+ * {@code /storage/tenants/{id}/public/...} через {@see TenantPublicStorageFileController} (локальная разработка и legacy).
  */
 final class TenantPublicAssetResolver
 {
@@ -27,7 +27,7 @@ final class TenantPublicAssetResolver
         }
 
         if (preg_match('#^https?://#i', $v) === 1) {
-            return $v;
+            return self::rewriteTenantPublicStorageUrlIfCdnConfigured($v, $tenantId) ?? $v;
         }
 
         if (preg_match('#^tenants/(\d+)/public/(.+)$#', $v, $m) === 1) {
@@ -65,6 +65,67 @@ final class TenantPublicAssetResolver
     }
 
     /**
+     * Старые записи в JSON/настройках: полный URL на {@code /storage/tenants/{id}/public/...} на домене сайта.
+     * При включённом CDN и облачном диске переписываем на прямой R2/CDN URL, иначе каждый запрос идёт в Laravel (302) и только потом на объект.
+     *
+     * @return non-empty-string|null
+     */
+    private static function rewriteTenantPublicStorageUrlIfCdnConfigured(string $url, int $tenantId): ?string
+    {
+        $cdn = rtrim((string) config('tenant_storage.public_cdn_base_url', ''), '/');
+        if ($cdn === '') {
+            return null;
+        }
+        if (TenantStorageDisks::usesLocalFlyAdapter(TenantStorageDisks::publicDisk())) {
+            return null;
+        }
+
+        $path = parse_url($url, PHP_URL_PATH);
+        if (! is_string($path) || $path === '') {
+            return null;
+        }
+
+        if (preg_match('#/storage/tenants/(\d+)/public/(.+)$#', $path, $m) !== 1) {
+            return null;
+        }
+        if ((int) $m[1] !== $tenantId) {
+            return null;
+        }
+
+        $rel = rawurldecode($m[2]);
+        $rel = str_replace('\\', '/', $rel);
+        $rel = ltrim($rel, '/');
+        if ($rel === '' || str_contains($rel, '..')) {
+            return null;
+        }
+
+        if (str_starts_with($rel, 'expert_auto/')) {
+            $rel = 'site/'.$rel;
+        }
+
+        try {
+            $direct = TenantStorage::forTrusted($tenantId)->publicUrl($rel);
+        } catch (Throwable) {
+            return null;
+        }
+        $direct = trim($direct);
+        if ($direct === '') {
+            return null;
+        }
+
+        $query = parse_url($url, PHP_URL_QUERY);
+        if (is_string($query) && $query !== '') {
+            $direct .= (str_contains($direct, '?') ? '&' : '?').$query;
+        }
+        $fragment = parse_url($url, PHP_URL_FRAGMENT);
+        if (is_string($fragment) && $fragment !== '') {
+            $direct .= '#'.$fragment;
+        }
+
+        return $direct;
+    }
+
+    /**
      * @throws Throwable
      */
     private static function publicAssetUrlForRequestContext(int $tenantId, string $pathUnderPublicSegment): string
@@ -79,7 +140,18 @@ final class TenantPublicAssetResolver
             $pathUnderPublicSegment = 'site/'.$pathUnderPublicSegment;
         }
 
-        if (! app()->runningInConsole() && Route::has('tenant.public.storage')) {
+        $cdn = rtrim((string) config('tenant_storage.public_cdn_base_url', ''), '/');
+        $useDirectCdnUrl = $cdn !== '' && ! TenantStorageDisks::usesLocalFlyAdapter(TenantStorageDisks::publicDisk());
+
+        if ($useDirectCdnUrl) {
+            return TenantStorage::forTrusted($tenantId)->publicUrl($pathUnderPublicSegment);
+        }
+
+        // PHPUnit may report runningInConsole() during HTTP tests; наличие route совпадает с реальным web-запросом.
+        $hasHttpRoute = Route::has('tenant.public.storage')
+            && (! app()->runningInConsole() || request()->route() !== null);
+
+        if ($hasHttpRoute) {
             return route('tenant.public.storage', [
                 'tenantId' => $tenantId,
                 'path' => $pathUnderPublicSegment,
@@ -124,7 +196,7 @@ final class TenantPublicAssetResolver
         }
 
         if (preg_match('#^https?://#i', $v) === 1) {
-            return $v;
+            return self::rewriteTenantPublicStorageUrlIfCdnConfigured($v, (int) $tenant->id) ?? $v;
         }
 
         $ts = TenantStorage::forTrusted($tenant);

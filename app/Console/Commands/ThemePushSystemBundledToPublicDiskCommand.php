@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Support\Storage\TenantStorage;
+use App\Support\Storage\TenantStorageArea;
 use App\Support\Storage\TenantStorageDisks;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
@@ -11,7 +12,7 @@ use Illuminate\Support\Facades\Storage;
 /**
  * Заливает {@code resources/themes/{key}/public/…} в публичный диск под {@code tenants/_system/themes/{key}/…}.
  *
- * Переопределения клиента — отдельно: {@code tenants/{id}/public/themes/…} (см. {@see \App\Support\Storage\TenantStorageArea::PublicThemes}).
+ * Переопределения клиента — отдельно: {@code tenants/{id}/public/themes/…} (см. {@see TenantStorageArea::PublicThemes}).
  */
 class ThemePushSystemBundledToPublicDiskCommand extends Command
 {
@@ -53,7 +54,11 @@ class ThemePushSystemBundledToPublicDiskCommand extends Command
             if ($dry) {
                 continue;
             }
-            $disk->put($objectKey, File::get($pathname), ['visibility' => 'public']);
+            $disk->put(
+                $objectKey,
+                File::get($pathname),
+                TenantStorage::mergedOptionsForPublicObjectWrite($disk, ['visibility' => 'public']),
+            );
         }
 
         if ($n === 0) {

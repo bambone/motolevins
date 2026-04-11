@@ -48,4 +48,51 @@ return [
     */
     'public_cdn_base_url' => env('TENANT_STORAGE_PUBLIC_CDN_URL', ''),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Optional cache-buster for TenantStorage::publicUrl()
+    |--------------------------------------------------------------------------
+    |
+    | Query string without leading "?" (e.g. v=20260411). Appended to CDN/disk URLs so
+    | browsers and Cloudflare fetch a new object after PutObject replaced the same key
+    | (objects often ship Cache-Control: immutable).
+    |
+    */
+    'public_url_version' => env('TENANT_STORAGE_PUBLIC_URL_VERSION', ''),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Cache-Control on new objects (S3 / R2 public disk only)
+    |--------------------------------------------------------------------------
+    |
+    | Sent on PutObject so browsers and Cloudflare can cache immutable tenant assets.
+    | Empty string disables (not recommended for production CDN). Existing objects keep
+    | old metadata until re-uploaded or fixed in bucket/CF.
+    |
+    */
+    'public_object_cache_control' => env('TENANT_STORAGE_PUBLIC_OBJECT_CACHE_CONTROL', 'public, max-age=31536000, immutable'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Cache-Control for HTTP 302 from legacy /storage/tenants/.../public/... route
+    |--------------------------------------------------------------------------
+    |
+    | Lets browsers reuse the redirect to the CDN URL without hitting Laravel every time.
+    | Empty string omits the header.
+    |
+    */
+    'public_storage_redirect_cache_control' => env('TENANT_STORAGE_PUBLIC_REDIRECT_CACHE_CONTROL', 'public, max-age=86400'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Stream tenant public files through PHP (cloud disk only)
+    |--------------------------------------------------------------------------
+    |
+    | When false (default), GET /storage/tenants/{id}/public/... on a non-local public disk responds
+    | with HTTP 302 to the canonical object URL (CDN/R2). Enable only if you must fix wrong Content-Type
+    | on objects without re-uploading (legacy); normal production should keep this false.
+    |
+    */
+    'stream_public_through_origin' => (bool) env('TENANT_STORAGE_STREAM_PUBLIC_THROUGH_ORIGIN', false),
+
 ];

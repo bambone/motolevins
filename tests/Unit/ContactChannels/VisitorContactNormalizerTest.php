@@ -23,6 +23,8 @@ class VisitorContactNormalizerTest extends TestCase
         yield 'at' => ['@User_Name', 'user_name'];
         yield 'tme' => ['https://t.me/someuser', 'someuser'];
         yield 'bad' => ['ab', null];
+        yield 'cyrillic_username' => ['иван_иванов', null];
+        yield 'cyrillic_in_tme' => ['https://t.me/марат', null];
     }
 
     public function test_normalize_vk_to_https_url(): void

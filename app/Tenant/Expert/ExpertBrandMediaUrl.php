@@ -9,7 +9,7 @@ use App\Support\Storage\TenantStorage;
 
 /**
  * Нормализует URL бренд-фото expert_auto: в БД могут быть устаревшие пути (другой tenant_id, удалённый public/tenants/…).
- * Публичные URL собираются через {@see TenantPublicAssetResolver} (same-origin /storage/tenants/… при HTTP), чтобы не ловить ORB на R2/CDN.
+ * Публичные URL собираются через {@see TenantPublicAssetResolver} (прямой CDN при {@code TENANT_STORAGE_PUBLIC_CDN_URL} + облачный диск, иначе /storage/… на origin).
  */
 final class ExpertBrandMediaUrl
 {

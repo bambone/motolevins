@@ -41,6 +41,24 @@
 
     <x-seo-meta />
 
+    @php
+        $__tenantCdnBase = rtrim((string) config('tenant_storage.public_cdn_base_url', ''), '/');
+        $__tenantCdnConnect = '';
+        if ($__tenantCdnBase !== '' && preg_match('#^https?://#i', $__tenantCdnBase) === 1) {
+            $__pu = parse_url($__tenantCdnBase);
+            if (is_array($__pu) && ! empty($__pu['host'])) {
+                $__tenantCdnConnect = ($__pu['scheme'] ?? 'https').'://'.$__pu['host'];
+                if (isset($__pu['port'])) {
+                    $__tenantCdnConnect .= ':'.$__pu['port'];
+                }
+            }
+        }
+    @endphp
+    @if ($__tenantCdnConnect !== '')
+        <link rel="dns-prefetch" href="{{ $__tenantCdnConnect }}">
+        <link rel="preconnect" href="{{ $__tenantCdnConnect }}" crossorigin>
+    @endif
+
     @stack('tenant-jsonld')
 
     @stack('tenant-preload')
@@ -63,12 +81,16 @@
                     $__manifestPath = public_path('build/manifest.json');
                     if (is_file($__manifestPath) && is_readable($__manifestPath)) {
                         $__manifest = json_decode((string) file_get_contents($__manifestPath), true) ?: [];
-                        $__expertAutoViteOk = isset($__manifest['resources/css/tenant-expert-auto.css']);
+                        $__expertAutoViteOk = isset($__manifest['resources/css/tenant-expert-auto.css'])
+                            && isset($__manifest['resources/js/tenant-expert-inquiry-form.js']);
                     }
                 }
             @endphp
             @if ($__expertAutoViteOk)
-                @vite(['resources/css/tenant-expert-auto.css'])
+                @vite([
+                    'resources/css/tenant-expert-auto.css',
+                    'resources/js/tenant-expert-inquiry-form.js',
+                ])
             @endif
         @endif
     @else
@@ -873,5 +895,7 @@
         }
     </script>
     @endif
+
+    @stack('tenant-scripts')
 </body>
 </html>

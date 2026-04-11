@@ -6,6 +6,7 @@ use App\PageBuilder\PageSectionCategory;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 
 final class ServiceProgramCardsBlueprint extends ExpertSectionBlueprint
 {
@@ -44,6 +45,7 @@ final class ServiceProgramCardsBlueprint extends ExpertSectionBlueprint
             'layout' => 'grid',
             'include_slugs' => '',
             'exclude_slugs' => '',
+            'uniform_columns' => false,
         ];
     }
 
@@ -70,6 +72,10 @@ final class ServiceProgramCardsBlueprint extends ExpertSectionBlueprint
             TextInput::make('data_json.exclude_slugs')
                 ->label('Исключить slug (через запятую)')
                 ->maxLength(500),
+            Toggle::make('data_json.uniform_columns')
+                ->label('Ровная сетка карточек')
+                ->helperText('Вкл.: все карточки одной ширины (без «флагмана» на весь ряд). Удобно для отдельной страницы «Программы».')
+                ->default(false),
         ];
     }
 

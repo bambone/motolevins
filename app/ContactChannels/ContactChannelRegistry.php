@@ -73,11 +73,14 @@ final class ContactChannelRegistry
     /**
      * Подсказка для публичной формы: что вводить в поле контакта (RU).
      * В браузере нельзя надёжно «подтянуть» ник из VK/Telegram/MAX без отдельной OAuth-интеграции.
+     *
+     * Placeholder (visitorValuePlaceholderRu) держим с латинскими примерами: ник Telegram/VK — ASCII;
+     * пояснения на русском только здесь и в сообщениях валидации.
      */
     public static function visitorValueHintRu(string $type): string
     {
         return match ($type) {
-            ContactChannelType::Telegram->value => 'Введите username (например ivan_ivanov или @ivan_ivanov) или ссылку вида t.me/username. Приложение Telegram не передаёт сайту ваш ник — скопируйте его из «Настройки → Имя пользователя».',
+            ContactChannelType::Telegram->value => 'Ник в Telegram — только латиница, цифры и подчёркивание (5–32 символа), либо ссылка https://t.me/… Скопируйте username в приложении: Настройки → Имя пользователя.',
             ContactChannelType::Vk->value => 'Вставьте ссылку на профиль: https://vk.com/id123 или https://vk.com/nickname. Короткий id или ник после vk.com/ тоже подойдут — мы сохраним канонический адрес. Выбрать профиль из приложения VK на сайте нельзя; откройте свой профиль и скопируйте URL из адресной строки.',
             ContactChannelType::Max->value => 'Укажите ссылку из мессенджера MAX, если есть, или любой понятный текст для связи. Автоподстановка из приложения в обычной веб-форме недоступна.',
             default => '',
@@ -87,8 +90,8 @@ final class ContactChannelRegistry
     public static function visitorValuePlaceholderRu(string $type): string
     {
         return match ($type) {
-            ContactChannelType::Telegram->value => '@username или t.me/username',
-            ContactChannelType::Vk->value => 'https://vk.com/… или id123456',
+            ContactChannelType::Telegram->value => '@username / t.me/username',
+            ContactChannelType::Vk->value => 'https://vk.com/… / id123456',
             ContactChannelType::Max->value => 'Ссылка или текст для связи в MAX',
             default => '',
         };

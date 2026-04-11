@@ -3,9 +3,11 @@
 namespace Database\Seeders\Tenant;
 
 use App\Http\Controllers\HomeController;
+use App\Models\Page;
+use App\Models\SeoMeta;
 use App\Models\TenantSetting;
 use App\Support\Storage\TenantStorage;
-use App\Support\Storage\TenantStorageArea;
+use App\Tenant\Expert\ExpertAutoProgramCoverInstaller;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -25,7 +27,7 @@ final class AflyatunovExpertBootstrap
     private static function expertHeroCinematicCore(): array
     {
         return [
-            'heading' => 'Уверенное вождение в городе, на парковке и в сложных условиях',
+            'heading' => self::seoPrimaryH1(),
             'subheading' => 'Индивидуально с Маратом Афлятуновым, КМС по автоспорту. Новички и опытные водители — убираем страх, даём уверенность в городе и на парковке.',
             'description' => '',
             'primary_cta_label' => 'Записаться на занятие',
@@ -35,7 +37,7 @@ final class AflyatunovExpertBootstrap
             'trust_badges' => [
                 ['text' => 'На автомобиле клиента'],
                 ['text' => 'Индивидуальный подход'],
-                ['text' => 'Город / парковка / контраварийка'],
+                ['text' => 'Город / парковка / контраварийная подготовка'],
                 ['text' => 'Челябинск и область'],
             ],
             'overlay_dark' => true,
@@ -213,6 +215,8 @@ final class AflyatunovExpertBootstrap
         self::seedFormConfig($tenantId, $now);
         self::seedSeoMeta($tenantId, $pageId, $now);
         self::ensureExpertMenuPages($tenantId, $now);
+        self::applyAflyatunovExpertSeoPackage($tenantId);
+        self::syncProgramCoversIfSchemaAllows($tenantId);
         HomeController::forgetCachedPayloadForTenant($tenantId);
     }
 
@@ -246,7 +250,29 @@ final class AflyatunovExpertBootstrap
         self::ensureExpertPublicBranding($tenantId);
         self::ensureExpertMenuPages($tenantId, $now);
 
+        $routeOverrides = trim((string) TenantSetting::getForTenant($tenantId, 'seo.route_overrides', ''));
+        $llmsIntro = trim((string) TenantSetting::getForTenant($tenantId, 'seo.llms_intro', ''));
+        if ($routeOverrides === '' || $llmsIntro === '') {
+            self::applyAflyatunovExpertSeoPackage($tenantId);
+        }
+
+        self::syncProgramCoversIfSchemaAllows($tenantId);
         HomeController::forgetCachedPayloadForTenant($tenantId);
+    }
+
+    /**
+     * Обложки карточек программ: бандл WebP → публичный диск тенанта + cover_* в БД.
+     * Вызывается из ensure/createFullTenant, чтобы локаль и свежие клоны не оставались без картинок без отдельной команды.
+     */
+    private static function syncProgramCoversIfSchemaAllows(int $tenantId): void
+    {
+        if ($tenantId <= 0) {
+            return;
+        }
+        if (! Schema::hasTable('tenant_service_programs') || ! Schema::hasColumn('tenant_service_programs', 'cover_image_ref')) {
+            return;
+        }
+        self::syncProgramCoverAssetsToTenantPublicDisk($tenantId);
     }
 
     public static function ensureExpertMenuPagesForSlug(): void
@@ -276,9 +302,8 @@ final class AflyatunovExpertBootstrap
     }
 
     /**
-     * Загружает WebP-обложки из {@see self::programCoverBundleDir()} в публичное хранилище тенанта (R2/local):
-     * {@code expert_auto/programs/{slug}/card-cover-desktop.webp} и дубликат в {@code card-cover-mobile.webp}
-     * до появления отдельных mobile-мастеров. Прописывает {@code cover_image_ref}, {@code cover_mobile_ref}, {@code cover_image_alt}.
+     * Копирует пресеты обложек из {@code tenants/_system/themes/expert_auto/program-covers/} в публичный диск тенанта.
+     * Универсально для любого тенанта с темой expert_auto (см. {@see ExpertAutoProgramCoverInstaller}).
      */
     public static function syncProgramCoverAssetsToTenantPublicDisk(?int $tenantId = null): void
     {
@@ -287,84 +312,7 @@ final class AflyatunovExpertBootstrap
             return;
         }
 
-        if (! Schema::hasTable('tenant_service_programs') || ! Schema::hasColumn('tenant_service_programs', 'cover_image_ref')) {
-            return;
-        }
-
-        $dir = self::programCoverBundleDir();
-        $map = [
-            'single-session' => 'single-session.webp',
-            'confidence' => 'confidence.webp',
-            'counter-emergency' => 'counter-emergency.webp',
-            'parking' => 'parking.webp',
-            'city-driving' => 'city-driving.webp',
-            'route' => 'route.webp',
-            'motorsport' => 'motorsport.webp',
-        ];
-
-        $altBySlug = [
-            'single-session' => 'Индивидуальное занятие по вождению',
-            'confidence' => 'Уверенное спокойное вождение в городе',
-            'counter-emergency' => 'Контраварийная подготовка на зимней площадке',
-            'parking' => 'Практика парковки в городских условиях',
-            'city-driving' => 'Городское движение и перестроения',
-            'route' => 'Практика по маршруту в реальном районе',
-            'motorsport' => 'Тренировка и сопровождение в автоспорте',
-        ];
-
-        $ts = TenantStorage::forTrusted($tenantId);
-        $now = now();
-        $hasMobile = Schema::hasColumn('tenant_service_programs', 'cover_mobile_ref');
-        $hasAlt = Schema::hasColumn('tenant_service_programs', 'cover_image_alt');
-
-        foreach ($map as $slug => $filename) {
-            $path = $dir.DIRECTORY_SEPARATOR.$filename;
-            if (! is_file($path)) {
-                continue;
-            }
-            $bytes = file_get_contents($path);
-            if ($bytes === false || $bytes === '') {
-                continue;
-            }
-            $relDesktop = 'expert_auto/programs/'.$slug.'/card-cover-desktop.webp';
-            $relMobile = 'expert_auto/programs/'.$slug.'/card-cover-mobile.webp';
-            $ts->putInArea(TenantStorageArea::PublicSite, $relDesktop, $bytes, [
-                'visibility' => 'public',
-                'ContentType' => 'image/webp',
-            ]);
-            $ts->putInArea(TenantStorageArea::PublicSite, $relMobile, $bytes, [
-                'visibility' => 'public',
-                'ContentType' => 'image/webp',
-            ]);
-            // Ключи должны совпадать с {@see TenantStorage::putInArea(PublicSite)} → префикс site/ под public/.
-            $keyDesktop = 'tenants/'.$tenantId.'/public/site/'.$relDesktop;
-            $keyMobile = 'tenants/'.$tenantId.'/public/site/'.$relMobile;
-
-            $payload = [
-                'cover_image_ref' => $keyDesktop,
-                'updated_at' => $now,
-            ];
-            if ($hasMobile) {
-                $payload['cover_mobile_ref'] = $keyMobile;
-            }
-            if ($hasAlt) {
-                $payload['cover_image_alt'] = $altBySlug[$slug] ?? null;
-            }
-
-            DB::table('tenant_service_programs')
-                ->where('tenant_id', $tenantId)
-                ->where('slug', $slug)
-                ->update($payload);
-        }
-
-        HomeController::forgetCachedPayloadForTenant($tenantId);
-    }
-
-    private static function programCoverBundleDir(): string
-    {
-        return dirname((new \ReflectionClass(self::class))->getFileName())
-            .DIRECTORY_SEPARATOR.'assets'
-            .DIRECTORY_SEPARATOR.'program-covers';
+        app(ExpertAutoProgramCoverInstaller::class)->installFromSystemBundledPool($tenantId);
     }
 
     private static function ensureExpertPublicBranding(int $tenantId): void
@@ -498,6 +446,7 @@ final class AflyatunovExpertBootstrap
                 'section_id' => '',
                 'limit' => 24,
                 'layout' => 'grid',
+                'uniform_columns' => true,
             ], 'Программы'),
             $mk('expert_lead_form', 'expert_lead_form', [
                 'heading' => 'Подберём программу под ваш запрос',
@@ -1319,39 +1268,277 @@ final class AflyatunovExpertBootstrap
 
     private static function seedSeoMeta(int $tenantId, int $pageId, $now): void
     {
-        $person = [
-            '@type' => 'Person',
-            'name' => 'Марат Афлятунов',
-            'jobTitle' => 'Инструктор по вождению',
-            'description' => 'Индивидуальные занятия по вождению в Челябинске.',
-        ];
-        $service = [
-            '@type' => 'Service',
-            'name' => 'Индивидуальные занятия по вождению',
-            'areaServed' => 'Челябинск',
-            'provider' => ['@type' => 'Person', 'name' => 'Марат Афлятунов'],
-        ];
+        $content = self::homeSeoContentPayload();
+        $graph = $content['json_ld'];
+        unset($content['json_ld']);
 
-        DB::table('seo_meta')->insert([
-            'tenant_id' => $tenantId,
-            'seoable_type' => 'App\\Models\\Page',
-            'seoable_id' => $pageId,
-            'meta_title' => 'Инструктор по вождению в Челябинске — парковка, город, контраварийка | Марат Афлятунов',
-            'meta_description' => 'Индивидуальные занятия по вождению в Челябинске: парковка, уверенность в городе, зимнее вождение, контраварийная подготовка. Занятия на вашем автомобиле.',
-            'meta_keywords' => null,
-            'h1' => 'Инструктор по вождению и контраварийной подготовке в Челябинске',
-            'canonical_url' => null,
-            'robots' => null,
-            'og_title' => null,
-            'og_description' => null,
-            'og_image' => null,
+        DB::table('seo_meta')->insert(array_merge(
+            [
+                'tenant_id' => $tenantId,
+                'seoable_type' => Page::class,
+                'seoable_id' => $pageId,
+                'canonical_url' => null,
+                'robots' => null,
+                'og_image' => null,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ],
+            $content,
+            ['json_ld' => json_encode($graph, JSON_UNESCAPED_UNICODE)],
+        ));
+    }
+
+    /**
+     * Полный SEO-слой для публичного сайта (мета главной, витринные страницы, llms.txt, overrides маршрутов без Page).
+     * Идемпотентно через updateOrCreate / setForTenant.
+     */
+    public static function applyAflyatunovExpertSeoPackage(int $tenantId): void
+    {
+        if ($tenantId < 1) {
+            return;
+        }
+        $slug = (string) DB::table('tenants')->where('id', $tenantId)->value('slug');
+        if ($slug !== self::SLUG) {
+            return;
+        }
+
+        $primaryCity = TenantSetting::getForTenant($tenantId, 'general.primary_city', '');
+        if (! is_string($primaryCity) || trim($primaryCity) === '') {
+            TenantSetting::setForTenant($tenantId, 'general.primary_city', 'Челябинск', 'string');
+        }
+
+        TenantSetting::setForTenant($tenantId, 'seo.llms_intro', self::aflyatunovLlmsIntro(), 'string');
+        TenantSetting::setForTenant($tenantId, 'seo.llms_entries', json_encode(self::aflyatunovLlmsEntries(), JSON_UNESCAPED_UNICODE), 'string');
+        TenantSetting::setForTenant($tenantId, 'seo.route_overrides', json_encode(self::aflyatunovRouteOverrides(), JSON_UNESCAPED_UNICODE), 'string');
+
+        $homePageId = (int) DB::table('pages')->where('tenant_id', $tenantId)->where('slug', 'home')->value('id');
+        if ($homePageId > 0) {
+            $payload = self::homeSeoContentPayload();
+            SeoMeta::withoutGlobalScope('tenant')->updateOrCreate(
+                [
+                    'tenant_id' => $tenantId,
+                    'seoable_type' => Page::class,
+                    'seoable_id' => $homePageId,
+                ],
+                $payload,
+            );
+            self::patchHomeHeroHeadingForSeo($tenantId, $homePageId);
+        }
+
+        self::upsertSubsidiarySeoMetaPages($tenantId);
+    }
+
+    private static function seoPrimaryH1(): string
+    {
+        return 'Инструктор по вождению и контраварийной подготовке в Челябинске';
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private static function homeJsonLdGraph(): array
+    {
+        return [
+            [
+                '@type' => 'Person',
+                'name' => 'Марат Афлятунов',
+                'jobTitle' => 'Инструктор по вождению и контраварийной подготовке',
+                'description' => 'Индивидуальные занятия по вождению в Челябинске и области на автомобиле ученика: парковка, город, зимнее вождение, контраварийная подготовка.',
+                'knowsAbout' => [
+                    'Контраварийное вождение',
+                    'Обучение вождению',
+                    'Парковка и манёврирование',
+                    'Городское движение',
+                    'Зимнее вождение',
+                ],
+                'award' => 'Кандидат в мастера спорта по автомобильному спорту',
+            ],
+            [
+                '@type' => 'Service',
+                'name' => 'Индивидуальные занятия по вождению и контраварийной подготовке',
+                'description' => 'Практические занятия в Челябинске на автомобиле клиента: парковка и манёвры, уверенность в городском потоке, зимняя контраварийка, маршруты и спортивные сценарии по запросу.',
+                'serviceType' => 'Обучение вождению; контраварийная подготовка',
+                'areaServed' => [
+                    '@type' => 'City',
+                    'name' => 'Челябинск',
+                ],
+                'provider' => [
+                    '@type' => 'Person',
+                    'name' => 'Марат Афлятунов',
+                ],
+            ],
+        ];
+    }
+
+    /**
+     * Поля для {@see SeoMeta} главной (без morph-ключей и без tenant_id в insert из сидера).
+     *
+     * @return array<string, mixed>
+     */
+    private static function homeSeoContentPayload(): array
+    {
+        $description = 'Индивидуальные занятия по вождению в Челябинске: парковка, уверенность в городе, зимнее вождение, контраварийная подготовка. Занятия на вашем автомобиле.';
+
+        return [
+            'meta_title' => 'Инструктор по вождению в Челябинске — парковка, город, контраварийная подготовка | Марат Афлятунов',
+            'meta_description' => $description,
+            'meta_keywords' => 'инструктор по вождению Челябинск, контраварийная подготовка, обучение вождению, парковка, зимнее вождение, занятия на своём автомобиле',
+            'h1' => self::seoPrimaryH1(),
+            'og_title' => 'Контраварийная подготовка и вождение в Челябинске | Марат Афлятунов',
+            'og_description' => $description,
             'og_type' => 'website',
             'twitter_card' => 'summary_large_image',
             'is_indexable' => true,
             'is_followable' => true,
-            'json_ld' => json_encode([$person, $service]),
-            'created_at' => $now,
-            'updated_at' => $now,
-        ]);
+            'json_ld' => self::homeJsonLdGraph(),
+        ];
+    }
+
+    private static function patchHomeHeroHeadingForSeo(int $tenantId, int $homePageId): void
+    {
+        if ($homePageId < 1) {
+            return;
+        }
+        $heading = self::seoPrimaryH1();
+        foreach (DB::table('page_sections')
+            ->where('tenant_id', $tenantId)
+            ->where('page_id', $homePageId)
+            ->where('section_key', 'expert_hero')
+            ->get() as $row) {
+            $data = json_decode((string) $row->data_json, true) ?: [];
+            $data['heading'] = $heading;
+            DB::table('page_sections')->where('id', $row->id)->update([
+                'data_json' => json_encode($data, JSON_UNESCAPED_UNICODE),
+                'updated_at' => now(),
+            ]);
+        }
+
+        HomeController::forgetCachedPayloadForTenant($tenantId);
+    }
+
+    private static function aflyatunovLlmsIntro(): string
+    {
+        return <<<'TXT'
+Марат Афлятунов — инструктор по вождению и контраварийной подготовке в Челябинске и области. Индивидуальные занятия на автомобиле ученика: парковка, уверенность в городе, зимнее вождение, контраварийка и спортивные сценарии по запросу. На сайте — программы, отзывы, ответы на частые вопросы и форма записи; контакты с телефоном и email.
+TXT;
+    }
+
+    /**
+     * @return list<array{path: string, summary: string}>
+     */
+    private static function aflyatunovLlmsEntries(): array
+    {
+        return [
+            ['path' => '/', 'summary' => 'Главная: программы, отзывы, форма записи; акцент на контраварийной подготовке и уверенном городском вождении.'],
+            ['path' => '/programs', 'summary' => 'Карточки программ: парковка, город, зима, контраварийная подготовка, маршрут, автоспорт.'],
+            ['path' => '/o-trener', 'summary' => 'О тренере: опыт, подход, зона работы; КМС по автоспорту, индивидуальный формат.'],
+            ['path' => '/otzyvy', 'summary' => 'Отзывы учеников о формате занятий и динамике обучения.'],
+            ['path' => '/contacts', 'summary' => 'Телефон, email и способы связи для записи на занятие.'],
+            ['path' => '/faq', 'summary' => 'Ответы про автомобиль клиента, зону выезда, зимние площадки и организацию занятий.'],
+            ['path' => '/prices', 'summary' => 'Ориентиры по стоимости программ и разовых занятий.'],
+            ['path' => '/reviews', 'summary' => 'Публичная лента отзывов (маршрут витрины).'],
+        ];
+    }
+
+    /**
+     * @return array<string, array<string, string>>
+     */
+    private static function aflyatunovRouteOverrides(): array
+    {
+        return [
+            'faq' => [
+                'title' => 'Вопросы о занятиях по вождению и контраварийной подготовке — {site_name}',
+                'description' => 'Формат занятий, автомобиль ученика, зона выезда в Челябинске, зимние площадки и запись — краткие ответы от {site_name}.',
+                'h1' => 'Частые вопросы',
+            ],
+            'prices' => [
+                'title' => 'Стоимость занятий по вождению и контраварийке — {site_name}',
+                'description' => 'Ориентиры по ценам программ и разовых занятий в Челябинске; итоговые условия согласуются после короткого созвона с {site_name}.',
+                'h1' => 'Стоимость занятий',
+            ],
+            'reviews' => [
+                'title' => 'Отзывы учеников — {site_name}',
+                'description' => 'Опыт учеников после занятий по парковке, городу, зиме и контраварийной подготовке с {site_name}.',
+                'h1' => 'Отзывы учеников',
+            ],
+            'motorcycles.index' => [
+                'title' => 'Каталог на сайте — {site_name}',
+                'description' => 'Служебный раздел витрины; актуальные программы и запись на занятия — на главной странице {site_name}.',
+                'robots' => 'noindex, follow',
+            ],
+            'booking.index' => [
+                'title' => 'Сервисный раздел сайта — {site_name}',
+                'description' => 'Техническая страница сервиса; запись на индивидуальные занятия — через форму на главной и контакты {site_name}.',
+                'robots' => 'noindex, follow',
+            ],
+            'booking.show' => [
+                'robots' => 'noindex, follow',
+            ],
+            'booking.checkout' => [
+                'robots' => 'noindex, follow',
+            ],
+            'booking.thank-you' => [
+                'robots' => 'noindex, follow',
+            ],
+            'order' => [
+                'title' => 'Заявка на сайте — {site_name}',
+                'description' => 'Альтернативная форма обращения; для записи на занятия удобнее форма на главной странице {site_name}.',
+                'robots' => 'noindex, follow',
+            ],
+        ];
+    }
+
+    private static function upsertSubsidiarySeoMetaPages(int $tenantId): void
+    {
+        $rows = [
+            'contacts' => [
+                'meta_title' => 'Контакты — запись на занятия по вождению в Челябинске | Марат Афлятунов',
+                'meta_description' => 'Телефон +7 (950) 731-76-84, email Aflyatunov_m@mail.ru. Связь для записи на индивидуальные занятия: парковка, город, зимнее вождение, контраварийная подготовка.',
+                'h1' => 'Контакты',
+                'og_title' => 'Контакты — Марат Афлятунов',
+                'og_description' => 'Телефон и email для записи на занятия по вождению и контраварийной подготовке в Челябинске.',
+            ],
+            'programs' => [
+                'meta_title' => 'Программы по вождению и контраварийной подготовке — Челябинск | Марат Афлятунов',
+                'meta_description' => 'Парковка, уверенность в городе, зима, контраварийка, маршрут и автоспорт — индивидуальные программы на вашем автомобиле.',
+                'h1' => 'Программы обучения',
+                'og_title' => 'Программы занятий — Марат Афлятунов',
+                'og_description' => 'Подбор формата под ваш запрос: от парковки до контраварийной подготовки.',
+            ],
+            'o-trener' => [
+                'meta_title' => 'Марат Афлятунов — инструктор по вождению, КМС по автоспорту | Челябинск',
+                'meta_description' => 'Опыт соревнований, индивидуальный подход, занятия на автомобиле ученика в Челябинске и области.',
+                'h1' => 'О тренере',
+                'og_title' => 'О тренере — Марат Афлятунов',
+                'og_description' => 'Инструктор по вождению и контраварийной подготовке, кандидат в мастера спорта по автоспорту.',
+            ],
+            'otzyvy' => [
+                'meta_title' => 'Отзывы учеников — занятия по вождению и контраварийке | Марат Афлятунов',
+                'meta_description' => 'Реальные отзывы о формате занятий, динамике обучения и результатах на дороге.',
+                'h1' => 'Отзывы учеников',
+                'og_title' => 'Отзывы — Марат Афлятунов',
+                'og_description' => 'Мнения учеников после занятий по вождению и контраварийной подготовке.',
+            ],
+        ];
+
+        foreach ($rows as $slug => $payload) {
+            $pageId = (int) DB::table('pages')->where('tenant_id', $tenantId)->where('slug', $slug)->value('id');
+            if ($pageId < 1) {
+                continue;
+            }
+            SeoMeta::withoutGlobalScope('tenant')->updateOrCreate(
+                [
+                    'tenant_id' => $tenantId,
+                    'seoable_type' => Page::class,
+                    'seoable_id' => $pageId,
+                ],
+                array_merge($payload, [
+                    'og_type' => 'website',
+                    'twitter_card' => 'summary_large_image',
+                    'is_indexable' => true,
+                    'is_followable' => true,
+                ]),
+            );
+        }
     }
 }

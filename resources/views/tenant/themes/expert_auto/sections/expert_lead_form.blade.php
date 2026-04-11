@@ -26,10 +26,11 @@
         ->get(['slug', 'title']);
     $successMessage = $config?->success_message ?? 'Спасибо! Заявка отправлена.';
     $endpoint = route('api.tenant.expert-inquiry.store');
+    $contactChannelOptions = app(\App\ContactChannels\TenantContactChannelsStore::class)->publicFormPreferredOptions((int) $tenant->id);
+    $contactChannelCount = count($contactChannelOptions);
 @endphp
 <section id="{{ e($sectionId) }}" class="expert-lead-mega relative mb-14 min-w-0 scroll-mt-24 sm:mb-20 lg:mb-28">
-    <div id="expert-inquiry-block" class="expert-lead-mega__shell relative mx-auto max-w-4xl overflow-hidden rounded-[1.5rem] border border-white/[0.08] bg-gradient-to-br from-[#0c0f17] to-[#050608] p-5 shadow-[0_32px_80px_-24px_rgba(201,168,124,0.2)] sm:rounded-[2rem] sm:p-10 lg:p-14">
-        <div class="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-moto-amber/10 blur-3xl" aria-hidden="true"></div>
+    <div id="expert-inquiry-block" class="expert-lead-mega__shell relative mx-auto max-w-4xl overflow-hidden rounded-[1.5rem] border border-white/[0.08] bg-gradient-to-br from-[#0c0f17] to-[#050608] p-5 shadow-[0_28px_64px_-20px_rgba(0,0,0,0.72)] ring-1 ring-inset ring-white/[0.04] sm:rounded-[2rem] sm:p-10 lg:p-14">
         <div class="relative z-10">
         @if($heading !== '')
             <div class="px-1 text-center">
@@ -51,35 +52,72 @@
 
         <div id="expert-inquiry-alert" class="mt-4 hidden rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-silver" role="status"></div>
 
+        <script type="application/json" id="expert-inquiry-channel-meta">@json($contactChannelOptions)</script>
+
         <form id="expert-inquiry-form" class="expert-inquiry-form mt-8 space-y-5 sm:mt-10 sm:space-y-5" novalidate
               data-expert-inquiry-endpoint="{{ e($endpoint) }}"
               data-expert-inquiry-default-success="{{ e($successMessage) }}">
             @csrf
             <input type="hidden" name="expert_domain" value="driving_instruction">
-            <input type="hidden" name="preferred_contact_channel" value="phone">
             <input type="hidden" name="page_url" value="{{ url()->current() }}">
 
             <div class="grid min-w-0 gap-4 sm:gap-5 md:grid-cols-2">
-                <div>
+                <div data-rb-public-field="name" class="expert-public-field-wrap min-w-0">
                     <label for="expert-name" class="mb-2 block text-sm font-semibold tracking-wide text-white/90">Имя <span class="text-moto-amber">*</span></label>
                     <input id="expert-name" name="name" type="text" required autocomplete="name" maxlength="255"
                            class="expert-form-input w-full min-h-[3.25rem] rounded-xl border border-white/[0.08] bg-white/[0.02] px-4 py-3 text-[15px] text-white outline-none transition-colors placeholder:text-silver/40 focus:border-moto-amber/50 focus:bg-white/[0.04]">
                 </div>
-                <div>
-                    <label for="expert-phone" class="mb-2 block text-sm font-semibold tracking-wide text-white/90">Телефон <span class="text-moto-amber">*</span></label>
-                    <input id="expert-phone" name="phone" type="tel" required autocomplete="tel" inputmode="tel" maxlength="16"
+                <div data-rb-public-field="phone" class="expert-public-field-wrap min-w-0">
+                    <label for="expert-phone" class="mb-2 block text-sm font-semibold tracking-wide text-white/90">Телефон <span class="text-moto-amber expert-phone-required-star">*</span></label>
+                    {{-- data-rb-intl-phone: автоподключение маски из tenant-intl-phone.js (как booking-modal: handleInput + hint) --}}
+                    <input id="expert-phone" name="phone" type="tel" required autocomplete="tel" inputmode="tel"
+                           data-rb-intl-phone="1"
+                           aria-describedby="expert-phone-hint"
+                           maxlength="28"
+                           placeholder="+7 (999) 123-45-67"
                            class="expert-form-input w-full min-h-[3.25rem] rounded-xl border border-white/[0.08] bg-white/[0.02] px-4 py-3 text-[15px] text-white outline-none transition-colors placeholder:text-silver/40 focus:border-moto-amber/50 focus:bg-white/[0.04]">
+                    <p id="expert-phone-hint" class="mt-2 text-[12px] leading-snug text-silver/55 sm:text-[13px]"></p>
                 </div>
             </div>
 
-            <div>
+            <div data-rb-public-field="preferred_contact_channel" class="expert-public-field-wrap min-w-0">
+                <span class="mb-2 block text-sm font-semibold tracking-wide text-white/90">Как с вами связаться?</span>
+                @if ($contactChannelCount <= 1)
+                    @php $onlyId = $contactChannelOptions[0]['id'] ?? 'phone'; @endphp
+                    <input type="hidden" name="preferred_contact_channel" value="{{ e($onlyId) }}">
+                    <p class="text-[13px] leading-relaxed text-silver/70">Ответим по контактам, указанным в заявке (телефон обязателен).</p>
+                @else
+                    <div class="expert-channel-grid flex flex-col gap-2.5 sm:gap-3">
+                        @foreach ($contactChannelOptions as $idx => $opt)
+                            @php $cid = $opt['id'] ?? ''; @endphp
+                            @if ($cid !== '')
+                                <label class="expert-channel-option flex cursor-pointer items-start gap-3 rounded-xl border border-white/[0.08] bg-white/[0.02] p-3.5 transition-colors has-[:checked]:border-moto-amber/45 has-[:checked]:bg-white/[0.04] sm:p-4">
+                                    <input type="radio" name="preferred_contact_channel" value="{{ e($cid) }}"
+                                           class="expert-channel-radio mt-0.5 h-4 w-4 shrink-0 border-white/25 text-moto-amber focus:ring-2 focus:ring-moto-amber/35"
+                                           @checked($idx === 0)>
+                                    <span class="min-w-0 text-[14px] font-medium leading-snug text-white/90 sm:text-[15px]">{{ $opt['label'] ?? $cid }}</span>
+                                </label>
+                            @endif
+                        @endforeach
+                    </div>
+                @endif
+            </div>
+
+            <div id="expert-pref-value-wrap" data-rb-public-field="preferred_contact_value" class="expert-public-field-wrap hidden min-w-0">
+                <label for="expert-pref-value" class="mb-2 block text-sm font-semibold tracking-wide text-white/90">Контакт для связи</label>
+                <input id="expert-pref-value" name="preferred_contact_value" type="text" maxlength="500"
+                       class="expert-form-input w-full min-h-[3.25rem] rounded-xl border border-white/[0.08] bg-white/[0.02] px-4 py-3 text-[15px] text-white outline-none transition-colors placeholder:text-silver/40 focus:border-moto-amber/50 focus:bg-white/[0.04]">
+                <p id="expert-pref-value-hint" class="mt-2 hidden text-[12px] leading-snug text-silver/60 sm:text-[13px]"></p>
+            </div>
+
+            <div data-rb-public-field="goal_text" class="expert-public-field-wrap min-w-0">
                 <label for="expert-goal" class="mb-2 block text-sm font-semibold tracking-wide text-white/90">Что хотите улучшить <span class="text-moto-amber">*</span></label>
                 <textarea id="expert-goal" name="goal_text" required rows="3" maxlength="2000"
                           class="expert-form-input w-full min-h-[6.5rem] rounded-xl border border-white/[0.08] bg-white/[0.02] px-4 py-3 text-[15px] text-white outline-none transition-colors placeholder:text-silver/40 focus:border-moto-amber/50 focus:bg-white/[0.04]"></textarea>
             </div>
 
             @if($programs->isNotEmpty())
-                <div>
+                <div data-rb-public-field="program_slug" class="expert-public-field-wrap min-w-0">
                     <label for="expert-program" class="mb-2 block text-sm font-semibold tracking-wide text-white/90">Программа (необязательно)</label>
                     <select id="expert-program" name="program_slug"
                             class="expert-form-input w-full min-h-[3.25rem] rounded-xl border border-white/[0.08] bg-white/[0.02] px-4 py-3 text-[15px] text-white outline-none transition-colors focus:border-moto-amber/50 focus:bg-white/[0.04] appearance-none">
@@ -92,12 +130,12 @@
             @endif
 
             <div class="grid min-w-0 gap-4 sm:gap-5 md:grid-cols-2">
-                <div>
+                <div data-rb-public-field="preferred_schedule" class="expert-public-field-wrap min-w-0">
                     <label for="expert-schedule" class="mb-2 block text-sm font-semibold tracking-wide text-white/90">Удобное время</label>
                     <input id="expert-schedule" name="preferred_schedule" type="text" maxlength="500"
                            class="expert-form-input w-full min-h-[3.25rem] rounded-xl border border-white/[0.08] bg-white/[0.02] px-4 py-3 text-[15px] text-white outline-none transition-colors placeholder:text-silver/40 focus:border-moto-amber/50 focus:bg-white/[0.04]">
                 </div>
-                <div>
+                <div data-rb-public-field="district" class="expert-public-field-wrap min-w-0">
                     <label for="expert-district" class="mb-2 block text-sm font-semibold tracking-wide text-white/90">Район</label>
                     <input id="expert-district" name="district" type="text" maxlength="255"
                            class="expert-form-input w-full min-h-[3.25rem] rounded-xl border border-white/[0.08] bg-white/[0.02] px-4 py-3 text-[15px] text-white outline-none transition-colors placeholder:text-silver/40 focus:border-moto-amber/50 focus:bg-white/[0.04]">
@@ -105,7 +143,7 @@
             </div>
 
             <div class="grid min-w-0 gap-4 sm:grid-cols-2 md:grid-cols-3 sm:gap-5">
-                <div>
+                <div data-rb-public-field="has_own_car" class="expert-public-field-wrap min-w-0">
                     <label for="expert-car" class="mb-2 block text-[13px] font-semibold tracking-wide text-white/90">Свой авто</label>
                     <select id="expert-car" name="has_own_car" class="expert-form-input w-full min-h-[3.25rem] rounded-xl border border-white/[0.08] bg-white/[0.02] px-4 py-3 text-[14px] text-white outline-none appearance-none focus:border-moto-amber/50">
                         <option value="" class="bg-black text-white">Не указано</option>
@@ -113,12 +151,12 @@
                         <option value="no" class="bg-black text-white">Нет</option>
                     </select>
                 </div>
-                <div>
+                <div data-rb-public-field="transmission" class="expert-public-field-wrap min-w-0">
                     <label for="expert-trans" class="mb-2 block text-[13px] font-semibold tracking-wide text-white/90">Коробка передач</label>
                     <input id="expert-trans" name="transmission" type="text" maxlength="64"
                            class="expert-form-input w-full min-h-[3.25rem] rounded-xl border border-white/[0.08] bg-white/[0.02] px-4 py-3 text-[14px] text-white outline-none transition-colors placeholder:text-silver/40 focus:border-moto-amber/50 focus:bg-white/[0.04]">
                 </div>
-                <div>
+                <div data-rb-public-field="has_license" class="expert-public-field-wrap min-w-0">
                     <label for="expert-license" class="mb-2 block text-[13px] font-semibold tracking-wide text-white/90">Есть права</label>
                     <select id="expert-license" name="has_license" class="expert-form-input w-full min-h-[3.25rem] rounded-xl border border-white/[0.08] bg-white/[0.02] px-4 py-3 text-[14px] text-white outline-none appearance-none focus:border-moto-amber/50">
                         <option value="" class="bg-black text-white">Не указано</option>
@@ -128,7 +166,7 @@
                 </div>
             </div>
             
-            <div>
+            <div data-rb-public-field="comment" class="expert-public-field-wrap min-w-0">
                 <label for="expert-comment" class="mb-2 block text-sm font-semibold tracking-wide text-white/90">Комментарий</label>
                 <textarea id="expert-comment" name="comment" rows="2" maxlength="2000"
                           class="expert-form-input w-full min-h-[4.5rem] rounded-xl border border-white/[0.08] bg-white/[0.02] px-4 py-3 text-[15px] text-white outline-none transition-colors placeholder:text-silver/40 focus:border-moto-amber/50 focus:bg-white/[0.04]"></textarea>
@@ -212,67 +250,4 @@
                 apply();
             })();
         </script>
-@endonce
-
-@once('expert-inquiry-form-script')
-    <script>
-        (function () {
-            const form = document.getElementById('expert-inquiry-form');
-            if (!form || form.dataset.bound === '1') return;
-            form.dataset.bound = '1';
-            const endpoint = form.getAttribute('data-expert-inquiry-endpoint') || '';
-            const defaultSuccessMessage = form.getAttribute('data-expert-inquiry-default-success') || '';
-            const alertEl = document.getElementById('expert-inquiry-alert');
-            const submitBtn = document.getElementById('expert-inquiry-submit');
-            form.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                if (alertEl) {
-                    alertEl.classList.add('hidden');
-                    alertEl.textContent = '';
-                }
-                const fd = new FormData(form);
-                const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-                if (submitBtn) submitBtn.disabled = true;
-                try {
-                    const res = await fetch(endpoint, {
-                        method: 'POST',
-                        headers: {
-                            'X-CSRF-TOKEN': token || '',
-                            'Accept': 'application/json',
-                        },
-                        body: fd,
-                    });
-                    const body = await res.json().catch(() => ({}));
-                    if (!res.ok) {
-                        let msg = typeof body.message === 'string' ? body.message : 'Ошибка отправки.';
-                        if (body.errors && typeof body.errors === 'object') {
-                            const flat = Object.values(body.errors).flat();
-                            if (flat.length) {
-                                msg = flat.join(' ');
-                            }
-                        }
-                        if (alertEl) {
-                            alertEl.textContent = msg;
-                            alertEl.classList.remove('hidden');
-                        }
-                        return;
-                    }
-                    if (alertEl) {
-                        alertEl.textContent = (typeof body.message === 'string' && body.message !== '')
-                            ? body.message
-                            : defaultSuccessMessage;
-                        alertEl.classList.remove('hidden');
-                    }
-                    form.reset();
-                } catch (err) {
-                    if (alertEl) {
-                        alertEl.textContent = 'Сеть недоступна. Попробуйте позже.';
-                        alertEl.classList.remove('hidden');
-                    }
-                } finally {
-                    if (submitBtn) submitBtn.disabled = false;
-                }
-            });
-        })();
-    </script>
 @endonce

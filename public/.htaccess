@@ -9,6 +9,11 @@
     RewriteCond %{REQUEST_URI} ^/storage/tenants/
     RewriteRule ^ index.php [L]
 
+    # Filament Platform «Клиенты» lives at /tenants on platform host. A real public/tenants/ directory is intercepted
+    # by Apache (403 + directory listing off) before Laravel — see .gitignore /public/tenants.
+    RewriteCond %{REQUEST_URI} ^/tenants(/|$)
+    RewriteRule ^ index.php [L]
+
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]

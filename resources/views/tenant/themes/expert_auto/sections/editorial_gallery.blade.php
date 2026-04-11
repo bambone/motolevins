@@ -90,7 +90,7 @@
                     </div>
                     <div class="expert-video-dialog__body expert-video-dialog__body--flush">
                         @if($item['kind'] === 'video')
-                            <video class="expert-video-dialog__video" controls playsinline preload="metadata" @if($item['poster_url'] !== '') poster="{{ e($item['poster_url']) }}" @endif src="{{ e($item['video_url']) }}"></video>
+                            <video class="expert-video-dialog__video" controls playsinline preload="none" @if($item['poster_url'] !== '') poster="{{ e($item['poster_url']) }}" @endif data-expert-dialog-src="{{ e($item['video_url']) }}"></video>
                         @else
                             <img src="{{ e($item['image_url']) }}" alt="{{ e($item['caption'] ?: 'Фото') }}" class="max-h-[min(78vh,900px)] w-full object-contain">
                         @endif

@@ -50,7 +50,7 @@
             @if($showVideo)
                 <div class="group relative overflow-hidden rounded-[1.35rem] border border-white/10 bg-[#050608] shadow-[0_32px_80px_-24px_rgba(0,0,0,0.85)] ring-1 ring-inset ring-white/[0.05] sm:rounded-[2rem]">
                     <div class="absolute inset-0 bg-gradient-to-t from-[#0a0f18]/80 via-transparent to-transparent z-10 pointer-events-none"></div>
-                    <video class="relative z-0 aspect-[4/5] w-full object-cover transition-transform duration-[2s] group-hover:scale-105 sm:aspect-[3/4]" controls playsinline preload="metadata" @if($asidePoster !== '') poster="{{ e($asidePoster) }}" @endif src="{{ e($asideVideo) }}"></video>
+                    <video class="expert-inline-lazy-video relative z-0 aspect-[4/5] w-full object-cover transition-transform duration-[2s] group-hover:scale-105 sm:aspect-[3/4]" controls playsinline preload="none" @if($asidePoster !== '') poster="{{ e($asidePoster) }}" @endif data-expert-lazy-src="{{ e($asideVideo) }}"></video>
                 </div>
             @elseif($asideImg !== '')
                 <figure class="group relative overflow-hidden rounded-[1.35rem] border border-white/10 bg-[#050608] shadow-[0_32px_80px_-24px_rgba(0,0,0,0.85)] ring-1 ring-inset ring-white/[0.05] sm:rounded-[2rem]">
@@ -60,8 +60,8 @@
             @endif
             
             @if($at !== '' || $ab !== '')
-                <aside class="expert-process-mega__aside relative overflow-hidden rounded-[1.25rem] border border-moto-amber/30 bg-[#0c101a] p-4 shadow-[0_16px_40px_-16px_rgba(201,168,124,0.15)] ring-1 ring-inset ring-white/[0.03] sm:rounded-[1.75rem] sm:p-8">
-                    <div class="pointer-events-none absolute inset-0 bg-gradient-to-br from-moto-amber/10 via-transparent to-white/[0.02]"></div>
+                <aside class="expert-process-mega__aside relative overflow-hidden rounded-[1.25rem] border border-moto-amber/25 bg-[#0c101a] p-4 shadow-[0_22px_48px_-16px_rgba(0,0,0,0.65)] ring-1 ring-inset ring-white/[0.05] sm:rounded-[1.75rem] sm:p-8">
+                    <div class="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/[0.05] via-transparent to-transparent"></div>
                     <div class="relative z-10">
                         @if($at !== '')
                             <h3 class="text-lg font-bold leading-tight text-white/95 sm:text-xl">{{ $at }}</h3>

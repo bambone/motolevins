@@ -18,7 +18,7 @@ trait NormalizesProgramListJsonForForm
             $data[$key] = $this->jsonLinesToRepeaterState($data[$key] ?? null);
         }
 
-        return $data;
+        return $this->normalizeCoverObjectPositionForFormFill($data);
     }
 
     /**
@@ -29,6 +29,50 @@ trait NormalizesProgramListJsonForForm
     {
         foreach (['audience_json', 'outcomes_json'] as $key) {
             $data[$key] = $this->repeaterStateToJsonLines($data[$key] ?? null);
+        }
+
+        return $this->normalizeCoverObjectPositionForSave($data);
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    protected function normalizeCoverObjectPositionForFormFill(array $data): array
+    {
+        $raw = trim((string) ($data['cover_object_position'] ?? ''));
+        $known = ['center top', 'center 22%', 'center 30%', 'center center', 'center 72%', 'center bottom'];
+        if ($raw === '') {
+            $data['cover_object_position_preset'] = 'auto';
+        } elseif (in_array($raw, $known, true)) {
+            $data['cover_object_position_preset'] = $raw;
+        } else {
+            $data['cover_object_position_preset'] = '__other__';
+        }
+
+        return $data;
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    protected function normalizeCoverObjectPositionForSave(array $data): array
+    {
+        if (! array_key_exists('cover_object_position_preset', $data)) {
+            return $data;
+        }
+
+        $preset = $data['cover_object_position_preset'];
+        unset($data['cover_object_position_preset']);
+
+        if ($preset === '__other__') {
+            $custom = trim((string) ($data['cover_object_position'] ?? ''));
+            $data['cover_object_position'] = $custom === '' ? null : $custom;
+        } elseif ($preset === 'auto' || $preset === '' || $preset === null) {
+            $data['cover_object_position'] = null;
+        } else {
+            $data['cover_object_position'] = (string) $preset;
         }
 
         return $data;

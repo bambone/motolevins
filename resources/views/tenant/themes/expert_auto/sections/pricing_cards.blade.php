@@ -30,7 +30,7 @@
                 $isEntry = $entrySlug !== '' && $program->slug === $entrySlug;
             @endphp
             <div
-                class="expert-pricing-card flex min-h-full min-w-0 flex-col overflow-hidden rounded-[1.35rem] border transition-all duration-300 sm:rounded-[1.5rem] sm:hover:-translate-y-1 {{ $isEntry ? 'expert-pricing-card--entry border-moto-amber/30 bg-gradient-to-br from-[#12141c] to-[#0a0c12] shadow-[0_16px_48px_-16px_rgba(201,168,124,0.3)]' : 'border-white/[0.05] bg-white/[0.02] hover:bg-white/[0.04]' }}"
+                class="expert-pricing-card flex min-h-full min-w-0 flex-col overflow-hidden rounded-[1.35rem] border transition-all duration-300 sm:rounded-[1.5rem] sm:hover:-translate-y-1 {{ $isEntry ? 'expert-pricing-card--entry border-moto-amber/30 bg-gradient-to-br from-[#12141c] to-[#0a0c12] shadow-[0_22px_52px_-16px_rgba(0,0,0,0.68)] ring-1 ring-inset ring-white/[0.05]' : 'border-white/[0.05] bg-white/[0.02] hover:bg-white/[0.04]' }}"
                 @if($pi >= 3)
                     x-bind:class="{ 'max-lg:hidden': !priceMore }"
                 @endif

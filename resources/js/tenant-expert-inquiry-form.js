@@ -1,0 +1,414 @@
+import './tenant-intl-phone.js';
+import './expertLazyMedia.js';
+
+import { flashPublicFieldWrap, pickFirstPublicFormErrorKey } from './shared/publicFormValidation.js';
+import {
+    normalizeTelegramVisitorInput,
+    normalizeVkVisitorInput,
+    preferredChannelNeedsAsciiValue,
+    stripToAsciiContactTyping,
+} from './shared/visitorContactNormalize.js';
+
+function getStickyOffset() {
+    return 72;
+}
+
+function expertErrorKeyPriority(keys) {
+    const first = pickFirstPublicFormErrorKey(keys);
+    if (first) {
+        return first;
+    }
+    const order = [
+        'program_slug',
+        'preferred_schedule',
+        'district',
+        'comment',
+        'has_own_car',
+        'transmission',
+        'has_license',
+    ];
+    const set = new Set(keys);
+    for (const k of order) {
+        if (set.has(k)) {
+            return k;
+        }
+    }
+
+    return keys[0] ?? null;
+}
+
+function clearInlineErrors(form) {
+    form.querySelectorAll('[data-rb-public-field]').forEach((wrap) => {
+        wrap.querySelectorAll('.expert-field-error').forEach((n) => n.remove());
+        wrap.querySelectorAll('.expert-form-input, input, textarea, select').forEach((el) => {
+            el.classList.remove('expert-form-input--error');
+        });
+        wrap.classList.remove('expert-public-field-wrap--error');
+    });
+}
+
+function setFieldError(form, fieldName, message) {
+    const wrap = form.querySelector(`[data-rb-public-field="${fieldName}"]`);
+    if (!wrap) {
+        return;
+    }
+    wrap.classList.add('expert-public-field-wrap--error');
+    const control = wrap.querySelector('input, textarea, select');
+    if (control && control.type !== 'radio' && control.type !== 'hidden') {
+        control.classList.add('expert-form-input--error');
+    }
+    const p = document.createElement('p');
+    p.className = 'expert-field-error mt-1.5 text-[13px] leading-snug text-red-400/95';
+    p.textContent = message;
+    wrap.appendChild(p);
+}
+
+function initPhoneUi(form) {
+    const T = window.TenantIntlPhone;
+    const phoneInput = form?.querySelector('#expert-phone');
+    const hintEl = form?.querySelector('#expert-phone-hint');
+    if (!form || !phoneInput || !T || typeof T.attachPublicTelField !== 'function') {
+        return;
+    }
+    T.attachPublicTelField(phoneInput, { hintEl });
+}
+
+function getSelectedPreferredChannel(form) {
+    const checked = form.querySelector('input[name="preferred_contact_channel"]:checked');
+    if (checked) {
+        return checked.value;
+    }
+    const hidden = form.querySelector('input[name="preferred_contact_channel"][type="hidden"]');
+
+    return hidden ? hidden.value : 'phone';
+}
+
+function initPreferredChannelSync(form, meta) {
+    const byId = new Map(meta.map((row) => [row.id, row]));
+    const valueWrap = form.querySelector('#expert-pref-value-wrap');
+    const valueInput = form.querySelector('#expert-pref-value');
+    const valueHint = form.querySelector('#expert-pref-value-hint');
+    let prev = null;
+
+    const sync = () => {
+        const id = getSelectedPreferredChannel(form);
+        if (prev !== null && prev !== id && valueInput) {
+            valueInput.value = '';
+        }
+        prev = id;
+        const row = byId.get(id);
+        if (!row || !valueWrap || !valueInput) {
+            return;
+        }
+        const needValue = Boolean(row.needs_value);
+        valueWrap.classList.toggle('hidden', !needValue);
+        valueInput.toggleAttribute('required', needValue);
+        const ph = String(row.value_placeholder ?? '').trim();
+        if (ph) {
+            valueInput.setAttribute('placeholder', ph);
+        } else {
+            valueInput.removeAttribute('placeholder');
+        }
+        if (id === 'telegram' || id === 'vk') {
+            valueInput.setAttribute('lang', 'en');
+            valueInput.setAttribute('spellcheck', 'false');
+            valueInput.setAttribute('autocapitalize', 'off');
+        } else {
+            valueInput.removeAttribute('lang');
+            valueInput.removeAttribute('spellcheck');
+            valueInput.removeAttribute('autocapitalize');
+        }
+        if (valueHint) {
+            const ht = String(row.value_hint ?? '').trim();
+            valueHint.textContent = ht;
+            valueHint.classList.toggle('hidden', ht === '');
+        }
+        if (needValue && preferredChannelNeedsAsciiValue(id) && valueInput.value) {
+            const stripped = stripToAsciiContactTyping(valueInput.value);
+            if (stripped !== valueInput.value) {
+                valueInput.value = stripped;
+            }
+        }
+    };
+
+    form.addEventListener('change', (e) => {
+        const t = e.target;
+        if (t && t.matches('input[name="preferred_contact_channel"]')) {
+            sync();
+        }
+    });
+
+    sync();
+
+    return sync;
+}
+
+function initPreferredValueAsciiGuard(form) {
+    const el = form.querySelector('#expert-pref-value');
+    if (!el || el.dataset.rbAsciiPrefGuard === '1') {
+        return;
+    }
+    el.dataset.rbAsciiPrefGuard = '1';
+
+    const applyStrip = () => {
+        if (!preferredChannelNeedsAsciiValue(getSelectedPreferredChannel(form))) {
+            return;
+        }
+        const v = el.value;
+        const next = stripToAsciiContactTyping(v);
+        if (next === v) {
+            return;
+        }
+        const car = el.selectionStart ?? next.length;
+        el.value = next;
+        const delta = v.length - next.length;
+        const pos = Math.max(0, Math.min(next.length, car - delta));
+        try {
+            el.setSelectionRange(pos, pos);
+        } catch (_) {}
+    };
+
+    el.addEventListener('beforeinput', (e) => {
+        if (!preferredChannelNeedsAsciiValue(getSelectedPreferredChannel(form))) {
+            return;
+        }
+        if (e.isComposing) {
+            return;
+        }
+        if (e.inputType === 'insertText' && e.data && /[^\x20-\x7E]/.test(e.data)) {
+            e.preventDefault();
+        }
+    });
+
+    el.addEventListener('paste', (e) => {
+        if (!preferredChannelNeedsAsciiValue(getSelectedPreferredChannel(form))) {
+            return;
+        }
+        const text = (e.clipboardData || window.clipboardData)?.getData('text') || '';
+        if (!/[^\x20-\x7E]/.test(text)) {
+            return;
+        }
+        e.preventDefault();
+        const cleaned = stripToAsciiContactTyping(text);
+        const start = el.selectionStart ?? 0;
+        const end = el.selectionEnd ?? 0;
+        const cur = el.value;
+        el.value = cur.slice(0, start) + cleaned + cur.slice(end);
+        const pos = start + cleaned.length;
+        try {
+            el.setSelectionRange(pos, pos);
+        } catch (_) {}
+    });
+
+    el.addEventListener('compositionend', applyStrip);
+    el.addEventListener('input', applyStrip);
+}
+
+function validateClientSide(form, meta) {
+    const T = window.TenantIntlPhone;
+    const byId = new Map(meta.map((row) => [row.id, row]));
+    clearInlineErrors(form);
+
+    const name = form.querySelector('[name="name"]');
+    const goal = form.querySelector('[name="goal_text"]');
+    const phoneInput = form.querySelector('#expert-phone');
+    const prefId = getSelectedPreferredChannel(form);
+    const row = byId.get(prefId);
+    const valueInput = form.querySelector('#expert-pref-value');
+
+    let ok = true;
+    if (name && name.value.trim() === '') {
+        setFieldError(form, 'name', 'Укажите имя.');
+        ok = false;
+    }
+    if (goal && goal.value.trim() === '') {
+        setFieldError(form, 'goal_text', 'Опишите, что хотите улучшить.');
+        ok = false;
+    }
+    if (phoneInput) {
+        if (T) {
+            const norm = T.normalizePhone(phoneInput.value);
+            if (!T.validatePhone(norm)) {
+                setFieldError(form, 'phone', 'Укажите корректный телефон в международном формате (для РФ: +7 …).');
+                ok = false;
+            }
+        } else if (phoneInput.value.trim() === '') {
+            setFieldError(form, 'phone', 'Укажите телефон.');
+            ok = false;
+        }
+    }
+    if (row?.needs_value && valueInput) {
+        const pv = valueInput.value.trim();
+        if (pv === '') {
+            setFieldError(form, 'preferred_contact_value', 'Заполните контакт для выбранного способа связи.');
+            ok = false;
+        } else if (prefId === 'telegram' && normalizeTelegramVisitorInput(pv) === null) {
+            setFieldError(
+                form,
+                'preferred_contact_value',
+                'Telegram: латинский username (5–32 символа: буквы, цифры, _) или ссылка https://t.me/…',
+            );
+            ok = false;
+        } else if (prefId === 'vk' && normalizeVkVisitorInput(pv) === null) {
+            setFieldError(
+                form,
+                'preferred_contact_value',
+                'ВКонтакте: ссылка на профиль (https://vk.com/…) или латинский id/ник после vk.com/',
+            );
+            ok = false;
+        }
+    }
+
+    if (!ok) {
+        const wraps = [...form.querySelectorAll('[data-rb-public-field]')];
+        const firstBad = wraps.find((w) => w.querySelector('.expert-field-error'));
+        if (firstBad) {
+            const fname = firstBad.getAttribute('data-rb-public-field');
+            if (fname) {
+                flashPublicFieldWrap(form, fname, { getStickyOffset });
+            }
+        }
+    }
+
+    return ok;
+}
+
+function applyServerErrors(form, errors) {
+    clearInlineErrors(form);
+    const keys = Object.keys(errors || {});
+    if (keys.length === 0) {
+        return;
+    }
+
+    for (const key of keys) {
+        const msgs = errors[key];
+        const msg = Array.isArray(msgs) ? msgs[0] : String(msgs);
+        if (msg) {
+            setFieldError(form, key, msg);
+        }
+    }
+
+    const first = expertErrorKeyPriority(keys);
+    if (first) {
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                flashPublicFieldWrap(form, first, { getStickyOffset });
+            });
+        });
+    }
+}
+
+function bootExpertInquiryForm() {
+    const form = document.getElementById('expert-inquiry-form');
+    const metaEl = document.getElementById('expert-inquiry-channel-meta');
+    if (!form || form.dataset.expertInquiryBound === '1') {
+        return;
+    }
+    form.dataset.expertInquiryBound = '1';
+
+    let meta = [];
+    try {
+        meta = JSON.parse(metaEl?.textContent || '[]');
+    } catch {
+        meta = [];
+    }
+    if (!Array.isArray(meta)) {
+        meta = [];
+    }
+
+    initPhoneUi(form);
+    let syncChannel = () => {};
+    if (meta.length > 0) {
+        syncChannel = initPreferredChannelSync(form, meta);
+    }
+    initPreferredValueAsciiGuard(form);
+
+    const endpoint = form.getAttribute('data-expert-inquiry-endpoint') || '';
+    const defaultSuccessMessage = form.getAttribute('data-expert-inquiry-default-success') || '';
+    const alertEl = document.getElementById('expert-inquiry-alert');
+    const submitBtn = document.getElementById('expert-inquiry-submit');
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (alertEl) {
+            alertEl.classList.add('hidden');
+            alertEl.textContent = '';
+        }
+        clearInlineErrors(form);
+
+        if (!validateClientSide(form, meta)) {
+            return;
+        }
+
+        const fd = new FormData(form);
+        const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+        if (submitBtn) {
+            submitBtn.disabled = true;
+        }
+        try {
+            const res = await fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': token || '',
+                    Accept: 'application/json',
+                },
+                body: fd,
+            });
+            const body = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                if (res.status === 422 && body.errors && typeof body.errors === 'object') {
+                    applyServerErrors(form, body.errors);
+                }
+                let msg = typeof body.message === 'string' ? body.message : 'Ошибка отправки.';
+                if (body.errors && typeof body.errors === 'object') {
+                    const flat = Object.values(body.errors).flat();
+                    if (flat.length) {
+                        msg = flat.join(' ');
+                    }
+                }
+                if (alertEl) {
+                    alertEl.textContent = msg;
+                    alertEl.classList.remove('hidden');
+                }
+                return;
+            }
+            if (alertEl) {
+                alertEl.textContent =
+                    typeof body.message === 'string' && body.message !== ''
+                        ? body.message
+                        : defaultSuccessMessage;
+                alertEl.classList.remove('hidden');
+            }
+            form.reset();
+            syncChannel();
+            const phoneInput = form.querySelector('#expert-phone');
+            if (window.TenantIntlPhone && phoneInput) {
+                window.TenantIntlPhone.syncInputDisplay(phoneInput, '');
+            }
+            const hintEl = form.querySelector('#expert-phone-hint');
+            if (hintEl && window.TenantIntlPhone) {
+                hintEl.textContent = window.TenantIntlPhone.phoneHelperHint('');
+            }
+        } catch {
+            if (alertEl) {
+                alertEl.textContent = 'Сеть недоступна. Попробуйте позже.';
+                alertEl.classList.remove('hidden');
+            }
+        } finally {
+            if (submitBtn) {
+                submitBtn.disabled = false;
+            }
+        }
+    });
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bootExpertInquiryForm);
+} else {
+    bootExpertInquiryForm();
+}
+
+/** Ленивые секции главной expert_auto (см. themes/expert_auto/pages/home.blade.php). */
+document.addEventListener('rentbase:tenant-dom-mounted', () => {
+    bootExpertInquiryForm();
+});

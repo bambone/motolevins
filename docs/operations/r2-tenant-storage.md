@@ -7,11 +7,13 @@
 
 ## Диски
 
-| Назначение | Конфиг / env | Типичные значения |
-|------------|----------------|-------------------|
-| Публичные tenant-файлы (брендинг, медиа на публичном диске) | `tenant_storage.public_disk` → `TENANT_STORAGE_PUBLIC_DISK` | `public`, `r2-public` |
-| Приватные (SEO snapshots, приватные аплоады) | `tenant_storage.private_disk` → `TENANT_STORAGE_PRIVATE_DISK` или `SEO_FILES_DISK` | `local`, `r2-private` |
-| Spatie Media Library | `media-library.disk_name` → `MEDIA_DISK` | тот же публичный диск, что и tenant public, если медиа публичные |
+
+| Назначение                                                  | Конфиг / env                                                                       | Типичные значения                                                |
+| ----------------------------------------------------------- | ---------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| Публичные tenant-файлы (брендинг, медиа на публичном диске) | `tenant_storage.public_disk` → `TENANT_STORAGE_PUBLIC_DISK`                        | `public`, `r2-public`                                            |
+| Приватные (SEO snapshots, приватные аплоады)                | `tenant_storage.private_disk` → `TENANT_STORAGE_PRIVATE_DISK` или `SEO_FILES_DISK` | `local`, `r2-private`                                            |
+| Spatie Media Library                                        | `media-library.disk_name` → `MEDIA_DISK`                                           | тот же публичный диск, что и tenant public, если медиа публичные |
+
 
 Хелпер в коде: `App\Support\Storage\TenantStorageDisks`.
 
@@ -29,6 +31,20 @@
 
 Публичный URL строится в рантайме: `TenantStorage::publicUrl()`, дисковый `url()` для публичного диска, или signed/temporary URL для приватного (отдельный API).
 
+### Прямые CDN URL в HTML (публичный сайт тенанта)
+
+Когда задан `**TENANT_STORAGE_PUBLIC_CDN_URL`** (`config('tenant_storage.public_cdn_base_url')`) и публичный диск **не** локальный Flysystem, `TenantPublicAssetResolver` в HTTP-контексте отдаёт **прямой** URL вида `{CDN}/tenants/{id}/public/{path}` (как `TenantStorage::publicUrl()`), без прокси через `/storage/...` на origin. Для локального `public` диска в разработке по-прежнему используется маршрут `/storage/tenants/...`.
+
+Значение CDN должно указывать на тот же namespace объектов, что и ключи в bucket (`tenants/*/public/*`), обычно совпадает с публичным origin R2 или custom domain в Cloudflare.
+
+### Следующий этап: варианты размеров изображений
+
+Чтобы снизить байты на LCP и карточках, отдельно планируются несколько размеров одного смысла (hero desktop/mobile, card, thumb) и разметка `srcset`/`sizes` или разные URL по breakpoint — после стабилизации прямой выдачи через CDN.
+
+### Видео на первом экране
+
+Не использовать тяжёлое видео как основной LCP-элемент: постер, открытие по действию пользователя (modal), умеренный `preload` у плеера в диалоге (`metadata` вместо полной предзагрузки), без агрессивного autoplay на mobile.
+
 ## Инварианты для приватного диска (`r2-private`)
 
 - Не использовать общий public-layer (`url()` на приватном bucket для отдачи в браузер).
@@ -38,7 +54,23 @@
 ## Отдача через маршрут `/storage/tenants/{id}/public/…`
 
 - **Локальный** публичный диск: ответ `response()->file()` (как раньше).
-- **Облачный** публичный диск: **HTTP 302** на канонический URL объекта (CDN/R2 public URL), без стриминга через PHP по умолчанию.
+- **Облачный** публичный диск: **HTTP 302** на канонический URL объекта (CDN/R2 public URL). Стриминг через PHP только при `**TENANT_STORAGE_STREAM_PUBLIC_THROUGH_ORIGIN=true`** (legacy, неверный `Content-Type` на объекте).
+
+### Env (публичные ассеты)
+
+
+| Переменная                                     | Назначение                                                                                                                                                                                                                                            |
+| ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `TENANT_STORAGE_PUBLIC_CDN_URL`                | База для прямых URL в разметке при облачном public disk (без завершающего `/`).                                                                                                                                                                       |
+| `R2_PUBLIC_URL`                                | Публичный URL диска `r2-public` в `config/filesystems.php`; должен быть согласован с CDN/custom domain для того же bucket.                                                                                                                            |
+| `TENANT_STORAGE_STREAM_PUBLIC_THROUGH_ORIGIN`  | `false` по умолчанию; `true` — стрим изображений/видео через Laravel вместо 302.                                                                                                                                                                      |
+| `TENANT_STORAGE_PUBLIC_OBJECT_CACHE_CONTROL`   | Заголовок для **новых** объектов на S3/R2 при `put` (`public, max-age=31536000, immutable` по умолчанию). Нужен, чтобы Cloudflare и браузер кешировали ответы; **уже залитые** файлы не меняются сами — перезалить или поправить метаданные в bucket. |
+| `TENANT_STORAGE_PUBLIC_REDIRECT_CACHE_CONTROL` | `Cache-Control` для HTTP **302** с маршрута `/storage/...` на CDN (по умолчанию сутки), чтобы реже бить Laravel.                                                                                                                                      |
+
+
+### Почему «кеш на Laravel» не ускоряет картинки с CDN
+
+Запрос браузера к `https://cdn…/tenants/…/public/…` **не проходит** через ваш PHP-сервер. Кешировать на origin имеет смысл только если трафик идёт через прокси на приложении. Для скорости важны: **заголовки на объекте** (см. env выше), **правила Cloudflare** (кешировать `tenants/*/public/`*, respect origin / override TTL), и **размер файлов** (`srcset`, WebP). В DevTools у ответа смотрите `cf-cache-status: HIT` после первого запроса.
 
 ## Первый rollout
 
@@ -63,11 +95,14 @@ php artisan tenant-storage:migrate-to-r2 --tenant=12 --only=branding,media,seo
 
 ## Документы следующего этапа (прикладное внедрение)
 
-| Документ | Содержание |
-|----------|------------|
-| [r2-public-scenarios-matrix.md](r2-public-scenarios-matrix.md) | Матрица публичных сценариев (брендинг, Spatie, маршрут `/storage/...`). |
-| [r2-private-tenant-files.md](r2-private-tenant-files.md) | Контракт приватных файлов, `temporaryPrivateUrl`, будущие префиксы CRM. |
-| [r2-migration-runbook.md](r2-migration-runbook.md) | Запуск миграции, статусы JSON-лога, verification, rollback, branding vs global disk. |
-| [r2-batch-rollout-plan.md](r2-batch-rollout-plan.md) | Волны mass rollout (production vs staging), порядок branding → cutover → media → seo. |
-| [r2-pilot-report-template.md](r2-pilot-report-template.md) | Шаблон отчёта о пилоте (без production id в git). |
-| [r2-production-smoke.md](r2-production-smoke.md) | Smoke-чеклист и согласованность env после включения R2. |
+
+| Документ                                                       | Содержание                                                                            |
+| -------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| [r2-public-scenarios-matrix.md](r2-public-scenarios-matrix.md) | Матрица публичных сценариев (брендинг, Spatie, маршрут `/storage/...`).               |
+| [r2-private-tenant-files.md](r2-private-tenant-files.md)       | Контракт приватных файлов, `temporaryPrivateUrl`, будущие префиксы CRM.               |
+| [r2-migration-runbook.md](r2-migration-runbook.md)             | Запуск миграции, статусы JSON-лога, verification, rollback, branding vs global disk.  |
+| [r2-batch-rollout-plan.md](r2-batch-rollout-plan.md)           | Волны mass rollout (production vs staging), порядок branding → cutover → media → seo. |
+| [r2-pilot-report-template.md](r2-pilot-report-template.md)     | Шаблон отчёта о пилоте (без production id в git).                                     |
+| [r2-production-smoke.md](r2-production-smoke.md)               | Smoke-чеклист и согласованность env после включения R2.                               |
+
+
