@@ -52,7 +52,7 @@
                             @endif
                         </div>
                         
-                        @if(filled($contacts['telegram'] ?? null) || filled($contacts['whatsapp'] ?? null))
+                        @if(filled($contacts['telegram'] ?? null) || filled($contacts['whatsapp'] ?? null) || filled($contacts['vk_url'] ?? null))
                         <div class="mt-10 border-t border-white/[0.06] pt-8">
                             <p class="text-[13px] font-bold uppercase tracking-widest text-silver/60 mb-5">Мессенджеры</p>
                             <div class="flex flex-wrap gap-2.5 sm:gap-3">
@@ -66,6 +66,12 @@
                                 <a href="https://wa.me/{{ $contacts['whatsapp'] }}" target="_blank" rel="noopener noreferrer" class="group flex min-h-11 min-w-0 flex-1 items-center justify-center gap-2.5 rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 py-3 transition hover:border-white/[0.15] hover:bg-white/[0.06] sm:flex-initial sm:justify-start sm:px-5">
                                     <svg class="h-5 w-5 text-[#25D366]" viewBox="0 0 24 24" fill="currentColor"><path d="M17.47 6.53A7.95 7.95 0 0 0 12 4.2C7.59 4.2 4 7.79 4 12.2c0 1.4.37 2.76 1.07 3.96L4 20l3.96-1.04A7.9 7.9 0 0 0 12 20.2c4.41 0 8-3.59 8-8 0-2.14-.83-4.15-2.53-5.67zM12 18.47c-1.18 0-2.33-.31-3.34-.92l-.24-.14-2.48.65.66-2.42-.16-.25A6.23 6.23 0 0 1 5.72 12.2c0-3.46 2.82-6.28 6.28-6.28 1.68 0 3.25.65 4.43 1.84a6.23 6.23 0 0 1 1.83 4.43c0 3.47-2.82 6.28-6.26 6.28zM15.42 13.8c-.19-.09-1.11-.55-1.28-.61-.17-.06-.29-.09-.42.09-.12.18-.49.61-.59.74-.11.12-.22.14-.4.04-.19-.09-.8-.29-1.52-.92-.56-.5-.94-1.12-1.05-1.3-.11-.19-.01-.29.08-.38.08-.08.18-.21.28-.31.09-.1.12-.17.18-.28.06-.11.03-.22-.01-.31-.05-.09-.43-1.02-.59-1.4-.15-.36-.31-.31-.42-.32h-.36c-.15 0-.4.06-.61.28-.21.23-.8.78-.8 1.9s.82 2.2 1.05 2.5c.23.3 1.7 2.65 4.18 3.73.59.25 1.05.41 1.41.52.59.19 1.13.16 1.56.1.48-.07 1.47-.6 1.67-1.18.21-.58.21-1.08.15-1.18-.06-.1-.23-.15-.42-.25z"/></svg>
                                     <span class="text-[14px] font-bold text-white/90 group-hover:text-white">WhatsApp</span>
+                                </a>
+                                @endif
+                                @if(filled($contacts['vk_url'] ?? null))
+                                <a href="{{ $contacts['vk_url'] }}" target="_blank" rel="noopener noreferrer" class="group flex min-h-11 min-w-0 flex-1 items-center justify-center gap-2.5 rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 py-3 transition hover:border-white/[0.15] hover:bg-white/[0.06] sm:flex-initial sm:justify-start sm:px-5">
+                                    <svg class="h-5 w-5 text-[#0077FF]" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M15.684 0H8.316C1.592 0 0 1.592 0 8.316v7.368C0 22.408 1.592 24 8.316 24h7.368C22.408 24 24 22.408 24 15.684V8.316C24 1.592 22.408 0 15.684 0zm2.07 16.538h-1.558c-.59 0-.77-.47-1.83-1.54-.92-.89-1.33-1.01-1.56-1.01-.32 0-.41.09-.41.53v1.41c0 .38-.12.6-1.12.6-1.65 0-3.48-1-4.76-2.86-1.22-1.8-1.77-3.84-1.77-4.25 0-.23.09-.44.53-.44h1.56c.39 0 .54.18.69.6.77 2.22 2.06 4.18 2.59 4.18.2 0 .29-.09.29-.59v-2.37c-.06-1.06-.62-1.15-.62-1.52 0-.18.15-.36.39-.36h2.45c.33 0 .45.18.45.57v3.1c0 .33.15.45.24.45.2 0 .36-.12.73-.48 1.12-1.25 1.91-3.17 1.91-3.17.14-.29.33-.44.73-.44h1.56c.47 0 .58.24.47.57-.2.91-2.1 3.08-2.1 3.08-.18.24-.24.35 0 .62.18.24.79.91 1.21 1.59.38.59.73 1.21.48 1.88z"/></svg>
+                                    <span class="text-[14px] font-bold text-white/90 group-hover:text-white">ВКонтакте</span>
                                 </a>
                                 @endif
                             </div>

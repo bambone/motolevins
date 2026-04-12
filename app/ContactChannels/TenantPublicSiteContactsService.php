@@ -7,6 +7,10 @@ use App\Models\TenantSetting;
 
 /**
  * Публичные контакты для Blade (шапка, плавающие кнопки): из contact_channels.state, без чужих дефолтов.
+ * Данные всегда по {@see Tenant::$id} в {@see TenantSetting}; шаблоны общие — изоляция здесь и в View-composer.
+ *
+ * Тесты: {@see \Tests\Unit\ContactChannels\TenantPublicSiteContactsServiceTest},
+ * {@see \Tests\Feature\Tenant\TenantPublicContactsComposerIsolationTest}.
  */
 final class TenantPublicSiteContactsService
 {
@@ -39,7 +43,7 @@ final class TenantPublicSiteContactsService
     }
 
     /**
-     * @return array{phone: string, phone_alt: string, whatsapp: string, telegram: string}
+     * @return array{phone: string, phone_alt: string, whatsapp: string, telegram: string, vk_url: string}
      */
     public function contactsForPublicLayout(Tenant $tenant): array
     {
@@ -54,7 +58,24 @@ final class TenantPublicSiteContactsService
             'phone_alt' => trim((string) TenantSetting::getForTenant($tenantId, 'contacts.phone_alt', '')),
             'whatsapp' => $this->resolveWhatsappDigits($state),
             'telegram' => $this->resolveTelegramHandle($state),
+            'vk_url' => $this->resolveVkUrl($state),
         ];
+    }
+
+    /**
+     * Быстрые кнопки (угол экрана): канал с контактом, если команда его использует и он либо публичный на сайте, либо доступен в формах заявок.
+     */
+    private function floatingMessengerChannelUsable(?TenantContactChannelConfig $cfg): bool
+    {
+        if ($cfg === null || ! $cfg->usesChannel) {
+            return false;
+        }
+
+        if (trim($cfg->businessValue) === '') {
+            return false;
+        }
+
+        return $cfg->publicVisible || $cfg->allowedInForms;
     }
 
     /**
@@ -85,7 +106,7 @@ final class TenantPublicSiteContactsService
     private function resolveWhatsappDigits(array $state): string
     {
         $w = $state[ContactChannelType::Whatsapp->value] ?? null;
-        if ($w === null || ! $w->usesChannel || ! $w->publicVisible) {
+        if ($w === null || ! $this->floatingMessengerChannelUsable($w)) {
             return '';
         }
 
@@ -100,12 +121,25 @@ final class TenantPublicSiteContactsService
     private function resolveTelegramHandle(array $state): string
     {
         $t = $state[ContactChannelType::Telegram->value] ?? null;
-        if ($t === null || ! $t->usesChannel || ! $t->publicVisible) {
+        if ($t === null || ! $this->floatingMessengerChannelUsable($t)) {
             return '';
         }
 
         $h = ltrim(trim($t->businessValue), '@');
 
         return $h;
+    }
+
+    /**
+     * @param  array<string, TenantContactChannelConfig>  $state
+     */
+    private function resolveVkUrl(array $state): string
+    {
+        $v = $state[ContactChannelType::Vk->value] ?? null;
+        if ($v === null || ! $this->floatingMessengerChannelUsable($v)) {
+            return '';
+        }
+
+        return VisitorContactNormalizer::normalizeVk($v->businessValue) ?? '';
     }
 }

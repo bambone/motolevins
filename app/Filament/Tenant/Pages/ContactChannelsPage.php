@@ -62,7 +62,7 @@ class ContactChannelsPage extends Page
     {
         $sections = [
             Section::make('Плавающие кнопки на лендинге')
-                ->description('Круглые кнопки WhatsApp и Telegram в углу экрана на публичном сайте. Отображаются только при включённой опции ниже и если у канала включено «Показывать на сайте» и заполнен контакт.')
+                ->description('Круглые кнопки WhatsApp, Telegram и ВКонтакте в углу экрана на публичном сайте. Нужны: опция ниже включена, у канала включено «Команда использует этот канал», заполнен контакт и включено «Показывать на сайте» или «Разрешить в формах как предпочтительный канал».')
                 ->icon('heroicon-o-chat-bubble-oval-left-ellipsis')
                 ->schema([
                     Toggle::make('floating_messenger_buttons_enabled')

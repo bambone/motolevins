@@ -272,6 +272,7 @@ class AppServiceProvider extends ServiceProvider
                         'phone_alt' => Setting::get('contacts.phone_alt', ''),
                         'whatsapp' => preg_replace('/\D/', '', Setting::get('contacts.whatsapp', '')),
                         'telegram' => ltrim((string) Setting::get('contacts.telegram', ''), '@'),
+                        'vk_url' => '',
                     ],
                     'floating_messenger_buttons_enabled' => true,
                     'branding' => ['logo' => '', 'primary_color' => '#f59e0b', 'favicon' => '', 'hero_image' => ''],
