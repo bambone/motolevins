@@ -40,19 +40,64 @@ class FaqResource extends Resource
     {
         return $schema
             ->components([
-                Section::make('Вопрос и ответ')
+                Section::make('Текст на сайте')
+                    ->description('Вопрос и ответ выводятся на публичной странице /faq и при необходимости в блоке FAQ на главной (если включено ниже).')
+                    ->icon('heroicon-o-chat-bubble-left-right')
                     ->schema([
-                        TextInput::make('question')->required()->maxLength(255),
-                        Textarea::make('answer')->required()->rows(4),
-                        TextInput::make('category')
+                        TextInput::make('question')
+                            ->label('Вопрос')
+                            ->required()
                             ->maxLength(255)
-                            ->helperText('Необязательная группа на странице /faq (например «Аренда», «Доставка»).'),
-                        TextInput::make('sort_order')->numeric()->default(0),
-                        Select::make('status')->options(Faq::statuses())->required()->default('published'),
+                            ->columnSpanFull()
+                            ->placeholder('Формулировка так, как её увидит посетитель')
+                            ->hintIcon('heroicon-o-information-circle')
+                            ->hintIconTooltip('Краткий понятный вопрос без служебных пометок. Отображается как заголовок раскрывающегося пункта на /faq.'),
+                        Textarea::make('answer')
+                            ->label('Ответ')
+                            ->required()
+                            ->rows(6)
+                            ->columnSpanFull()
+                            ->hintIcon('heroicon-o-information-circle')
+                            ->hintIconTooltip('Развёрнутый ответ: факты, условия, ссылки. Можно обычный текст с абзацами; HTML на сайте зависит от темы.'),
+                    ])
+                    ->columns(2),
+
+                Section::make('Группировка и публикация')
+                    ->description('Категория и порядок — для удобства на странице FAQ; статус определяет видимость на сайте.')
+                    ->icon('heroicon-o-adjustments-horizontal')
+                    ->schema([
+                        TextInput::make('category')
+                            ->label('Группа (категория)')
+                            ->maxLength(255)
+                            ->placeholder('Например: Занятия, Оплата')
+                            ->hintIcon('heroicon-o-information-circle')
+                            ->hintIconTooltip(
+                                'Необязательно. Одинаковая строка у нескольких вопросов объединяет их в подзаголовок на /faq '
+                                .'(например «Обучение», «Автомобиль»). Пусто — пункт без группы.'
+                            ),
+                        TextInput::make('sort_order')
+                            ->label('Порядок в списке')
+                            ->numeric()
+                            ->default(0)
+                            ->hintIcon('heroicon-o-information-circle')
+                            ->hintIconTooltip('Меньшее число — выше внутри своей категории. Удобно задать 10, 20, 30, чтобы потом вставлять пункты между ними.'),
+                        Select::make('status')
+                            ->label('Статус')
+                            ->options(Faq::statuses())
+                            ->required()
+                            ->default('published')
+                            ->native(true)
+                            ->hintIcon('heroicon-o-information-circle')
+                            ->hintIconTooltip('На сайте показываются только пункты «Опубликован». Черновик и «Скрыт» остаются в админке.'),
                         Toggle::make('show_on_home')
                             ->label('Показывать на главной')
-                            ->helperText('Если включено, пункт может попасть в блок FAQ на главной странице сайта (виджет/секция темы). Полный список — на публичной странице /faq.'),
-                    ])->columns(2),
+                            ->hintIcon('heroicon-o-information-circle')
+                            ->hintIconTooltip(
+                                'Если включено, пункт может попасть в блок FAQ на главной (секция темы / конструктор страницы). '
+                                .'Полный список вопросов — всегда на странице /faq.'
+                            ),
+                    ])
+                    ->columns(2),
             ]);
     }
 

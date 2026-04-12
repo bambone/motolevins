@@ -78,4 +78,22 @@ class TenantSettingsFormMappingTest extends TestCase
         $this->assertSame('My Site', TenantSetting::getForTenant($tenant->id, 'general.site_name', ''));
         $this->assertSame('+7999', TenantSetting::getForTenant($tenant->id, 'contacts.phone_alt', ''));
     }
+
+    public function test_forget_for_tenant_removes_row_and_restores_default(): void
+    {
+        $tenant = Tenant::query()->create([
+            'name' => 'Forget T',
+            'slug' => 'forgett',
+            'status' => 'active',
+        ]);
+
+        TenantSetting::setForTenant($tenant->id, 'general.domain', 'https://explicit.example.test');
+        $this->assertSame(
+            'https://explicit.example.test',
+            TenantSetting::getForTenant($tenant->id, 'general.domain', 'fallback')
+        );
+
+        TenantSetting::forgetForTenant($tenant->id, 'general.domain');
+        $this->assertSame('fallback', TenantSetting::getForTenant($tenant->id, 'general.domain', 'fallback'));
+    }
 }

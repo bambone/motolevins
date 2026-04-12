@@ -5,6 +5,8 @@ namespace App\Filament\Tenant\Pages;
 use App\ContactChannels\ContactChannelRegistry;
 use App\ContactChannels\ContactChannelType;
 use App\ContactChannels\TenantContactChannelsStore;
+use App\ContactChannels\TenantPublicSiteContactsService;
+use App\Models\TenantSetting;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Notifications\Notification;
@@ -52,12 +54,24 @@ class ContactChannelsPage extends Page
             $form[$k.'_business_value'] = $cfg->businessValue;
             $form[$k.'_sort_order'] = (string) $cfg->sortOrder;
         }
+        $form['floating_messenger_buttons_enabled'] = app(TenantPublicSiteContactsService::class)->floatingMessengerButtonsEnabled($tenant->id);
         $this->data = $form;
     }
 
     public function form(Schema $schema): Schema
     {
-        $sections = [];
+        $sections = [
+            Section::make('Плавающие кнопки на лендинге')
+                ->description('Круглые кнопки WhatsApp и Telegram в углу экрана на публичном сайте. Отображаются только при включённой опции ниже и если у канала включено «Показывать на сайте» и заполнен контакт.')
+                ->icon('heroicon-o-chat-bubble-oval-left-ellipsis')
+                ->schema([
+                    Toggle::make('floating_messenger_buttons_enabled')
+                        ->label('Показывать плавающие кнопки мессенджеров')
+                        ->default(true)
+                        ->helperText('По умолчанию включено. Выключите, если не нужны поверх страницы.'),
+                ])
+                ->columns(1),
+        ];
         foreach (ContactChannelType::allForTenantConfig() as $type) {
             $k = $type->value;
             $label = ContactChannelRegistry::label($k);
@@ -101,6 +115,14 @@ class ContactChannelsPage extends Page
         }
 
         $data = $this->getSchema('form')->getState();
+
+        TenantSetting::setForTenant(
+            $tenant->id,
+            'public_site.floating_messenger_buttons',
+            ! empty($data['floating_messenger_buttons_enabled']),
+            'boolean'
+        );
+
         $raw = [];
         foreach (ContactChannelType::allForTenantConfig() as $type) {
             $k = $type->value;

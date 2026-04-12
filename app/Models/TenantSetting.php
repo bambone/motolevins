@@ -58,6 +58,24 @@ class TenantSetting extends Model
         Cache::forget("tenant_settings.{$tenantId}.{$key}");
     }
 
+    /**
+     * Remove a tenant setting so {@see getForTenant()} falls back to the passed default again.
+     */
+    public static function forgetForTenant(int $tenantId, string $key): void
+    {
+        $parts = explode('.', $key, 2);
+        $group = $parts[0] ?? 'general';
+        $k = $parts[1] ?? $parts[0];
+
+        static::query()
+            ->where('tenant_id', $tenantId)
+            ->where('group', $group)
+            ->where('key', $k)
+            ->delete();
+
+        Cache::forget("tenant_settings.{$tenantId}.{$key}");
+    }
+
     protected static function castValue(?string $value, string $type): mixed
     {
         return match ($type) {

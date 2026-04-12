@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Auth\AccessRoles;
 use App\Auth\TenantPivotPermissions;
+use App\ContactChannels\TenantPublicSiteContactsService;
 use App\Filesystem\WindowsSafeFilesystem;
 use App\Http\Controllers\HomeController;
 use App\Jobs\Mail\SendTenantMailableJob;
@@ -250,13 +251,11 @@ class AppServiceProvider extends ServiceProvider
 
             $tenant = currentTenant();
             if ($tenant) {
+                $publicContactsService = app(TenantPublicSiteContactsService::class);
+                $publicContacts = $publicContactsService->contactsForPublicLayout($tenant);
                 $bundle = [
-                    'contacts' => [
-                        'phone' => TenantSetting::getForTenant($tenant->id, 'contacts.phone', '+7 (913) 060-86-89'),
-                        'phone_alt' => TenantSetting::getForTenant($tenant->id, 'contacts.phone_alt', ''),
-                        'whatsapp' => preg_replace('/\D/', '', TenantSetting::getForTenant($tenant->id, 'contacts.whatsapp', '79130608689')),
-                        'telegram' => ltrim(TenantSetting::getForTenant($tenant->id, 'contacts.telegram', 'motolevins'), '@'),
-                    ],
+                    'contacts' => $publicContacts,
+                    'floating_messenger_buttons_enabled' => $publicContactsService->floatingMessengerButtonsEnabled((int) $tenant->id),
                     'branding' => [
                         'logo' => tenant_branding_logo_url(),
                         'primary_color' => TenantSetting::getForTenant($tenant->id, 'branding.primary_color', '#f59e0b'),
@@ -269,11 +268,12 @@ class AppServiceProvider extends ServiceProvider
             } else {
                 $bundle = [
                     'contacts' => [
-                        'phone' => Setting::get('contacts.phone', '+7 (913) 060-86-89'),
+                        'phone' => Setting::get('contacts.phone', ''),
                         'phone_alt' => Setting::get('contacts.phone_alt', ''),
-                        'whatsapp' => preg_replace('/\D/', '', Setting::get('contacts.whatsapp', '79130608689')),
-                        'telegram' => ltrim(Setting::get('contacts.telegram', 'motolevins'), '@'),
+                        'whatsapp' => preg_replace('/\D/', '', Setting::get('contacts.whatsapp', '')),
+                        'telegram' => ltrim((string) Setting::get('contacts.telegram', ''), '@'),
                     ],
+                    'floating_messenger_buttons_enabled' => true,
                     'branding' => ['logo' => '', 'primary_color' => '#f59e0b', 'favicon' => '', 'hero_image' => ''],
                     'site_name' => config('app.name'),
                     'tenantMainMenuPages' => collect(),

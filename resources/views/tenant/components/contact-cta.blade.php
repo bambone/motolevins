@@ -1,3 +1,4 @@
+{{-- Родитель скрывает блок целиком, если выключены плавающие кнопки или нет WA/TG в $contacts. --}}
 <!-- Floating CTAs: приглушаются во время hero-video -->
 <div x-data="{ videoPlaying: false }"
      @hero-video-playing.window="videoPlaying = true"

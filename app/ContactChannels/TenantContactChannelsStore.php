@@ -11,16 +11,21 @@ class TenantContactChannelsStore
 {
     public const SETTING_KEY = 'contact_channels.state';
 
+    public static function hasSavedContactChannelsState(int $tenantId): bool
+    {
+        return TenantSetting::query()
+            ->where('tenant_id', $tenantId)
+            ->where('group', 'contact_channels')
+            ->where('key', 'state')
+            ->exists();
+    }
+
     /**
      * @return array<string, TenantContactChannelConfig>
      */
     public function resolvedState(int $tenantId): array
     {
-        $hasSavedState = TenantSetting::query()
-            ->where('tenant_id', $tenantId)
-            ->where('group', 'contact_channels')
-            ->where('key', 'state')
-            ->exists();
+        $hasSavedState = self::hasSavedContactChannelsState($tenantId);
 
         $stored = TenantSetting::getForTenant($tenantId, self::SETTING_KEY, null);
         $map = is_array($stored) ? $stored : [];

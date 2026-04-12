@@ -52,19 +52,25 @@
                             @endif
                         </div>
                         
+                        @if(filled($contacts['telegram'] ?? null) || filled($contacts['whatsapp'] ?? null))
                         <div class="mt-10 border-t border-white/[0.06] pt-8">
                             <p class="text-[13px] font-bold uppercase tracking-widest text-silver/60 mb-5">Мессенджеры</p>
                             <div class="flex flex-wrap gap-2.5 sm:gap-3">
-                                <a href="https://t.me/{{ ltrim(tenant()->telegram ?? '', '@') }}" target="_blank" rel="noopener noreferrer" class="group flex min-h-11 min-w-0 flex-1 items-center justify-center gap-2.5 rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 py-3 transition hover:border-white/[0.15] hover:bg-white/[0.06] sm:flex-initial sm:justify-start sm:px-5">
+                                @if(filled($contacts['telegram'] ?? null))
+                                <a href="https://t.me/{{ $contacts['telegram'] }}" target="_blank" rel="noopener noreferrer" class="group flex min-h-11 min-w-0 flex-1 items-center justify-center gap-2.5 rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 py-3 transition hover:border-white/[0.15] hover:bg-white/[0.06] sm:flex-initial sm:justify-start sm:px-5">
                                     <svg class="h-5 w-5 text-[#38BDF8]" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM16.64 9.11l-1.54 7.27c-.12.53-.43.66-.88.4L11.8 15l-1.18 1.12c-.13.13-.24.24-.49.24l.17-2.48 4.54-4.1c.2-.18-.04-.28-.31-.09l-5.6 3.53-2.41-.75c-.52-.16-.53-.52.11-.77l9.4-3.62c.44-.15.82.09.7.83z"/></svg>
                                     <span class="text-[14px] font-bold text-white/90 group-hover:text-white">Telegram</span>
                                 </a>
-                                <a href="https://wa.me/{{ preg_replace('/[^+\d]/', '', tenant()->whatsapp ?? '') }}" target="_blank" rel="noopener noreferrer" class="group flex min-h-11 min-w-0 flex-1 items-center justify-center gap-2.5 rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 py-3 transition hover:border-white/[0.15] hover:bg-white/[0.06] sm:flex-initial sm:justify-start sm:px-5">
+                                @endif
+                                @if(filled($contacts['whatsapp'] ?? null))
+                                <a href="https://wa.me/{{ $contacts['whatsapp'] }}" target="_blank" rel="noopener noreferrer" class="group flex min-h-11 min-w-0 flex-1 items-center justify-center gap-2.5 rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 py-3 transition hover:border-white/[0.15] hover:bg-white/[0.06] sm:flex-initial sm:justify-start sm:px-5">
                                     <svg class="h-5 w-5 text-[#25D366]" viewBox="0 0 24 24" fill="currentColor"><path d="M17.47 6.53A7.95 7.95 0 0 0 12 4.2C7.59 4.2 4 7.79 4 12.2c0 1.4.37 2.76 1.07 3.96L4 20l3.96-1.04A7.9 7.9 0 0 0 12 20.2c4.41 0 8-3.59 8-8 0-2.14-.83-4.15-2.53-5.67zM12 18.47c-1.18 0-2.33-.31-3.34-.92l-.24-.14-2.48.65.66-2.42-.16-.25A6.23 6.23 0 0 1 5.72 12.2c0-3.46 2.82-6.28 6.28-6.28 1.68 0 3.25.65 4.43 1.84a6.23 6.23 0 0 1 1.83 4.43c0 3.47-2.82 6.28-6.26 6.28zM15.42 13.8c-.19-.09-1.11-.55-1.28-.61-.17-.06-.29-.09-.42.09-.12.18-.49.61-.59.74-.11.12-.22.14-.4.04-.19-.09-.8-.29-1.52-.92-.56-.5-.94-1.12-1.05-1.3-.11-.19-.01-.29.08-.38.08-.08.18-.21.28-.31.09-.1.12-.17.18-.28.06-.11.03-.22-.01-.31-.05-.09-.43-1.02-.59-1.4-.15-.36-.31-.31-.42-.32h-.36c-.15 0-.4.06-.61.28-.21.23-.8.78-.8 1.9s.82 2.2 1.05 2.5c.23.3 1.7 2.65 4.18 3.73.59.25 1.05.41 1.41.52.59.19 1.13.16 1.56.1.48-.07 1.47-.6 1.67-1.18.21-.58.21-1.08.15-1.18-.06-.1-.23-.15-.42-.25z"/></svg>
                                     <span class="text-[14px] font-bold text-white/90 group-hover:text-white">WhatsApp</span>
                                 </a>
+                                @endif
                             </div>
                         </div>
+                        @endif
                     </div>
 
                     {{-- Блок "Реквизиты и адрес" --}}

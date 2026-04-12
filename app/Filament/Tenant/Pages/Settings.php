@@ -91,7 +91,7 @@ class Settings extends Page
         if ($tenant) {
             return [
                 'general_site_name' => TenantSetting::getForTenant($tenant->id, 'general.site_name', $tenant->defaultPublicSiteName()),
-                'general_domain' => TenantSetting::getForTenant($tenant->id, 'general.domain', $tenant->defaultPublicSiteUrl()),
+                'general_domain' => $this->resolvedGeneralDomainFormValue($tenant),
                 'branding_logo' => TenantSetting::getForTenant($tenant->id, 'branding.logo', ''),
                 'branding_logo_path' => TenantSetting::getForTenant($tenant->id, 'branding.logo_path', ''),
                 'branding_primary_color' => TenantSetting::getForTenant($tenant->id, 'branding.primary_color', '#f59e0b'),
@@ -144,7 +144,11 @@ class Settings extends Page
                         TextInput::make('general_domain')
                             ->label('Основной URL сайта')
                             ->url()
-                            ->helperText('Канонический адрес сайта клиента (https://…). По умолчанию берётся из домена, с которого открыта админка, или основного домена в карточке клиента.'),
+                            ->nullable()
+                            ->helperText(
+                                'Канонический адрес публичного сайта (https://…). Если оставить пустым и сохранить — используется автоматический адрес из доменов клиента '
+                                .'(как у карточки «Свой домен» / основной домен), без дублирования в БД. Явный URL нужен, если сайт должен ссылаться с другого базового адреса.'
+                            ),
                     ])->columns(2),
 
                 Section::make('Брендинг')
@@ -262,6 +266,16 @@ class Settings extends Page
             }
         }
 
+        if ($tenant !== null && array_key_exists('general_domain', $data)) {
+            $raw = trim((string) ($data['general_domain'] ?? ''));
+            if ($raw === '' || ! filter_var($raw, FILTER_VALIDATE_URL)) {
+                TenantSetting::forgetForTenant((int) $tenant->id, 'general.domain');
+            } else {
+                TenantSetting::setForTenant((int) $tenant->id, 'general.domain', rtrim($raw, '/'));
+            }
+            unset($data['general_domain']);
+        }
+
         foreach ($data as $field => $value) {
             if (! array_key_exists($field, self::FORM_FIELD_TO_SETTING_KEY)) {
                 continue;
@@ -298,6 +312,19 @@ class Settings extends Page
     public static function formFieldToSettingKeyMap(): array
     {
         return self::FORM_FIELD_TO_SETTING_KEY;
+    }
+
+    /**
+     * Effective public base URL for the form: explicit tenant_settings.general.domain if valid, else same fallback as runtime (active request host, primary domain, app.url).
+     */
+    private function resolvedGeneralDomainFormValue(Tenant $tenant): string
+    {
+        $stored = trim((string) TenantSetting::getForTenant($tenant->id, 'general.domain', ''));
+        if ($stored !== '' && filter_var($stored, FILTER_VALIDATE_URL)) {
+            return rtrim($stored, '/');
+        }
+
+        return rtrim($tenant->defaultPublicSiteUrl(), '/');
     }
 
     private function assertBrandingUploadsWithinQuota(Tenant $tenant, array $formData): void
