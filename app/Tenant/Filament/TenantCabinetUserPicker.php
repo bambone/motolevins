@@ -93,4 +93,26 @@ final class TenantCabinetUserPicker
             ]);
         }
     }
+
+    /**
+     * Список пользователей для нативного Select (id => имя). Всегда {@see User::query()}, без Filament relationship-query.
+     *
+     * @return array<int, string>
+     */
+    public static function nameOptionsForCabinet(?int $tenantId, ?int $legacyUserIdForEdit = null): array
+    {
+        if ($tenantId === null) {
+            return [];
+        }
+
+        $query = User::query();
+        if ($legacyUserIdForEdit !== null) {
+            self::applyCabinetTeamScopeWithLegacyAssignee($query, $tenantId, $legacyUserIdForEdit);
+        } else {
+            self::applyCabinetTeamScope($query, $tenantId);
+        }
+
+        /** @var array<int, string> */
+        return $query->orderBy('name')->pluck('name', 'id')->all();
+    }
 }

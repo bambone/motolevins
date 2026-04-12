@@ -88,16 +88,15 @@ class NotificationDestinationResource extends Resource
                         ->default(false),
                     Select::make('user_id')
                         ->label('Пользователь (персональный)')
-                        ->relationship(
-                            name: 'user',
-                            titleAttribute: 'name',
-                            modifyQueryUsing: function (Builder $query): void {
-                                TenantCabinetUserPicker::applyCabinetTeamScope(
-                                    $query,
-                                    currentTenant()?->id,
-                                );
-                            },
-                        )
+                        ->options(function (Select $component): array {
+                            $tenantId = currentTenant()?->id;
+                            $record = $component->getRecord();
+                            $legacyUserId = ($record instanceof NotificationDestination && $record->exists && $record->user_id !== null)
+                                ? (int) $record->user_id
+                                : null;
+
+                            return TenantCabinetUserPicker::nameOptionsForCabinet($tenantId, $legacyUserId);
+                        })
                         ->searchable(false)
                         ->preload()
                         ->native(true),

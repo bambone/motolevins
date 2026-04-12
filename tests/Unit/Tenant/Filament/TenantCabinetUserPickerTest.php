@@ -88,6 +88,21 @@ final class TenantCabinetUserPickerTest extends TestCase
         $this->assertNotContains($userB->id, $ids);
     }
 
+    public function test_name_options_for_cabinet_excludes_other_tenant(): void
+    {
+        $a = Tenant::query()->create(['name' => 'A', 'slug' => 'a-'.uniqid(), 'status' => 'active']);
+        $b = Tenant::query()->create(['name' => 'B', 'slug' => 'b-'.uniqid(), 'status' => 'active']);
+        $userA = User::factory()->create(['status' => 'active', 'name' => 'UserA']);
+        $userB = User::factory()->create(['status' => 'active', 'name' => 'UserB']);
+        $userA->tenants()->attach($a->id, ['role' => 'tenant_owner', 'status' => 'active']);
+        $userB->tenants()->attach($b->id, ['role' => 'tenant_owner', 'status' => 'active']);
+
+        $opts = TenantCabinetUserPicker::nameOptionsForCabinet($a->id, null);
+
+        $this->assertArrayHasKey($userA->id, $opts);
+        $this->assertArrayNotHasKey($userB->id, $opts);
+    }
+
     public function test_apply_tenant_owned_scope_null_tenant_yields_empty(): void
     {
         Tenant::query()->create(['name' => 'T', 'slug' => 't-'.uniqid(), 'status' => 'active']);
