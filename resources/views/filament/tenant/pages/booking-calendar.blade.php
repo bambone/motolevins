@@ -3,6 +3,32 @@
     @vite(['resources/css/booking-calendar.css', 'resources/js/booking-calendar.js'])
 
     <div class="booking-calendar-page space-y-4">
+        @if (count($this->schedulingHelpNavLinks()) > 0)
+            @php
+                $tenantForTerms = currentTenant();
+                $bookingPluralTerm = $tenantForTerms
+                    ? app(\App\Terminology\TenantTerminologyService::class)->label($tenantForTerms, \App\Terminology\DomainTermKeys::BOOKING_PLURAL)
+                    : 'бронирования';
+            @endphp
+            <div class="fi-section rounded-xl border border-amber-200/80 bg-amber-50/90 p-4 text-sm shadow-sm ring-1 ring-amber-900/10 dark:border-amber-500/30 dark:bg-amber-950/40 dark:ring-amber-400/20">
+                <p class="font-semibold text-amber-950 dark:text-amber-100">Доступность и свободное время</p>
+                <p class="mt-1 text-amber-950/90 dark:text-amber-100/90">
+                    Здесь — занятость по времени по уже созданным <strong>{{ $bookingPluralTerm }}</strong>.
+                    Свободные слоты и график работы задаются в разделе меню <strong>«Запись и расписание»</strong>:
+                </p>
+                <ul class="mt-2 flex flex-wrap gap-x-4 gap-y-1">
+                    @foreach ($this->schedulingHelpNavLinks() as $link)
+                        <li>
+                            <a
+                                href="{{ $link['url'] }}"
+                                class="font-medium text-amber-900 underline decoration-amber-700/50 underline-offset-2 hover:text-amber-950 dark:text-amber-200 dark:hover:text-amber-50"
+                            >{{ $link['label'] }}</a>
+                        </li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+
         <div class="fi-section rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-950/5 dark:bg-gray-900 dark:ring-white/10">
             <p class="text-sm font-medium text-gray-950 dark:text-white">Фильтры</p>
             <div class="mt-3">
@@ -25,7 +51,7 @@
                 @endforeach
                 <li class="inline-flex items-center gap-2">
                     <span class="inline-block h-3 w-3 rounded-sm ring-2 ring-red-500/80"></span>
-                    Пересечение по юниту
+                    {{ $this->legendRentalOverlapDescription }}
                 </li>
             </ul>
         </div>

@@ -9,6 +9,9 @@ use App\Bookings\Calendar\BookingStatusPresentation;
 use App\Enums\BookingStatus;
 use App\Filament\Tenant\Concerns\ResolvesDomainTermLabels;
 use App\Filament\Tenant\Forms\ManualOperatorBookingForm;
+use App\Filament\Tenant\Resources\BookableServiceResource;
+use App\Filament\Tenant\Resources\CalendarConnectionResource;
+use App\Filament\Tenant\Resources\SchedulingResourceResource;
 use App\Models\Booking;
 use App\Models\Category;
 use App\Models\Motorcycle;
@@ -70,7 +73,7 @@ class BookingCalendarPage extends Page
 
     public static function getNavigationLabel(): string
     {
-        return 'Календарь бронирований';
+        return 'Календарь: '.static::domainTermLabel(DomainTermKeys::BOOKING_PLURAL, 'Бронирования');
     }
 
     public function getTitle(): string
@@ -100,6 +103,11 @@ class BookingCalendarPage extends Page
 
         if (! in_array($this->calView, ['month', 'week'], true)) {
             $this->calView = 'month';
+        }
+
+        // Тема expert_auto — записи занятий без «аренды единицы парка» в фильтрах календаря.
+        if (($tenant->theme_key ?? '') === 'expert_auto') {
+            $this->rental_unit_id = null;
         }
     }
 
@@ -193,46 +201,96 @@ class BookingCalendarPage extends Page
     }
 
     /**
+     * @return list<array{label: string, url: string}>
+     */
+    public function schedulingHelpNavLinks(): array
+    {
+        $tenant = currentTenant();
+        if ($tenant === null || ! $tenant->scheduling_module_enabled || ! Gate::allows('manage_scheduling')) {
+            return [];
+        }
+
+        $links = [
+            ['label' => 'Ресурсы расписания', 'url' => SchedulingResourceResource::getUrl()],
+            ['label' => 'Услуги (запись)', 'url' => BookableServiceResource::getUrl()],
+        ];
+
+        if ($tenant->calendar_integrations_enabled) {
+            $links[] = ['label' => 'Календари (подключения)', 'url' => CalendarConnectionResource::getUrl()];
+        }
+
+        return $links;
+    }
+
+    #[Computed]
+    public function legendRentalOverlapDescription(): string
+    {
+        $unit = mb_strtolower(static::domainTermLabel(DomainTermKeys::FLEET_UNIT, 'единице парка'));
+
+        return 'Пересечение по '.$unit;
+    }
+
+    private function shouldShowRentalUnitCalendarFilter(): bool
+    {
+        $tenant = currentTenant();
+        if ($tenant === null) {
+            return false;
+        }
+
+        if (($tenant->theme_key ?? '') === 'expert_auto') {
+            return false;
+        }
+
+        return count($this->rentalUnitsForFilter) > 0;
+    }
+
+    /**
      * Filament Select / CheckboxList вместо нативных select: выпадающие списки в стиле панели (в т.ч. тёмная тема).
      */
     public function calendarFiltersForm(Schema $schema): Schema
     {
+        $filterCells = [];
+
+        if ($this->shouldShowRentalUnitCalendarFilter()) {
+            $filterCells[] = Select::make('rental_unit_id')
+                ->label(static::domainTermLabel(DomainTermKeys::FLEET_UNIT, 'Единица парка'))
+                ->placeholder('Все')
+                ->options(fn (): array => collect($this->rentalUnitsForFilter)
+                    ->mapWithKeys(fn (array $row): array => [$row['id'] => $row['label']])
+                    ->all())
+                ->native(false)
+                ->nullable()
+                ->searchable(false)
+                ->live(onBlur: false);
+        }
+
+        $filterCells[] = Select::make('motorcycle_id')
+            ->label(static::domainTermLabel(DomainTermKeys::RESOURCE_PLURAL, 'Каталог').' (модель)')
+            ->placeholder('Все')
+            ->options(fn (): array => collect($this->motorcyclesForFilter)
+                ->mapWithKeys(fn (array $row): array => [$row['id'] => $row['label']])
+                ->all())
+            ->native(false)
+            ->nullable()
+            ->searchable(false)
+            ->live(onBlur: false);
+
+        $filterCells[] = Select::make('filterCategoryId')
+            ->label(static::domainTermLabel(DomainTermKeys::CATEGORY, 'Категория'))
+            ->placeholder('Все')
+            ->options(fn (): array => collect($this->categoriesForFilter)
+                ->mapWithKeys(fn (array $row): array => [$row['id'] => $row['label']])
+                ->all())
+            ->native(false)
+            ->nullable()
+            ->searchable(false)
+            ->live(onBlur: false);
+
         return $schema
             ->columns(1)
             ->components([
                 Grid::make(['default' => 1, 'sm' => 2, 'lg' => 4])
-                    ->schema([
-                        Select::make('rental_unit_id')
-                            ->label('Единица парка')
-                            ->placeholder('Все')
-                            ->options(fn (): array => collect($this->rentalUnitsForFilter)
-                                ->mapWithKeys(fn (array $row): array => [$row['id'] => $row['label']])
-                                ->all())
-                            ->native(false)
-                            ->nullable()
-                            ->searchable(false)
-                            ->live(onBlur: false),
-                        Select::make('motorcycle_id')
-                            ->label('Каталог (модель)')
-                            ->placeholder('Все')
-                            ->options(fn (): array => collect($this->motorcyclesForFilter)
-                                ->mapWithKeys(fn (array $row): array => [$row['id'] => $row['label']])
-                                ->all())
-                            ->native(false)
-                            ->nullable()
-                            ->searchable(false)
-                            ->live(onBlur: false),
-                        Select::make('filterCategoryId')
-                            ->label('Категория')
-                            ->placeholder('Все')
-                            ->options(fn (): array => collect($this->categoriesForFilter)
-                                ->mapWithKeys(fn (array $row): array => [$row['id'] => $row['label']])
-                                ->all())
-                            ->native(false)
-                            ->nullable()
-                            ->searchable(false)
-                            ->live(onBlur: false),
-                    ]),
+                    ->schema($filterCells),
                 CheckboxList::make('filterStatuses')
                     ->label('Статусы (пусто = все занимающие)')
                     ->options(fn (): array => collect($this->occupyingStatusFilterOptions)

@@ -6,6 +6,12 @@
 - Имя маршрута: `filament.admin.pages.bookings.calendar`.
 - Доступ: `BookingPolicy::viewAny` (ability `manage_bookings` через Gate в tenant-панели). Отдельной ability в v1 нет.
 
+## Фильтры, терминология и доступность
+
+- Подписи фильтров календаря берутся из **TenantTerminologyService** (`DomainTermKeys::FLEET_UNIT`, `RESOURCE_PLURAL`, `CATEGORY`) — совпадают с preset терминологии тенанта (`domain_localization_preset_id`), а не только с темой сайта.
+- При **`theme_key = expert_auto`** скрыт фильтр по **единице парка** (сценарий записей/занятий без «аренды юнита»); при mount сбрасывается `rental_unit_id` из query string.
+- **Свободные слоты и график** настраиваются в группе меню **«Запись и расписание»**; при `scheduling_module_enabled` и праве `manage_scheduling` на странице календаря показывается блок со ссылками на ресурсы расписания, услуги и (если включены интеграции) календарные подключения.
+
 ## Источник событий
 
 - Только модель `Booking` со статусами из `Booking::occupyingStatusValues()` (`pending`, `awaiting_payment`, `confirmed`).
