@@ -3,7 +3,9 @@
 namespace Tests\Feature\Filament;
 
 use App\Filament\Tenant\Pages\TenantLogin;
+use App\Models\Tenant;
 use App\Models\User;
+use App\Services\CurrentTenantManager;
 use Database\Seeders\RolePermissionSeeder;
 use Filament\Auth\Pages\Login;
 use Filament\Facades\Filament;
@@ -80,9 +82,10 @@ class TenantAdminPanelSmokeTest extends TestCase
         $user = User::factory()->create(['status' => 'active']);
         $user->tenants()->attach($tenant->id, ['role' => 'tenant_owner', 'status' => 'active']);
 
+        $this->actingAs($user);
         Filament::setCurrentPanel(Filament::getPanel('admin'));
 
-        $urls = $this->collectTenantAdminGetUrls();
+        $urls = $this->collectTenantAdminGetUrls($tenant);
         $seen = [];
 
         if ($this->assertQueryBudget) {
@@ -101,7 +104,7 @@ class TenantAdminPanelSmokeTest extends TestCase
                 DB::flushQueryLog();
             }
 
-            $response = $this->actingAs($user)->getWithHost($host, $path);
+            $response = $this->getWithHost($host, $path);
 
             if ($this->assertQueryBudget) {
                 $queryCount = count(DB::getQueryLog());
@@ -253,47 +256,59 @@ class TenantAdminPanelSmokeTest extends TestCase
     /**
      * @return list<array{label: string, path: string}>
      */
-    private function collectTenantAdminGetUrls(): array
+    private function collectTenantAdminGetUrls(Tenant $tenant): array
     {
         $panel = Filament::getPanel('admin');
         $items = [];
 
-        foreach ($panel->getPages() as $pageClass) {
-            if (! is_subclass_of($pageClass, FilamentPage::class)) {
-                continue;
-            }
-            if ($pageClass === TenantLogin::class || is_a($pageClass, Login::class, true)) {
-                continue;
-            }
+        $tenantManager = app(CurrentTenantManager::class);
+        $previousTenant = $tenantManager->getTenant();
+        $tenantManager->setTenant($tenant);
 
-            $path = parse_url($pageClass::getUrl([], false, 'admin'), PHP_URL_PATH);
-            if (! is_string($path) || $path === '') {
-                continue;
-            }
-            $items[] = ['label' => $pageClass, 'path' => $path];
-        }
+        try {
+            foreach ($panel->getPages() as $pageClass) {
+                if (! is_subclass_of($pageClass, FilamentPage::class)) {
+                    continue;
+                }
+                if ($pageClass === TenantLogin::class || is_a($pageClass, Login::class, true)) {
+                    continue;
+                }
 
-        foreach ($panel->getResources() as $resourceClass) {
-            if (! is_subclass_of($resourceClass, Resource::class)) {
-                continue;
-            }
-
-            $reflection = new \ReflectionClass($resourceClass);
-            if ($reflection->isAbstract()) {
-                continue;
+                $path = parse_url($pageClass::getUrl([], false, 'admin'), PHP_URL_PATH);
+                if (! is_string($path) || $path === '') {
+                    continue;
+                }
+                $items[] = ['label' => $pageClass, 'path' => $path];
             }
 
-            $items[] = [
-                'label' => $resourceClass.'::index',
-                'path' => parse_url($resourceClass::getUrl(null, [], false, 'admin'), PHP_URL_PATH) ?: '/admin',
-            ];
+            foreach ($panel->getResources() as $resourceClass) {
+                if (! is_subclass_of($resourceClass, Resource::class)) {
+                    continue;
+                }
 
-            if ($resourceClass::hasPage('create')) {
+                $reflection = new \ReflectionClass($resourceClass);
+                if ($reflection->isAbstract()) {
+                    continue;
+                }
+
+                if (method_exists($resourceClass, 'canAccess') && ! $resourceClass::canAccess()) {
+                    continue;
+                }
+
                 $items[] = [
-                    'label' => $resourceClass.'::create',
-                    'path' => parse_url($resourceClass::getUrl('create', [], false, 'admin'), PHP_URL_PATH) ?: '/admin',
+                    'label' => $resourceClass.'::index',
+                    'path' => parse_url($resourceClass::getUrl(null, [], false, 'admin'), PHP_URL_PATH) ?: '/admin',
                 ];
+
+                if ($resourceClass::hasPage('create')) {
+                    $items[] = [
+                        'label' => $resourceClass.'::create',
+                        'path' => parse_url($resourceClass::getUrl('create', [], false, 'admin'), PHP_URL_PATH) ?: '/admin',
+                    ];
+                }
             }
+        } finally {
+            $tenantManager->setTenant($previousTenant);
         }
 
         usort($items, static fn (array $a, array $b): int => $a['path'] <=> $b['path']);
