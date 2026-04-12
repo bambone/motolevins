@@ -100,7 +100,8 @@
                     @endif
 
                     {{-- Нижняя зона: без боковой колонки CTA на lg (в 2-col сетке она съедала ширину текста). Заголовок + цена в ряд, списки на всю ширину карточки. --}}
-                    <div class="relative z-[1] order-2 flex min-w-0 flex-1 flex-col px-5 pb-6 pt-6 sm:px-8 sm:pb-8 sm:pt-8 xl:px-10 xl:pb-10 xl:pt-10">
+                    {{-- expert-program-card__main: при обложке — заезд на нижние ~10% фото, фото под текстом (z-index в CSS). --}}
+                    <div class="expert-program-card__main relative z-[1] order-2 flex min-w-0 flex-1 flex-col px-5 pb-6 sm:px-8 sm:pb-8 xl:px-10 xl:pb-10">
                         <div class="flex min-w-0 flex-col gap-5 sm:flex-row sm:items-start sm:justify-between sm:gap-6 lg:gap-8">
                             <div class="min-w-0 flex-1">
                                 @if($program->is_featured)

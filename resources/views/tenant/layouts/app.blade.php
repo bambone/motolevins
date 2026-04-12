@@ -28,9 +28,21 @@
 
     @php
         $tenantFavicon = trim($branding['favicon'] ?? '');
+        if ($tenantFavicon === '' && tenant()?->themeKey() === 'expert_auto') {
+            $tenantFavicon = theme_platform_asset_url('expert-brand-favicon.svg');
+        }
+        $tenantFaviconMime = 'image/png';
+        if ($tenantFavicon !== '') {
+            $lower = strtolower($tenantFavicon);
+            if (str_ends_with($lower, '.svg') || str_contains($lower, '.svg?')) {
+                $tenantFaviconMime = 'image/svg+xml';
+            } elseif (str_ends_with($lower, '.ico') || str_contains($lower, '.ico?')) {
+                $tenantFaviconMime = 'image/x-icon';
+            }
+        }
     @endphp
     @if($tenantFavicon !== '')
-        <link rel="icon" href="{{ $tenantFavicon }}" type="image/png">
+        <link rel="icon" href="{{ $tenantFavicon }}" type="{{ $tenantFaviconMime }}">
     @endif
 
     <link rel="manifest" href="{{ asset('manifest.json') }}">
