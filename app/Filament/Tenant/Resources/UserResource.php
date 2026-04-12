@@ -72,9 +72,9 @@ class UserResource extends Resource
                             ->required(),
                     ])->columns(2),
 
-                Section::make('Роль в этом клиенте')
+                Section::make('Роль')
                     ->description(FilamentInlineMarkdown::toHtml(
-                        'Определяет, что пользователь может делать в **кабинете клиента**. Роли **консоли платформы** здесь не настраиваются.'
+                        'Определяет, что пользователь может делать в **этом кабинете**. Роли **консоли платформы** здесь не настраиваются.'
                     ))
                     ->schema([
                         Select::make('tenant_role')
@@ -82,7 +82,7 @@ class UserResource extends Resource
                             ->options(fn (): array => self::tenantRoleOptionsForForm())
                             ->default(fn (): string => self::defaultTenantRoleForForm())
                             ->required()
-                            ->helperText('Выберите уровень доступа согласно обязанностям сотрудника. Доступные роли зависят от вашей роли в клиенте.'),
+                            ->helperText('Выберите уровень доступа согласно обязанностям сотрудника. Доступные роли зависят от вашей роли в команде.'),
                     ]),
                 UserPasswordFormFields::editPasswordSection(),
             ]);
@@ -96,7 +96,7 @@ class UserResource extends Resource
                 TextColumn::make('email')->searchable()->sortable(),
                 TextColumn::make('status')->badge()->formatStateUsing(fn (?string $state): string => $state ? (User::statuses()[$state] ?? $state) : ''),
                 TextColumn::make('pivot_role')
-                    ->label('Роль в клиенте')
+                    ->label('Роль')
                     ->getStateUsing(function (User $record): string {
                         $tenant = currentTenant();
                         if (! $tenant) {

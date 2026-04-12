@@ -131,7 +131,7 @@ class TenantUsersRelationManager extends RelationManager
                     ->label('Email')
                     ->searchable(),
                 TextColumn::make('pivot.role')
-                    ->label('Роль в клиенте')
+                    ->label('Роль')
                     ->badge()
                     ->formatStateUsing(fn (?string $state): string => $state ? (RoleLabels::tenantMembershipRoleOptions()[$state] ?? $state) : '—')
                     ->color(fn (?string $state): string => match ($state) {

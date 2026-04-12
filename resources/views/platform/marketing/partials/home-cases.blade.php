@@ -37,6 +37,10 @@
                             }
                         }
                     }
+                    $iconWrapClass = match ($iconKey) {
+                        'driving' => 'flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-50 via-white to-orange-50 text-amber-900 shadow-sm ring-1 ring-amber-200/80 transition-colors group-hover:from-amber-100 group-hover:to-orange-50/90',
+                        default => 'flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 ring-1 ring-indigo-100 transition-colors group-hover:bg-indigo-100/80',
+                    };
                 @endphp
                 <article @class([
                     'group fade-reveal pm-reveal-cases-' . min($index, 4) => true,
@@ -62,7 +66,7 @@
                             <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-slate-800 to-slate-900 text-sm font-black text-white shadow-md ring-1 ring-white/10" aria-hidden="true">{{ $initials }}</div>
                         @endif
                         <div @class([
-                            'flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 ring-1 ring-indigo-100 transition-colors group-hover:bg-indigo-100/80',
+                            $iconWrapClass,
                             'hidden' => $initials !== '',
                         ]) aria-hidden="true">
                             @switch($iconKey)
@@ -75,6 +79,16 @@
                                         <path d="M14 17.5l-1.25-6.5-3.25 1.25L8 8.25H5.75"/>
                                         <path d="M12.75 11l3-2.75h3.5L21 11.5V14"/>
                                         <path d="M17.25 11l1.5 3.25"/>
+                                    </svg>
+                                    @break
+                                @case('driving')
+                                    {{-- Инструктор / автошкола: руль + дорожная разметка --}}
+                                    <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                                        <circle cx="12" cy="13" r="5.25"/>
+                                        <circle cx="12" cy="13" r="1.75"/>
+                                        <path d="M12 7.75V5.5M8.2 9.1 6.9 7.1M15.8 9.1 17.1 7.1"/>
+                                        <path d="M5 21h14" stroke-width="1.5" opacity="0.45"/>
+                                        <path d="M8 21v-1.5M12 21v-2M16 21v-1.5" stroke-width="1.25" opacity="0.35"/>
                                     </svg>
                                     @break
                                 @case('academic')
