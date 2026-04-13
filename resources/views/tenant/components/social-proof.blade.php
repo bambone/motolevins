@@ -27,11 +27,11 @@
                         </div>
                         <div class="border-t border-white/5 pt-5 flex items-center gap-4">
                             <div class="w-12 h-12 rounded-full overflow-hidden border-2 border-white/10 shrink-0 shadow-lg flex items-center justify-center bg-moto-amber/20">
-                                @if($review->avatar_url)
-                                    <img src="{{ $review->avatar_url }}" alt="{{ $review->name }}" class="w-full h-full object-cover" loading="lazy" decoding="async" fetchpriority="low" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden')">
+                                @if($review->publicAvatarUrl())
+                                    <img src="{{ $review->publicAvatarUrl() }}" alt="{{ $review->name }}" class="w-full h-full object-cover" loading="lazy" decoding="async" fetchpriority="low" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden')">
                                 @endif
                                 @php $initials = strtoupper(collect(explode(' ', $review->name ?? '?'))->take(2)->map(fn($s) => mb_substr($s, 0, 1))->implode('')); @endphp
-                                <span class="text-moto-amber font-bold text-sm {{ $review->avatar_url ? 'hidden' : '' }}">{{ $initials ?: '?' }}</span>
+                                <span class="text-moto-amber font-bold text-sm {{ $review->publicAvatarUrl() ? 'hidden' : '' }}">{{ $initials ?: '?' }}</span>
                             </div>
                             <div>
                                 <span class="block text-white font-bold text-sm">{{ $review->name }}</span>

@@ -265,15 +265,15 @@ body.expert-auto-theme .tenant-thin-scrollbar::-webkit-scrollbar-thumb:hover {
     .expert-hero-cinematic--photo .expert-hero-cinematic__bleed--stage {
         display: flex;
         flex-direction: column;
+        /* Только svh: 100dvh пересчитывается при скрытии адресной строки → скачок высоты героя и «прыжок» фона с scale(). */
         min-height: 100svh;
-        min-height: 100dvh;
     }
 
-    /* Верх кадра — лицо/фигура читаются; масштаб чуть крупнее по вертикали */
+    /* Верх кадра — лицо/фигура читаются; без сильного scale — иначе при любом изменении вьюпорта заметен рывок */
     .expert-hero-cinematic--photo .expert-hero-cinematic__photo {
         object-position: 82% 18%;
-        transform: scale(1.06);
-        transform-origin: 78% 22%;
+        transform: scale(1.02);
+        transform-origin: 82% 18%;
         filter: saturate(0.98) contrast(1.04) brightness(1.06);
     }
 

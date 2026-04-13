@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\BelongsToTenant;
+use App\Support\Storage\TenantPublicAssetResolver;
 use App\Support\Storage\TenantStorageDisks;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
@@ -118,6 +119,19 @@ class Review extends Model implements HasMedia
         }
 
         return null;
+    }
+
+    /**
+     * Аватар для публичного сайта с учётом delivery=local (переписывание CDN → /media/…).
+     */
+    public function publicAvatarUrl(): ?string
+    {
+        $raw = $this->avatar_url;
+        if ($raw === null || $raw === '') {
+            return null;
+        }
+
+        return TenantPublicAssetResolver::resolve($raw, (int) $this->tenant_id) ?? $raw;
     }
 
     public static function statuses(): array
