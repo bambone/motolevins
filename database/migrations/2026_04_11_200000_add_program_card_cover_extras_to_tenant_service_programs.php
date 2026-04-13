@@ -11,20 +11,17 @@ return new class extends Migration
         if (! Schema::hasTable('tenant_service_programs')) {
             return;
         }
-        // cover_image_ref добавляется миграцией 2026_04_12_120000 (идёт позже по имени файла).
-        $afterMobile = Schema::hasColumn('tenant_service_programs', 'cover_image_ref')
-            ? 'cover_image_ref'
-            : 'outcomes_json';
-
-        Schema::table('tenant_service_programs', function (Blueprint $table) use ($afterMobile): void {
+        // Имена файлов: 2026_04_11_200000 выполняется *раньше* 2026_04_12_120000 (cover_image_ref).
+        // Не используем ->after(...) — иначе на проде без cover_image_ref MySQL падает на ALTER.
+        Schema::table('tenant_service_programs', function (Blueprint $table): void {
             if (! Schema::hasColumn('tenant_service_programs', 'cover_mobile_ref')) {
-                $table->string('cover_mobile_ref', 2048)->nullable()->after($afterMobile);
+                $table->string('cover_mobile_ref', 2048)->nullable();
             }
             if (! Schema::hasColumn('tenant_service_programs', 'cover_image_alt')) {
-                $table->string('cover_image_alt', 512)->nullable()->after('cover_mobile_ref');
+                $table->string('cover_image_alt', 512)->nullable();
             }
             if (! Schema::hasColumn('tenant_service_programs', 'cover_object_position')) {
-                $table->string('cover_object_position', 64)->nullable()->after('cover_image_alt');
+                $table->string('cover_object_position', 64)->nullable();
             }
         });
     }
