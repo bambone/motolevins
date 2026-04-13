@@ -64,6 +64,38 @@ class ExpertAutoTenantTest extends TestCase
         $this->assertContains('parking', $payload['intent_tags'] ?? []);
     }
 
+    public function test_expert_inquiry_rejects_invalid_preferred_schedule(): void
+    {
+        $this->createTenantWithActiveDomain('expertsched', ['theme_key' => 'expert_auto']);
+        $host = $this->tenancyHostForSlug('expertsched');
+
+        $this->postJson('http://'.$host.'/api/tenant/expert-inquiry', [
+            'name' => 'Клиент',
+            'phone' => '+79991112299',
+            'goal_text' => 'Тест',
+            'preferred_contact_channel' => 'phone',
+            'preferred_schedule' => 'вечером',
+        ])->assertStatus(422)->assertJsonValidationErrors(['preferred_schedule']);
+    }
+
+    public function test_expert_inquiry_accepts_time_interval_preferred_schedule(): void
+    {
+        $this->createTenantWithActiveDomain('expertschedok', ['theme_key' => 'expert_auto']);
+        $host = $this->tenancyHostForSlug('expertschedok');
+
+        $this->postJson('http://'.$host.'/api/tenant/expert-inquiry', [
+            'name' => 'Клиент',
+            'phone' => '+79991112299',
+            'goal_text' => 'Тест',
+            'preferred_contact_channel' => 'phone',
+            'preferred_schedule' => '18:00 – 21:00',
+        ])->assertOk()->assertJsonPath('success', true);
+
+        $crm = CrmRequest::query()->where('request_type', 'expert_service_inquiry')->first();
+        $this->assertNotNull($crm);
+        $this->assertSame('18:00 – 21:00', $crm->payload_json['preferred_schedule'] ?? null);
+    }
+
     public function test_expert_home_renders_page_builder_hero(): void
     {
         $tenant = $this->createTenantWithActiveDomain('experthome', ['theme_key' => 'expert_auto']);

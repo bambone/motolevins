@@ -131,9 +131,21 @@
 
             <div class="grid min-w-0 gap-4 sm:gap-5 md:grid-cols-2">
                 <div data-rb-public-field="preferred_schedule" class="expert-public-field-wrap min-w-0">
-                    <label for="expert-schedule" class="mb-2 block text-sm font-semibold tracking-wide text-white/90">Удобное время</label>
-                    <input id="expert-schedule" name="preferred_schedule" type="text" maxlength="500"
-                           class="expert-form-input w-full min-h-[3.25rem] rounded-xl border border-white/[0.08] bg-white/[0.02] px-4 py-3 text-[15px] text-white outline-none transition-colors placeholder:text-silver/40 focus:border-moto-amber/50 focus:bg-white/[0.04]">
+                    <span id="expert-schedule-legend" class="mb-2 block text-sm font-semibold tracking-wide text-white/90">Удобное время</span>
+                    <p id="expert-schedule-desc" class="mb-3 text-[12px] leading-snug text-silver/60 sm:text-[13px]">Интервал, когда вам удобно заниматься (необязательно). На телефоне откроется выбор времени.</p>
+                    <div class="grid min-w-0 gap-3 sm:grid-cols-2 sm:gap-4" role="group" aria-labelledby="expert-schedule-legend" aria-describedby="expert-schedule-desc">
+                        <div class="min-w-0">
+                            <label for="expert-schedule-from" class="mb-1.5 block text-[13px] font-medium tracking-wide text-white/80">С</label>
+                            <input id="expert-schedule-from" type="time" step="300" autocomplete="off"
+                                   class="expert-form-input w-full min-h-[3.25rem] rounded-xl border border-white/[0.08] bg-white/[0.02] px-4 py-3 text-[15px] text-white outline-none transition-colors focus:border-moto-amber/50 focus:bg-white/[0.04] [color-scheme:dark]">
+                        </div>
+                        <div class="min-w-0">
+                            <label for="expert-schedule-to" class="mb-1.5 block text-[13px] font-medium tracking-wide text-white/80">До</label>
+                            <input id="expert-schedule-to" type="time" step="300" autocomplete="off"
+                                   class="expert-form-input w-full min-h-[3.25rem] rounded-xl border border-white/[0.08] bg-white/[0.02] px-4 py-3 text-[15px] text-white outline-none transition-colors focus:border-moto-amber/50 focus:bg-white/[0.04] [color-scheme:dark]">
+                        </div>
+                    </div>
+                    <input type="hidden" name="preferred_schedule" id="expert-schedule-value" value="">
                 </div>
                 <div data-rb-public-field="district" class="expert-public-field-wrap min-w-0">
                     <label for="expert-district" class="mb-2 block text-sm font-semibold tracking-wide text-white/90">Район</label>

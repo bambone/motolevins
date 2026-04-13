@@ -27,6 +27,12 @@ class StoreExpertInquiryRequest extends FormRequest
         $this->merge([
             'preferred_contact_channel' => $this->input('preferred_contact_channel', ContactChannelType::Phone->value),
         ]);
+
+        if ($this->has('preferred_schedule')) {
+            $this->merge([
+                'preferred_schedule' => trim((string) $this->input('preferred_schedule')),
+            ]);
+        }
     }
 
     /**
@@ -52,7 +58,14 @@ class StoreExpertInquiryRequest extends FormRequest
                 },
             ],
             'goal_text' => ['required', 'string', 'max:2000'],
-            'preferred_schedule' => ['nullable', 'string', 'max:500'],
+            'preferred_schedule' => [
+                'nullable',
+                'string',
+                'max:32',
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    $this->assertValidPreferredScheduleInterval($value, $fail);
+                },
+            ],
             'district' => ['nullable', 'string', 'max:255'],
             'has_own_car' => ['nullable', 'string', 'max:32'],
             'transmission' => ['nullable', 'string', 'max:64'],
@@ -64,5 +77,47 @@ class StoreExpertInquiryRequest extends FormRequest
             'preferred_contact_channel' => ['required', 'string', Rule::in($allowed)],
             'preferred_contact_value' => ['nullable', 'string', 'max:500'],
         ];
+    }
+
+    /**
+     * @param  \Closure(string): void  $fail
+     */
+    protected function assertValidPreferredScheduleInterval(mixed $value, \Closure $fail): void
+    {
+        if ($value === null) {
+            return;
+        }
+        if (! is_string($value)) {
+            $fail('Некорректное значение удобного времени.');
+
+            return;
+        }
+        $trim = trim($value);
+        if ($trim === '') {
+            return;
+        }
+        if (! preg_match('/^(\d{2}:\d{2})\s*[\x{2013}\x{2014}-]\s*(\d{2}:\d{2})$/u', $trim, $m)) {
+            $fail('Укажите интервал как ЧЧ:ММ – ЧЧ:ММ (например 18:00 – 21:00) или оставьте оба поля пустыми.');
+
+            return;
+        }
+        foreach ([$m[1], $m[2]] as $hm) {
+            if (! self::isValidHourMinuteToken($hm)) {
+                $fail('Время должно быть от 00:00 до 23:59.');
+
+                return;
+            }
+        }
+    }
+
+    protected static function isValidHourMinuteToken(string $hm): bool
+    {
+        if (! preg_match('/^(\d{2}):(\d{2})$/', $hm, $p)) {
+            return false;
+        }
+        $h = (int) $p[1];
+        $i = (int) $p[2];
+
+        return $h >= 0 && $h <= 23 && $i >= 0 && $i <= 59;
     }
 }

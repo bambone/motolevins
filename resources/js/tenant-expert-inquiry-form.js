@@ -143,6 +143,42 @@ function initPreferredChannelSync(form, meta) {
     return sync;
 }
 
+function syncPreferredScheduleHidden(form) {
+    const from = form.querySelector('#expert-schedule-from');
+    const to = form.querySelector('#expert-schedule-to');
+    const hidden = form.querySelector('#expert-schedule-value');
+    if (!from || !to || !hidden) {
+        return;
+    }
+    if (from.value === '' && to.value === '') {
+        hidden.value = '';
+
+        return;
+    }
+    if (from.value !== '' && to.value !== '') {
+        hidden.value = `${from.value} \u2013 ${to.value}`;
+
+        return;
+    }
+    hidden.value = '';
+}
+
+function initPreferredScheduleInterval(form) {
+    const from = form.querySelector('#expert-schedule-from');
+    const to = form.querySelector('#expert-schedule-to');
+    const hidden = form.querySelector('#expert-schedule-value');
+    if (!from || !to || !hidden || form.dataset.rbPreferredScheduleBound === '1') {
+        return;
+    }
+    form.dataset.rbPreferredScheduleBound = '1';
+    const sync = () => syncPreferredScheduleHidden(form);
+    from.addEventListener('input', sync);
+    from.addEventListener('change', sync);
+    to.addEventListener('input', sync);
+    to.addEventListener('change', sync);
+    sync();
+}
+
 function initPreferredValueAsciiGuard(form) {
     const el = form.querySelector('#expert-pref-value');
     if (!el || el.dataset.rbAsciiPrefGuard === '1') {
@@ -237,6 +273,21 @@ function validateClientSide(form, meta) {
             ok = false;
         }
     }
+    const scheduleFrom = form.querySelector('#expert-schedule-from');
+    const scheduleTo = form.querySelector('#expert-schedule-to');
+    if (scheduleFrom && scheduleTo) {
+        const sf = scheduleFrom.value;
+        const st = scheduleTo.value;
+        if ((sf !== '' && st === '') || (sf === '' && st !== '')) {
+            setFieldError(
+                form,
+                'preferred_schedule',
+                'Укажите и время «С», и «До», или оставьте оба поля пустыми.',
+            );
+            ok = false;
+        }
+    }
+
     if (row?.needs_value && valueInput) {
         const pv = valueInput.value.trim();
         if (pv === '') {
@@ -322,6 +373,7 @@ function bootExpertInquiryForm() {
         syncChannel = initPreferredChannelSync(form, meta);
     }
     initPreferredValueAsciiGuard(form);
+    initPreferredScheduleInterval(form);
 
     const endpoint = form.getAttribute('data-expert-inquiry-endpoint') || '';
     const defaultSuccessMessage = form.getAttribute('data-expert-inquiry-default-success') || '';
@@ -335,11 +387,13 @@ function bootExpertInquiryForm() {
             alertEl.textContent = '';
         }
         clearInlineErrors(form);
+        syncPreferredScheduleHidden(form);
 
         if (!validateClientSide(form, meta)) {
             return;
         }
 
+        syncPreferredScheduleHidden(form);
         const fd = new FormData(form);
         const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
         if (submitBtn) {
