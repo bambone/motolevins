@@ -10,6 +10,12 @@ use Filament\Widgets\StatsOverviewWidget\Stat;
 
 class PlatformStatsWidget extends BaseStatsOverviewWidget
 {
+    /**
+     * Без авто-poll: дефолт Filament StatsOverview — wire:poll.5s, на тяжёлом getStats() даёт поток
+     * /livewire/update и ощущение «залипшей» вкладки. Обновление — по F5 или отдельной кнопке позже.
+     */
+    protected ?string $pollingInterval = null;
+
     /** См. PlatformDashboardIntroWidget: синхронный рендер, без залипшего loading-placeholder. */
     protected static bool $isLazy = false;
 
