@@ -9,6 +9,7 @@ use App\Models\PageSection;
 use App\Models\SeoLandingPage;
 use App\Models\Tenant;
 use App\Models\TenantSetting;
+use App\Money\MoneyBindingRegistry;
 
 final class FallbackSeoGenerator
 {
@@ -87,7 +88,7 @@ final class FallbackSeoGenerator
 
         $geoPriceBits = array_filter([
             trim((string) TenantSetting::getForTenant($tenant->id, 'general.primary_city', '')),
-            $moto->price_per_day > 0 ? 'от '.number_format((int) $moto->price_per_day, 0, ',', ' ').' ₽/сутки' : '',
+            $moto->price_per_day > 0 ? 'от '.tenant_money_format((int) $moto->price_per_day, MoneyBindingRegistry::MOTORCYCLE_PRICE_PER_DAY, $tenant).'/сутки' : '',
         ]);
         if ($geoPriceBits !== [] && $description !== '') {
             $description = $this->excerptFromPlain($description.' '.implode(', ', $geoPriceBits), 160);

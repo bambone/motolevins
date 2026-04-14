@@ -6,8 +6,10 @@ use App\Filament\Tenant\Concerns\ResolvesDomainTermLabels;
 use App\Filament\Tenant\Forms\LinkedBookableSchedulingForm;
 use App\Filament\Tenant\Resources\MotorcycleResource\Form\MotorcycleFormFieldKit;
 use App\Filament\Tenant\Resources\MotorcycleResource\Pages;
+use App\Filament\Tenant\Support\TenantMoneyForms;
 use App\Models\BookingSettingsPreset;
 use App\Models\Motorcycle;
+use App\Money\MoneyBindingRegistry;
 use App\Scheduling\BookableServiceBulkService;
 use App\Scheduling\Enums\BookableServiceSettingsApplyMode;
 use App\Support\FilamentMotorcycleThumbnail;
@@ -23,7 +25,6 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Notifications\Notification;
-use App\Filament\Tenant\Resources\Resource;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Tabs;
@@ -184,7 +185,14 @@ class MotorcycleResource extends Resource
                     ->sortable(),
                 TextColumn::make('price_per_day')
                     ->label('Цена / сутки')
-                    ->money('RUB')
+                    ->formatStateUsing(function ($state, Motorcycle $record): string {
+                        $t = $record->tenant ?? currentTenant();
+                        if ($t === null) {
+                            return (string) $state;
+                        }
+
+                        return tenant_money_format((int) $state, MoneyBindingRegistry::MOTORCYCLE_PRICE_PER_DAY, $t);
+                    })
                     ->sortable(),
                 TextColumn::make('status')
                     ->label('Статус')
@@ -234,11 +242,7 @@ class MotorcycleResource extends Resource
                             ->label('Статус')
                             ->options(Motorcycle::statuses())
                             ->required(),
-                        TextInput::make('price_per_day')
-                            ->label('Цена за сутки')
-                            ->numeric()
-                            ->suffix('₽')
-                            ->required(),
+                        TenantMoneyForms::moneyTextInput('price_per_day', MoneyBindingRegistry::MOTORCYCLE_PRICE_PER_DAY, 'Цена за сутки', required: true),
                         TextInput::make('sort_order')
                             ->label('Сортировка')
                             ->numeric(),

@@ -88,7 +88,11 @@
                 return d.toLocaleDateString('ru-RU', {day: '2-digit', month: '2-digit'});
             },
 
-            formatPrice(amount) {
+            formatPrice(amount, bindingKey = 'booking.total_price') {
+                if (window.TenantMoneyFormat && bindingKey) {
+                    return window.TenantMoneyFormat.formatStorage(amount, bindingKey);
+                }
+
                 return new Intl.NumberFormat('ru-RU').format(amount);
             },
 

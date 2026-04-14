@@ -108,7 +108,7 @@
                             <div x-show="calculatedDays > 0" x-collapse class="mt-6 rounded-xl border border-moto-amber/20 bg-gradient-to-br from-moto-amber/[0.08] to-white/[0.03] p-5 sm:p-6">
                                 <div class="mb-2 flex items-center justify-between text-base">
                                     <span class="text-zinc-400">Стоимость 1 суток:</span>
-                                    <span class="font-medium text-white" x-text="formatMoney(bike.price) + ' ₽'"></span>
+                                    <span class="font-medium text-white" x-text="formatMoney(bike.price, 'motorcycle.price_per_day')"></span>
                                 </div>
                                 <div class="mb-4 flex items-center justify-between border-b border-white/10 pb-4 text-base">
                                     <span class="text-zinc-400">Количество дней:</span>
@@ -116,7 +116,7 @@
                                 </div>
                                 <div class="flex items-end justify-between gap-3">
                                     <span class="text-lg font-medium text-zinc-200">Итого к оплате:</span>
-                                    <span class="text-3xl font-bold tracking-tight text-moto-amber sm:text-4xl" x-text="formatMoney(totalPrice) + ' ₽'"></span>
+                                    <span class="text-3xl font-bold tracking-tight text-moto-amber sm:text-4xl" x-text="formatMoney(totalPrice, 'booking.total_price')"></span>
                                 </div>
                             </div>
 
@@ -283,7 +283,11 @@ document.addEventListener('alpine:init', () => {
         hintRangeOk: null,
         hintRangesText: '',
 
-        formatMoney(amount) {
+        formatMoney(amount, bindingKey) {
+            if (window.TenantMoneyFormat && bindingKey) {
+                return window.TenantMoneyFormat.formatStorage(amount, bindingKey);
+            }
+
             return new Intl.NumberFormat('ru-RU').format(amount);
         },
 

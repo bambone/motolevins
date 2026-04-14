@@ -206,8 +206,12 @@
                 </div>
                 <div data-rb-public-field="transmission" class="expert-public-field-wrap min-w-0">
                     <label for="expert-trans" class="mb-2 block text-[13px] font-semibold tracking-wide text-[rgb(28_31_32)]">Коробка передач</label>
-                    <input id="expert-trans" name="transmission" type="text" maxlength="64"
-                           class="expert-form-input w-full min-h-[3.5rem] rounded-xl border border-[rgba(28,31,38,0.22)] bg-white px-4 py-3 text-[17px] text-[rgb(24_27_32)] outline-none transition-colors placeholder:text-[rgb(130_137_148)] focus:border-moto-amber/55 focus:ring-2 focus:ring-moto-amber/20">
+                    <select id="expert-trans" name="transmission" class="expert-form-input w-full min-h-[3.25rem] rounded-xl border border-stone-300/80 bg-white px-4 py-3 text-[14px] text-stone-900 outline-none appearance-none focus:border-moto-amber/55">
+                        <option value="">Не указано</option>
+                        <option value="manual">Механика (МКПП)</option>
+                        <option value="automatic">Автомат (АКПП)</option>
+                        <option value="robot">Робот / вариатор (уточню в комментарии)</option>
+                    </select>
                 </div>
                 <div data-rb-public-field="has_license" class="expert-public-field-wrap min-w-0">
                     <label for="expert-license" class="mb-2 block text-[13px] font-semibold tracking-wide text-[rgb(28_31_32)]">Есть права</label>

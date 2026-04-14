@@ -9,6 +9,7 @@ use App\Models\SeoLandingPage;
 use App\Models\SeoMeta;
 use App\Models\Tenant;
 use App\Models\TenantSetting;
+use App\Money\MoneyBindingRegistry;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 
@@ -272,7 +273,7 @@ final class TenantSeoResolver
             $motorcycleModel = trim((string) $model->model);
             $price = (int) ($model->price_per_day ?? 0);
             if ($price > 0) {
-                $fromPrice = number_format($price, 0, ',', ' ');
+                $fromPrice = tenant_money_format($price, MoneyBindingRegistry::MOTORCYCLE_PRICE_PER_DAY, $tenant);
             }
             $leadForTitle = trim($motorcycleBrand.' '.$motorcycleModel);
             if ($leadForTitle === '') {

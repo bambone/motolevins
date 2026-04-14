@@ -8,6 +8,8 @@ use Filament\Widgets\StatsOverviewWidget;
 
 class CrmRequestStatsWidget extends StatsOverviewWidget
 {
+    protected static bool $isLazy = false;
+
     protected static bool $isDiscovered = false;
 
     protected static ?string $panel = 'platform';

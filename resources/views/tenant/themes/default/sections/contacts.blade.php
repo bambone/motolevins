@@ -4,12 +4,10 @@
     $presentation = app(ContactChannelsResolver::class)->present(is_array($data ?? null) ? $data : []);
     $heading = $data['heading'] ?? '';
     $desc = $data['description'] ?? '';
-    $hasChannel = filled($data['phone'] ?? '')
-        || filled($data['whatsapp'] ?? '')
-        || filled($data['telegram'] ?? '')
-        || filled($data['email'] ?? '')
+    $channelRows = array_merge($presentation->primaryChannels, $presentation->secondaryChannels);
+    $hasChannel = $channelRows !== []
+        || $presentation->hasAddress()
         || filled($data['social_note'] ?? '')
-        || filled($data['address'] ?? '')
         || $presentation->hasMap();
     if (! filled($heading) && ! filled($desc) && ! $hasChannel) {
         return;
@@ -22,35 +20,23 @@
     @if(filled($desc))
         <p class="mt-3 text-silver">{{ $desc }}</p>
     @endif
-    @php
-        $hasList = filled($data['phone'] ?? '')
-            || filled($data['email'] ?? '')
-            || filled($data['whatsapp'] ?? '')
-            || filled($data['telegram'] ?? '')
-            || filled($data['social_note'] ?? '')
-            || filled($data['address'] ?? '');
-    @endphp
-    @if($hasList)
-        <ul class="mt-4 space-y-2 text-sm text-silver">
-            @if(filled($data['phone'] ?? ''))
-                <li><span class="text-white/80">Телефон:</span> {{ $data['phone'] }}</li>
+    @if($channelRows !== [] || $presentation->hasAddress())
+        <dl class="mt-4 grid gap-4 text-sm text-silver sm:grid-cols-2 sm:gap-6 sm:text-base">
+            @foreach($channelRows as $ch)
+                @include('tenant.partials.contact-channel-link', ['channel' => $ch, 'variant' => 'default_dl'])
+            @endforeach
+            @if($presentation->hasAddress())
+                <div class="sm:col-span-2">
+                    <dt class="text-xs font-medium uppercase tracking-wide text-white/50">Адрес</dt>
+                    <dd class="mt-1 whitespace-pre-line text-white/90">{{ $presentation->address }}</dd>
+                </div>
             @endif
-            @if(filled($data['email'] ?? ''))
-                <li><span class="text-white/80">Email:</span> <a href="mailto:{{ e($data['email']) }}" class="text-amber-400 underline hover:text-amber-300">{{ $data['email'] }}</a></li>
-            @endif
-            @if(filled($data['whatsapp'] ?? ''))
-                <li><span class="text-white/80">WhatsApp:</span> {{ $data['whatsapp'] }}</li>
-            @endif
-            @if(filled($data['telegram'] ?? ''))
-                <li><span class="text-white/80">Telegram:</span> {{ $data['telegram'] }}</li>
-            @endif
-            @if(filled($data['social_note'] ?? ''))
-                <li><span class="text-white/80">Соцсети:</span> {{ $data['social_note'] }}</li>
-            @endif
-            @if(filled($data['address'] ?? ''))
-                <li><span class="text-white/80">Адрес:</span> {{ $data['address'] }}</li>
-            @endif
-        </ul>
+        </dl>
+    @endif
+    @if(filled($data['social_note'] ?? ''))
+        <p class="mt-4 text-sm text-silver/90">
+            <span class="text-white/80">Дополнительно:</span> {{ $data['social_note'] }}
+        </p>
     @endif
     @if($presentation->hasMap())
         <div class="mt-6">

@@ -1,5 +1,7 @@
 @props(['bike', 'badge' => null, 'useBookingContext' => true])
 @php
+    use App\Money\MoneyBindingRegistry;
+
     $card = $bike->catalogCardForView();
     $positioning = $card['positioning'];
     $scenario = $card['scenario'];
@@ -10,6 +12,9 @@
     $engine = $bike->engine_cc ?? $bike->engine ?? 0;
     $detailUrl = route('motorcycle.show', $bike->slug);
     $detailLabel = 'О модели: ' . $bike->name;
+    $bikePriceDayFormatted = tenant() !== null
+        ? tenant_money_format((int) $bike->price_per_day, MoneyBindingRegistry::MOTORCYCLE_PRICE_PER_DAY)
+        : number_format((int) $bike->price_per_day, 0, ',', ' ').' '.chr(0xE2).chr(0x82).chr(0xBD);
 @endphp
 <article class="group/card relative flex h-full flex-col overflow-hidden rounded-2xl border border-white/5 bg-carbon shadow-lg shadow-black/30 transition-[border-color,box-shadow,transform] duration-300 hover:-translate-y-0.5 hover:border-white/10 hover:shadow-xl hover:shadow-black/40 focus-within:border-white/12 focus-within:shadow-xl [content-visibility:auto] [contain-intrinsic-size:auto_36rem]">
     <div class="pointer-events-none absolute inset-0 -z-10 rounded-2xl bg-white/[0.02] opacity-0 blur-2xl transition-opacity duration-300 group-hover/card:opacity-100"></div>
@@ -91,8 +96,7 @@
                 <div x-show="!$store.tenantBooking.filters.start_date || !$store.tenantBooking.filters.end_date" class="min-w-0">
                     <span class="mb-0.5 block text-[10px] font-semibold uppercase tracking-wider text-zinc-500">от</span>
                     <div class="flex flex-wrap items-baseline gap-x-1.5 gap-y-0">
-                        <span class="text-[1.65rem] font-extrabold leading-none tracking-tight text-white sm:text-[2rem]">{{ number_format($bike->price_per_day, 0, ',', ' ') }}</span>
-                        <span class="text-base font-bold text-moto-amber">₽</span>
+                        <span class="text-[1.65rem] font-extrabold leading-none tracking-tight text-white sm:text-[2rem]">{{ $bikePriceDayFormatted }}</span>
                         <span class="text-[11px] font-medium uppercase tracking-wide text-zinc-500">/ сутки</span>
                     </div>
                     @if($priceNote !== '')
@@ -102,8 +106,7 @@
                 <div class="min-w-0" x-show="$store.tenantBooking.filters.start_date && $store.tenantBooking.filters.end_date" x-cloak>
                     <span class="mb-0.5 block text-[10px] font-semibold uppercase tracking-wide text-zinc-500" x-text="`${$store.tenantBooking.rentalDayCount()} дней аренды`"></span>
                     <div class="flex flex-wrap items-baseline gap-x-1.5">
-                        <span class="text-[1.65rem] font-extrabold leading-none tracking-tight text-white sm:text-[2rem]"><span x-text="formatPrice(calculateCardTotalPrice({{ $bike->price_per_day }}))"></span></span>
-                        <span class="text-base font-bold text-moto-amber">₽</span>
+                        <span class="text-[1.65rem] font-extrabold leading-none tracking-tight text-moto-amber sm:text-[2rem]"><span x-text="$store.tenantBooking.formatPrice($store.tenantBooking.calculateCardTotalPrice({{ (int) $bike->price_per_day }}))"></span></span>
                     </div>
                     @if($priceNote !== '')
                         <p class="mt-1.5 line-clamp-1 text-xs text-zinc-400">{{ $priceNote }}</p>
@@ -113,8 +116,7 @@
                 <div class="min-w-0">
                     <span class="mb-0.5 block text-[10px] font-semibold uppercase tracking-wider text-zinc-500">от</span>
                     <div class="flex flex-wrap items-baseline gap-x-1.5 gap-y-0">
-                        <span class="text-[1.65rem] font-extrabold leading-none tracking-tight text-white sm:text-[2rem]">{{ number_format($bike->price_per_day, 0, ',', ' ') }}</span>
-                        <span class="text-base font-bold text-moto-amber">₽</span>
+                        <span class="text-[1.65rem] font-extrabold leading-none tracking-tight text-white sm:text-[2rem]">{{ $bikePriceDayFormatted }}</span>
                         <span class="text-[11px] font-medium uppercase tracking-wide text-zinc-500">/ сутки</span>
                     </div>
                     @if($priceNote !== '')

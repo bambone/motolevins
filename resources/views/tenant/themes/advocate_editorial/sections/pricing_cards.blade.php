@@ -6,7 +6,6 @@
     $resolved = \App\Models\TenantServiceProgram::resolvePricingCardsSection((int) $tenant->id, $data);
     $programs = $resolved['programs'];
     $manual = $resolved['manual_cards'];
-    $currency = $tenant->currency ?? 'RUB';
     if ($programs->isEmpty() && $manual === []) {
         return;
     }
@@ -26,7 +25,7 @@
     <div class="mt-6 grid min-w-0 gap-3 sm:mt-10 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 lg:gap-8">
         @foreach($programs as $pi => $program)
             @php
-                $price = $program->formattedPriceLabel($currency);
+                $price = $program->formattedPriceLabel($tenant);
                 $isEntry = $entrySlug !== '' && $program->slug === $entrySlug;
             @endphp
             <div

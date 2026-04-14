@@ -195,6 +195,23 @@ final class ContactChannelsResolver
             ];
         }
 
+        $vk = trim((string) ($data['vk_url'] ?? ''));
+        if ($vk !== '') {
+            $out[] = [
+                'type' => ContactChannelType::Vk->value,
+                'label' => null,
+                'value' => $vk,
+                'url' => null,
+                'is_override_url' => false,
+                'is_enabled' => true,
+                'is_primary' => true,
+                'sort_order' => $order++,
+                'note' => null,
+                'cta_label' => null,
+                'open_in_new_tab' => null,
+            ];
+        }
+
         return $out;
     }
 

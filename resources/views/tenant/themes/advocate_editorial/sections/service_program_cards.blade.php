@@ -19,8 +19,6 @@
     $sid = trim((string) ($data['section_id'] ?? ''));
     $layout = trim((string) ($data['layout'] ?? 'grid'));
     $uniformColumns = filter_var($data['uniform_columns'] ?? false, FILTER_VALIDATE_BOOLEAN);
-    $currency = $tenant->currency ?? 'RUB';
-
     $linesFromJson = static function ($json): array {
         if (! is_array($json)) {
             return [];
@@ -62,7 +60,7 @@
                     $spanFeatured = $program->is_featured && !$uniformColumns && $layout !== 'list';
                     $formatParts = array_filter([$program->format_label, $program->duration_label]);
                     $formatLine = implode(' · ', $formatParts);
-                    $price = $program->formattedPriceLabel($currency);
+                    $price = $program->formattedPriceLabel($tenant);
                     $desktopUrl = $program->coverDesktopPublicUrl($tenant);
                     $mobileUrl = $program->coverMobilePublicUrl($tenant);
                     $coverAlt = $program->coverImageAlt();

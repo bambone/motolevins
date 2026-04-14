@@ -20,15 +20,19 @@ use App\Models\Review;
 use App\Models\Setting;
 use App\Models\TenantSetting;
 use App\Models\User;
+use App\Money\MoneyAmountConverter;
+use App\Money\MoneyFormatter;
+use App\Money\MoneyParser;
+use App\Money\TenantMoneySettingsResolver;
 use App\NotificationCenter\NotificationActionUrlBuilder;
 use App\NotificationCenter\NotificationChannelDriverFactory;
 use App\NotificationCenter\NotificationDedupeService;
 use App\NotificationCenter\NotificationDeliveryPlanner;
 use App\NotificationCenter\NotificationEventRecorder;
-use App\NotificationCenter\NotificationRuleDraftGenerator;
-use App\NotificationCenter\NotificationSubscriptionConditionEvaluator;
 use App\NotificationCenter\NotificationRouter;
+use App\NotificationCenter\NotificationRuleDraftGenerator;
 use App\NotificationCenter\NotificationSchedulePolicy;
+use App\NotificationCenter\NotificationSubscriptionConditionEvaluator;
 use App\Observers\LeadObserver;
 use App\PageBuilder\LegacySectionTypeResolver;
 use App\PageBuilder\PageSectionKeyGenerator;
@@ -109,6 +113,17 @@ class AppServiceProvider extends ServiceProvider
         });
 
         $this->app->singleton(LinkedBookableServiceManager::class);
+
+        $this->app->singleton(MoneyAmountConverter::class);
+        $this->app->singleton(TenantMoneySettingsResolver::class);
+        $this->app->singleton(MoneyFormatter::class, fn ($app) => new MoneyFormatter(
+            $app->make(MoneyAmountConverter::class),
+            $app->make(TenantMoneySettingsResolver::class),
+        ));
+        $this->app->singleton(MoneyParser::class, fn ($app) => new MoneyParser(
+            $app->make(MoneyAmountConverter::class),
+            $app->make(TenantMoneySettingsResolver::class),
+        ));
     }
 
     /**

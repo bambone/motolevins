@@ -1,4 +1,6 @@
 @php
+    use App\Money\MoneyBindingRegistry;
+
     /** @var array{audience: string, use_case: array, advantages: array, rental_notes: string} $detailContent */
     $detailContent = $detailContent ?? ['audience' => '', 'use_case' => [], 'advantages' => [], 'rental_notes' => ''];
     $galleryUrls = $galleryUrls ?? [];
@@ -19,6 +21,9 @@
         $heroTagline = $heroCard['scenario'];
     }
     $heroChips = array_slice($heroCard['highlights'] ?? [], 0, 3);
+    $motorcyclePricePerDayFormatted = tenant() !== null
+        ? tenant_money_format((int) $motorcycle->price_per_day, MoneyBindingRegistry::MOTORCYCLE_PRICE_PER_DAY)
+        : number_format((int) $motorcycle->price_per_day, 0, ',', ' ').' '.chr(0xE2).chr(0x82).chr(0xBD);
 @endphp
 @extends('tenant.layouts.app')
 
@@ -78,16 +83,16 @@
                         <div class="min-w-0 w-full flex-1 lg:min-w-0">
                             <div x-show="!$store.tenantBooking.filters.start_date || !$store.tenantBooking.filters.end_date">
                                 <p class="text-2xl font-bold text-white sm:text-3xl">
-                                    от <span class="text-moto-amber">{{ number_format($motorcycle->price_per_day, 0, ',', ' ') }} ₽</span>
+                                    от <span class="text-moto-amber">{{ $motorcyclePricePerDayFormatted }}</span>
                                     <span class="text-base font-semibold text-zinc-400">/ сутки</span>
                                 </p>
                             </div>
                             <div x-show="$store.tenantBooking.filters.start_date && $store.tenantBooking.filters.end_date" x-cloak>
                                 <p class="text-[11px] font-bold uppercase tracking-[0.14em] text-zinc-500" x-text="`${$store.tenantBooking.rentalDayCount()} дней · выбранный период`"></p>
                                 <p class="mt-1 text-2xl font-bold text-white sm:text-3xl">
-                                    <span class="text-moto-amber" x-text="$store.tenantBooking.formatPrice($store.tenantBooking.calculateCardTotalPrice({{ (int) $motorcycle->price_per_day }})) + ' ₽'"></span>
+                                    <span class="text-moto-amber" x-text="$store.tenantBooking.formatPrice($store.tenantBooking.calculateCardTotalPrice({{ (int) $motorcycle->price_per_day }}))"></span>
                                 </p>
-                                <p class="mt-1 text-sm text-zinc-400">{{ number_format($motorcycle->price_per_day, 0, ',', ' ') }} ₽ за сутки</p>
+                                <p class="mt-1 text-sm text-zinc-400">{{ $motorcyclePricePerDayFormatted }} за сутки</p>
                             </div>
                             @if(count($heroChips) > 0)
                                 <ul class="mt-4 flex flex-wrap gap-2" aria-label="Кратко о модели">
@@ -249,16 +254,15 @@
                         <div>
                             <p class="text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-400">Стоимость</p>
                             <div x-show="!$store.tenantBooking.filters.start_date || !$store.tenantBooking.filters.end_date">
-                                <p class="mt-1 text-4xl font-extrabold tracking-tight text-white">
-                                    {{ number_format($motorcycle->price_per_day, 0, ',', ' ') }}
-                                    <span class="text-2xl font-bold text-moto-amber">₽</span>
+                                <p class="mt-1 text-4xl font-extrabold tracking-tight text-moto-amber">
+                                    {{ $motorcyclePricePerDayFormatted }}
                                 </p>
                                 <p class="mt-1 text-sm font-medium text-zinc-300">за сутки · итог за период в форме брони</p>
                             </div>
                             <div x-show="$store.tenantBooking.filters.start_date && $store.tenantBooking.filters.end_date" x-cloak>
                                 <p class="mt-1 text-[11px] font-semibold uppercase tracking-wide text-zinc-500" x-text="`${$store.tenantBooking.rentalDayCount()} дней`"></p>
-                                <p class="mt-1 text-4xl font-extrabold tracking-tight text-moto-amber" x-text="$store.tenantBooking.formatPrice($store.tenantBooking.calculateCardTotalPrice({{ (int) $motorcycle->price_per_day }})) + ' ₽'"></p>
-                                <p class="mt-1 text-sm font-medium text-zinc-300">{{ number_format($motorcycle->price_per_day, 0, ',', ' ') }} ₽ за сутки</p>
+                                <p class="mt-1 text-4xl font-extrabold tracking-tight text-moto-amber" x-text="$store.tenantBooking.formatPrice($store.tenantBooking.calculateCardTotalPrice({{ (int) $motorcycle->price_per_day }}))"></p>
+                                <p class="mt-1 text-sm font-medium text-zinc-300">{{ $motorcyclePricePerDayFormatted }} за сутки</p>
                             </div>
                         </div>
                         <button type="button"

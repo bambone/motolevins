@@ -12,6 +12,36 @@ body.advocate-editorial-theme.premium-bg {
 }
 
 /*
+ * Шапка expert_header_bar: у advocate нет body.expert-auto-theme → не действовали лимиты бренда из tenant-expert-auto.css.
+ * Длинное ФИО + inline-меню + телефон давали наложение на «Главная» и телефон на последний пункт меню.
+ */
+body.advocate-editorial-theme .expert-header-bar__brand {
+    max-width: min(100%, 14rem);
+}
+
+@media (min-width: 768px) {
+    body.advocate-editorial-theme .expert-header-bar__brand {
+        max-width: min(100%, 18rem);
+    }
+}
+
+@media (min-width: 1024px) {
+    body.advocate-editorial-theme .expert-header-bar__brand {
+        max-width: min(100%, 22rem);
+    }
+}
+
+@media (min-width: 1280px) {
+    body.advocate-editorial-theme .expert-header-bar__brand {
+        max-width: min(100%, 32rem);
+    }
+}
+
+body.advocate-editorial-theme .expert-header-bar__actions {
+    flex-shrink: 0;
+}
+
+/*
  * Заголовки внутренних страниц (не hero): тёмный текст на светлом фоне.
  * Не используем «main h1.text-white» без уточнения — это ломало hero (заголовок становился тёмным на тёмном фоне).
  */

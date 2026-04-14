@@ -39,6 +39,7 @@
                     }
                     $iconWrapClass = match ($iconKey) {
                         'driving' => 'flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-50 via-white to-orange-50 text-amber-900 shadow-sm ring-1 ring-amber-200/80 transition-colors group-hover:from-amber-100 group-hover:to-orange-50/90',
+                        'legal' => 'flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-slate-100 via-white to-sky-50 text-slate-800 shadow-sm ring-1 ring-slate-200/90 transition-colors group-hover:from-slate-50 group-hover:to-sky-50/80',
                         default => 'flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 ring-1 ring-indigo-100 transition-colors group-hover:bg-indigo-100/80',
                     };
                 @endphp

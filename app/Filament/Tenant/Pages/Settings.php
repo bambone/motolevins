@@ -5,9 +5,12 @@ namespace App\Filament\Tenant\Pages;
 use App\Filament\Forms\Components\TenantPublicImagePicker;
 use App\Filament\Shared\TenantAnalyticsFormSchema;
 use App\Livewire\Concerns\InteractsWithTenantPublicFilePicker;
+use App\Models\PlatformSetting;
 use App\Models\Setting;
 use App\Models\Tenant;
 use App\Models\TenantSetting;
+use App\Money\Enums\MoneyFractionDisplayMode;
+use App\Money\TenantMoneySettingsResolver;
 use App\Rules\OptionalRussianPhone;
 use App\Services\Analytics\AnalyticsSettingsPersistence;
 use App\Support\Analytics\AnalyticsSettingsData;
@@ -16,8 +19,10 @@ use App\Support\RussianPhone;
 use App\Support\Storage\TenantStorageDisks;
 use App\Tenant\StorageQuota\StorageQuotaExceededException;
 use App\Tenant\StorageQuota\TenantStorageQuotaService;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Schemas\Components\Grid;
@@ -26,6 +31,7 @@ use Filament\Schemas\Schema;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\HtmlString;
 use Illuminate\Validation\ValidationException;
 use Livewire\WithFileUploads;
 use UnitEnum;
@@ -109,6 +115,7 @@ class Settings extends Page
                 ...AnalyticsSettingsFormMapper::toFormState(
                     app(AnalyticsSettingsPersistence::class)->load((int) $tenant->id)
                 ),
+                ...self::moneyFormState($tenant),
             ];
         }
 
@@ -226,6 +233,56 @@ class Settings extends Page
                         Textarea::make('contacts_hours')->label('Часы работы')->rows(2)->placeholder('Например: Пн–Вс 9:00–21:00'),
                     ])->columns(2),
 
+                Section::make('Деньги / Валюта')
+                    ->description(new HtmlString(
+                        '<p class="text-sm text-gray-600 dark:text-gray-400">'
+                        .'Ввод и отображение сумм на сайте и в кабинете следуют этим настройкам. '
+                        .'<strong>Изменение масштаба UI</strong> влияет на ввод и отображение денежных полей (только там, где это разрешено для типа поля). '
+                        .'Существующие значения в БД не пересчитываются автоматически. После смены масштаба одни и те же цифры в формах будут интерпретироваться '
+                        .'в <strong>новых</strong> единицах отображения — проверьте сохранённые суммы.'
+                        .'</p>'
+                    ))
+                    ->schema([
+                        Select::make('money_base_currency_code')
+                            ->label('Основная валюта')
+                            ->options(fn (): array => self::moneyCurrencySelectOptions())
+                            ->required()
+                            ->native(true),
+                        Select::make('money_fraction_display_mode')
+                            ->label('Дробная часть (отображение)')
+                            ->options([
+                                MoneyFractionDisplayMode::Auto->value => 'auto — только значимая дробь',
+                                MoneyFractionDisplayMode::Always->value => 'always — всегда полные знаки валюты',
+                                MoneyFractionDisplayMode::Never->value => 'never — без дробной части в отображении',
+                            ])
+                            ->required()
+                            ->native(true),
+                        Select::make('money_display_scale_exponent')
+                            ->label('Масштаб UI (разрядность)')
+                            ->options([
+                                0 => 'Единицы валюты',
+                                3 => 'Тысячи',
+                                6 => 'Миллионы',
+                            ])
+                            ->required()
+                            ->native(true),
+                        TextInput::make('money_display_unit_label_override')
+                            ->label('Своя подпись единицы (необязательно)')
+                            ->maxLength(32)
+                            ->helperText('Только для масштаба «единицы». Пусто — символ валюты из справочника.'),
+                        Toggle::make('money_multi_currency_enabled')
+                            ->label('Включить опциональную мультивалютность')
+                            ->visible(fn (): bool => (bool) PlatformSetting::get('money.tenant_multicurrency_allowed', false))
+                            ->helperText('Дополнительные валюты задаются вручную; автокурсов нет.'),
+                        TextInput::make('money_additional_currency_codes')
+                            ->label('Дополнительные валюты (коды через запятую)')
+                            ->visible(fn (): bool => (bool) PlatformSetting::get('money.tenant_multicurrency_allowed', false))
+                            ->placeholder('USD, EUR')
+                            ->maxLength(255),
+                    ])
+                    ->columns(2)
+                    ->visible(fn (): bool => \currentTenant() !== null),
+
                 TenantAnalyticsFormSchema::section(fn (): bool => \currentTenant() !== null),
             ]);
     }
@@ -264,6 +321,10 @@ class Settings extends Page
 
                 return;
             }
+        }
+
+        if ($tenant !== null) {
+            $this->persistMoneySettings($tenant, $data);
         }
 
         if ($tenant !== null && array_key_exists('general_domain', $data)) {
@@ -317,6 +378,129 @@ class Settings extends Page
     /**
      * Effective public base URL for the form: explicit tenant_settings.general.domain if valid, else same fallback as runtime (active request host, primary domain, app.url).
      */
+    /**
+     * @return array<string, mixed>
+     */
+    private static function moneyFormState(Tenant $tenant): array
+    {
+        $resolver = app(TenantMoneySettingsResolver::class);
+        $defaults = $resolver->platformDefaultsForNewTenants();
+        $tid = (int) $tenant->id;
+        $additional = TenantSetting::getForTenant($tid, 'money.additional_currency_codes', []);
+        $additionalStr = '';
+        if (is_array($additional) && $additional !== []) {
+            $additionalStr = implode(', ', $additional);
+        }
+
+        return [
+            'money_base_currency_code' => strtoupper(trim((string) TenantSetting::getForTenant(
+                $tid,
+                'money.base_currency_code',
+                (string) ($defaults['base_currency_code'] ?? $tenant->currency ?? 'RUB')
+            ))),
+            'money_fraction_display_mode' => (string) TenantSetting::getForTenant(
+                $tid,
+                'money.fraction_display_mode',
+                (string) ($defaults['fraction_display_mode'] ?? 'auto')
+            ),
+            'money_display_scale_exponent' => (int) TenantSetting::getForTenant(
+                $tid,
+                'money.display_scale_exponent',
+                (int) ($defaults['display_scale_exponent'] ?? 0)
+            ),
+            'money_display_unit_label_override' => (string) TenantSetting::getForTenant($tid, 'money.display_unit_label_override', ''),
+            'money_multi_currency_enabled' => (bool) TenantSetting::getForTenant(
+                $tid,
+                'money.multi_currency_enabled',
+                (bool) ($defaults['multi_currency_enabled'] ?? false)
+            ),
+            'money_additional_currency_codes' => $additionalStr,
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private static function moneyCurrencySelectOptions(): array
+    {
+        $resolver = app(TenantMoneySettingsResolver::class);
+        $opts = [];
+        foreach ($resolver->platformCurrenciesByCode() as $c) {
+            if (! $c->active) {
+                continue;
+            }
+            $opts[$c->code] = $c->code.' — '.$c->name;
+        }
+        $tenant = currentTenant();
+        if ($tenant !== null) {
+            $cur = strtoupper(trim((string) ($tenant->currency ?? '')));
+            if ($cur !== '' && ! isset($opts[$cur])) {
+                $opts[$cur] = $cur.' (текущая колонка tenants.currency)';
+            }
+        }
+
+        return $opts;
+    }
+
+    private function persistMoneySettings(Tenant $tenant, array &$data): void
+    {
+        if (! array_key_exists('money_base_currency_code', $data)) {
+            return;
+        }
+
+        $tid = (int) $tenant->id;
+        $base = strtoupper(trim((string) ($data['money_base_currency_code'] ?? 'RUB')));
+        TenantSetting::setForTenant($tid, 'money.base_currency_code', $base);
+
+        $fraction = (string) ($data['money_fraction_display_mode'] ?? 'auto');
+        if (MoneyFractionDisplayMode::tryFrom($fraction) === null) {
+            $fraction = MoneyFractionDisplayMode::Auto->value;
+        }
+        TenantSetting::setForTenant($tid, 'money.fraction_display_mode', $fraction);
+
+        $scale = (int) ($data['money_display_scale_exponent'] ?? 0);
+        if (! in_array($scale, [0, 3, 6], true)) {
+            $scale = 0;
+        }
+        TenantSetting::setForTenant($tid, 'money.display_scale_exponent', (string) $scale, 'integer');
+
+        $override = trim((string) ($data['money_display_unit_label_override'] ?? ''));
+        if ($override === '') {
+            TenantSetting::forgetForTenant($tid, 'money.display_unit_label_override');
+        } else {
+            TenantSetting::setForTenant($tid, 'money.display_unit_label_override', $override);
+        }
+
+        $multiAllowed = (bool) PlatformSetting::get('money.tenant_multicurrency_allowed', false);
+        $multi = $multiAllowed && (bool) ($data['money_multi_currency_enabled'] ?? false);
+        TenantSetting::setForTenant($tid, 'money.multi_currency_enabled', $multi ? '1' : '0', 'boolean');
+
+        $rawCodes = trim((string) ($data['money_additional_currency_codes'] ?? ''));
+        $codes = [];
+        if ($rawCodes !== '') {
+            foreach (preg_split('/[,\s]+/', $rawCodes) ?: [] as $p) {
+                $c = strtoupper(trim((string) $p));
+                if ($c !== '' && $c !== $base) {
+                    $codes[] = $c;
+                }
+            }
+            $codes = array_values(array_unique($codes));
+        }
+        TenantSetting::setForTenant($tid, 'money.additional_currency_codes', $codes, 'json');
+
+        $tenant->currency = $base;
+        $tenant->save();
+
+        unset(
+            $data['money_base_currency_code'],
+            $data['money_fraction_display_mode'],
+            $data['money_display_scale_exponent'],
+            $data['money_display_unit_label_override'],
+            $data['money_multi_currency_enabled'],
+            $data['money_additional_currency_codes'],
+        );
+    }
+
     private function resolvedGeneralDomainFormValue(Tenant $tenant): string
     {
         $stored = trim((string) TenantSetting::getForTenant($tenant->id, 'general.domain', ''));

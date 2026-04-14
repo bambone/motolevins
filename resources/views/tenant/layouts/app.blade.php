@@ -158,6 +158,13 @@
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css">
 
+    @if (tenant())
+        <script id="rb-tenant-money-config" type="application/json">{!! json_encode(tenant_money_public_config(tenant()), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR) !!}</script>
+        <script>
+            window.__tenantMoneyConfig = JSON.parse(document.getElementById('rb-tenant-money-config').textContent);
+        </script>
+    @endif
+
     <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.14.3/dist/cdn.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.3/dist/cdn.min.js"></script>
     <script>
@@ -347,7 +354,11 @@
                     return days > 0 ? days * Number(pricePerDay) : 0;
                 },
 
-                formatPrice(amount) {
+                formatPrice(amount, bindingKey = 'booking.total_price') {
+                    if (window.TenantMoneyFormat && bindingKey) {
+                        return window.TenantMoneyFormat.formatStorage(amount, bindingKey);
+                    }
+
                     return new Intl.NumberFormat('ru-RU').format(amount);
                 },
             });

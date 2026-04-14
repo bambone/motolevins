@@ -4,7 +4,9 @@ namespace App\Filament\Tenant\Resources;
 
 use App\Filament\Forms\Components\TenantPublicImagePicker;
 use App\Filament\Tenant\Resources\TenantServiceProgramResource\Pages;
+use App\Filament\Tenant\Support\TenantMoneyForms;
 use App\Models\TenantServiceProgram;
+use App\Money\MoneyBindingRegistry;
 use App\Tenant\Expert\ServiceProgramType;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\Repeater;
@@ -12,7 +14,6 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
-use App\Filament\Tenant\Resources\Resource;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
@@ -63,11 +64,8 @@ class TenantServiceProgramResource extends Resource
                             ->required(),
                         TextInput::make('duration_label')->label('Длительность (текстом)')->maxLength(255),
                         TextInput::make('format_label')->label('Формат занятия')->maxLength(255),
-                        TextInput::make('price_amount')
-                            ->label('Цена (копейки)')
-                            ->numeric()
-                            ->minValue(0)
-                            ->helperText('Целое число в минимальных единицах валюты (для RUB — копейки). Оставьте пустым для «По запросу».'),
+                        TenantMoneyForms::moneyTextInput('price_amount', MoneyBindingRegistry::TENANT_SERVICE_PROGRAM_PRICE_AMOUNT, 'Цена', required: false, nullableStorage: true)
+                            ->helperText('Ввод в человекочитаемом виде по настройкам «Деньги / Валюта». Оставьте пустым для «По запросу».'),
                         TextInput::make('price_prefix')->label('Префикс цены («от» и т.п.)')->maxLength(32),
                         Toggle::make('is_featured')->label('Избранное (широкая карточка)'),
                         Toggle::make('is_visible')->label('Видимость на сайте')->default(true),
@@ -148,6 +146,7 @@ class TenantServiceProgramResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(fn ($query) => $query->with('tenant'))
             ->columns([
                 TextColumn::make('sort_order')->sortable(),
                 TextColumn::make('title')->searchable()->limit(40),
@@ -155,7 +154,20 @@ class TenantServiceProgramResource extends Resource
                 TextColumn::make('program_type'),
                 IconColumn::make('is_featured')->boolean(),
                 IconColumn::make('is_visible')->boolean(),
-                TextColumn::make('price_amount')->label('Коп.')->sortable(),
+                TextColumn::make('price_amount')
+                    ->label('Цена')
+                    ->formatStateUsing(function ($state, TenantServiceProgram $record): string {
+                        if ($state === null) {
+                            return '—';
+                        }
+                        $t = $record->tenant ?? currentTenant();
+                        if ($t === null) {
+                            return (string) $state;
+                        }
+
+                        return tenant_money_format((int) $state, MoneyBindingRegistry::TENANT_SERVICE_PROGRAM_PRICE_AMOUNT, $t);
+                    })
+                    ->sortable(),
             ])
             ->defaultSort('sort_order')
             ->actions([EditAction::make()]);

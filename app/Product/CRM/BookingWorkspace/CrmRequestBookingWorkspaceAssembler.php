@@ -11,6 +11,7 @@ use App\Models\CrmRequest;
 use App\Models\Lead;
 use App\Models\Motorcycle;
 use App\Models\RentalUnit;
+use App\Money\MoneyBindingRegistry;
 use App\Services\BookingService;
 use App\Services\TenantPublicBookingAvailabilityService;
 use Carbon\Carbon;
@@ -108,8 +109,8 @@ final class CrmRequestBookingWorkspaceAssembler
         $motorcycleImageUrl = $motorcycle?->cover_url;
         $motorcycleDescriptor = $this->buildMotorcycleDescriptor($motorcycle);
         $motorcycleStatusLabel = $motorcycle !== null ? (Motorcycle::statuses()[$motorcycle->status] ?? $motorcycle->status) : null;
-        $priceLabel = $motorcycle !== null && $motorcycle->price_per_day
-            ? number_format((int) $motorcycle->price_per_day, 0, ',', ' ').' ₽ / сутки'
+        $priceLabel = $motorcycle !== null && $motorcycle->price_per_day && $tenant !== null
+            ? tenant_money_format((int) $motorcycle->price_per_day, MoneyBindingRegistry::MOTORCYCLE_PRICE_PER_DAY, $tenant).' / сутки'
             : null;
 
         $availabilityState = BookingWorkspaceAvailabilityState::Unknown;

@@ -10,6 +10,9 @@ use Filament\Widgets\StatsOverviewWidget\Stat;
 
 class StatsOverviewWidget extends BaseWidget
 {
+    /** Lazy widgets + Livewire morph: «Snapshot missing» в консоли при открытии /admin. */
+    protected static bool $isLazy = false;
+
     protected static ?int $sort = 2;
 
     protected ?string $heading = 'Операции';

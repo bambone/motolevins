@@ -1,5 +1,9 @@
 @extends('tenant.layouts.app')
 
+@php
+    use App\Money\MoneyBindingRegistry;
+@endphp
+
 @section('content')
 @php
     $visibleAtSelectedLocation = $visibleAtSelectedLocation ?? true;
@@ -31,7 +35,7 @@
         <div class="min-w-0">
             <h1 class="mb-2 text-balance text-xl font-bold text-white sm:text-2xl">{{ ($resolvedSeo ?? null)?->h1 ?? $motorcycle->name }}</h1>
             <p class="mb-6 text-sm leading-relaxed text-silver sm:text-base">{{ $motorcycle->short_description }}</p>
-            <div class="break-words text-lg font-bold text-moto-amber sm:text-xl">{{ number_format($motorcycle->price_per_day ?? 0) }} ₽ / сутки</div>
+            <div class="break-words text-lg font-bold text-moto-amber sm:text-xl">{{ tenant_money_format((int) ($motorcycle->price_per_day ?? 0), MoneyBindingRegistry::MOTORCYCLE_PRICE_PER_DAY) }} / сутки</div>
         </div>
     </div>
 
@@ -62,7 +66,7 @@
                                     class="h-11 w-20 shrink-0 rounded-lg border border-white/10 bg-black/50 px-3 py-2 text-sm text-white">
                                 <span class="min-w-0 flex-1 text-sm text-white sm:text-base">{{ $addon->name }}</span>
                             </div>
-                            <span class="shrink-0 text-moto-amber sm:ml-auto">{{ number_format($addon->price) }} ₽</span>
+                            <span class="shrink-0 text-moto-amber sm:ml-auto">{{ tenant_money_format((int) $addon->price, MoneyBindingRegistry::ADDON_PRICE) }}</span>
                         </label>
                     @endforeach
                 </div>
@@ -77,15 +81,15 @@
                 <div>
                     <div class="mb-1 flex justify-between text-xs text-silver sm:text-sm">
                         <span>Стоимость аренды</span>
-                        <span class="text-white" x-text="formatMoney(priceResult?.price?.total || 0) + ' ₽'"></span>
+                        <span class="text-white" x-text="priceResult?.price?.base_price_formatted || formatMoney(priceResult?.price?.base_price || 0, 'booking.total_price')"></span>
                     </div>
                     <div class="mb-2 flex justify-between text-xs text-silver sm:text-sm" x-show="priceResult?.price?.deposit > 0">
                         <span>Залог</span>
-                        <span class="text-white" x-text="formatMoney(priceResult?.price?.deposit || 0) + ' ₽'"></span>
+                        <span class="text-white" x-text="priceResult?.price?.deposit_formatted || formatMoney(priceResult?.price?.deposit || 0, 'booking.deposit_amount')"></span>
                     </div>
                     <div class="flex items-center justify-between border-t border-white/10 pt-2">
                         <span class="font-bold text-white">Итого</span>
-                        <span class="text-xl font-bold text-moto-amber sm:text-2xl" x-text="formatMoney(priceResult?.price?.total || 0) + ' ₽'"></span>
+                        <span class="text-xl font-bold text-moto-amber sm:text-2xl" x-text="priceResult?.price?.total_formatted || formatMoney(priceResult?.price?.total || 0, 'booking.total_price')"></span>
                     </div>
                 </div>
             </template>
@@ -117,7 +121,10 @@ document.addEventListener('alpine:init', () => {
             return this.startDate && this.endDate && this.priceResult?.available;
         },
 
-        formatMoney(n) {
+        formatMoney(n, bindingKey) {
+            if (window.TenantMoneyFormat && bindingKey) {
+                return window.TenantMoneyFormat.formatStorage(n, bindingKey);
+            }
             return new Intl.NumberFormat('ru-RU').format(n);
         },
 

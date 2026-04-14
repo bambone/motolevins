@@ -216,6 +216,7 @@ final class AflyatunovExpertBootstrap
         self::seedSeoMeta($tenantId, $pageId, $now);
         self::ensureExpertMenuPages($tenantId, $now);
         self::applyAflyatunovExpertSeoPackage($tenantId);
+        self::ensureAflyatunovPublicContactSettings($tenantId);
         self::syncProgramCoversIfSchemaAllows($tenantId);
         HomeController::forgetCachedPayloadForTenant($tenantId);
     }
@@ -256,6 +257,7 @@ final class AflyatunovExpertBootstrap
             self::applyAflyatunovExpertSeoPackage($tenantId);
         }
 
+        self::ensureAflyatunovPublicContactSettings($tenantId);
         self::syncProgramCoversIfSchemaAllows($tenantId);
         HomeController::forgetCachedPayloadForTenant($tenantId);
     }
@@ -480,26 +482,7 @@ final class AflyatunovExpertBootstrap
         $u = fn (string $f): string => self::brandPublicUrl($tenantId, $f);
 
         return [
-            $mk('founder_expert_bio', 'founder_expert_bio', [
-                'heading' => 'О тренере',
-                'lead' => 'Я Марат Афлятунов — многократный призёр и победитель соревнований по автоспорту в Челябинске и Челябинской области, КМС по автомобильному спорту.',
-                'paragraphs' => [
-                    ['text' => 'Эта работа для меня не про «покататься», а про то, чтобы дать человеку уверенность за рулём, понимание автомобиля и навык, который реально помогает в жизни и на дороге.'],
-                    ['text' => 'На занятиях разбираем посадку, работу рулём и педалями, поведение автомобиля в разных условиях, парковку, маневрирование, движение в потоке и сложные дорожные ситуации.'],
-                ],
-                'photo_slot' => null,
-                'section_id' => '',
-                'portrait_image_url' => $u('portrait.jpg'),
-                'portrait_image_alt' => 'Марат Афлятунов',
-                'trust_points' => [
-                    ['text' => 'КМС по автоспорту'],
-                    ['text' => 'Работа с новичками и опытными водителями'],
-                    ['text' => 'Контраварийная подготовка и городское вождение'],
-                    ['text' => 'Подготовка и сопровождение в автоспорте'],
-                ],
-                'cta_label' => 'Записаться на занятие',
-                'cta_anchor' => '#expert-inquiry',
-            ], 'О тренере'),
+            $mk('founder_expert_bio', 'founder_expert_bio', self::aflyatunovFounderExpertBioData($tenantId, ''), 'О тренере'),
             $mk('credentials_grid', 'credentials_grid', [
                 'section_heading' => 'Почему мне доверяют',
                 'lead' => 'Реальный спортивный бэкграунд и спокойная подача — чтобы вы почувствовали контроль за рулём.',
@@ -551,6 +534,134 @@ final class AflyatunovExpertBootstrap
     }
 
     /**
+     * Данные блока «Контакты» на странице /contacts (единый источник для сидов и патчей).
+     *
+     * @return array<string, mixed>
+     */
+    private static function aflyatunovContactsBlockData(): array
+    {
+        return [
+            'heading' => 'Контакты',
+            'phone' => '+7 (950) 731-76-84',
+            'email' => 'aflyatunov_m@mail.ru',
+            'telegram' => 'aflyatunov_driving174',
+            'vk_url' => 'https://vk.com/aflyatunov_driving174',
+            'address' => 'Челябинск: встреча и старт занятия согласовываются индивидуально (район, ориентир у метро или удобная точка у дома/работы). Выезд в область — по договорённости.',
+            'social_note' => '',
+        ];
+    }
+
+    /**
+     * Блок founder_expert_bio: одинаковый текст на главной и на /o-trener (различается только section_id).
+     *
+     * @return array<string, mixed>
+     */
+    private static function aflyatunovFounderExpertBioData(int $tenantId, string $sectionId): array
+    {
+        $u = fn (string $f): string => self::brandPublicUrl($tenantId, $f);
+
+        return [
+            'heading' => 'О тренере',
+            'lead' => 'Я Марат Афлятунов — многократный призёр и победитель соревнований по автоспорту в Челябинске и области, кандидат в мастера спорта по автомобильному спорту. Больше десяти лет в практике вождения и соревновательной технике: от спокойного городского формата до подготовки к стартам.',
+            'paragraphs' => [
+                ['text' => 'Эта работа для меня не про «покататься», а про то, чтобы у человека появилось спокойствие и понятные действия за рулём — в потоке, на парковке, зимой и в нестандартных ситуациях.'],
+                ['text' => 'На занятиях разбираем посадку, обзор и габариты, работу с педалями и рулём, поведение машины на разном покрытии, парковку и маневрирование, уверенные перестроения и работу «на шаг впереди» в городе.'],
+                ['text' => 'Формат всегда индивидуальный: кто-то приходит после долгого перерыва, кто-то хочет убрать страх перед парковкой или зимой, кто-то готовится к любительским стартам — под каждый запрос свой темп и последовательность.'],
+                ['text' => 'Занятия проходят на вашем автомобиле — так вы быстрее привыкаете к его габаритам, педалям и реакции. Документы об образовании и спортивной квалификации можно запросить до записи.'],
+            ],
+            'photo_slot' => null,
+            'section_id' => $sectionId,
+            'portrait_image_url' => $u('portrait.jpg'),
+            'portrait_image_alt' => 'Марат Афлятунов',
+            'trust_points' => [
+                ['text' => 'КМС / КМС по автоспорту, многолетняя соревновательная практика'],
+                ['text' => 'Сотни индивидуальных занятий: от первого выезда до контраварийки'],
+                ['text' => 'Челябинск и область — встреча и маршрут под ваш район'],
+                ['text' => 'Контраварийка, город, парковка, подготовка к автоспринту и тайм-аттаку'],
+            ],
+            'cta_label' => 'Записаться на занятие',
+            'cta_anchor' => '#expert-inquiry',
+        ];
+    }
+
+    public static function ensureAflyatunovPublicContactSettings(int $tenantId): void
+    {
+        if ($tenantId < 1) {
+            return;
+        }
+        if ((string) DB::table('tenants')->where('id', $tenantId)->value('slug') !== self::SLUG) {
+            return;
+        }
+        TenantSetting::setForTenant($tenantId, 'contacts.phone', '+7 (950) 731-76-84');
+        TenantSetting::setForTenant($tenantId, 'contacts.email', 'aflyatunov_m@mail.ru');
+        TenantSetting::setForTenant($tenantId, 'contacts.telegram', 'aflyatunov_driving174');
+        TenantSetting::setForTenant($tenantId, 'contacts.vk_url', 'https://vk.com/aflyatunov_driving174');
+    }
+
+    /**
+     * Аудит публичного сайта (контакты, каналы формы, FAQ, цены, «О тренере», SEO) — идемпотентно для уже развёрнутого тенанта.
+     */
+    public static function patchAflyatunovPublicSiteAudit2026(): void
+    {
+        $tenantId = (int) DB::table('tenants')->where('slug', self::SLUG)->value('id');
+        if ($tenantId <= 0) {
+            return;
+        }
+
+        self::ensureAflyatunovPublicContactSettings($tenantId);
+        self::upsertAflyatunovServicePrograms($tenantId);
+
+        $contactsPayload = self::aflyatunovContactsBlockData();
+        foreach (DB::table('page_sections')
+            ->where('tenant_id', $tenantId)
+            ->where('section_key', 'contacts')
+            ->where('section_type', 'contacts')
+            ->get() as $row) {
+            $data = json_decode((string) $row->data_json, true) ?: [];
+            $data = array_merge($data, $contactsPayload);
+            DB::table('page_sections')->where('id', $row->id)->update([
+                'data_json' => json_encode($data, JSON_UNESCAPED_UNICODE),
+                'updated_at' => now(),
+            ]);
+        }
+
+        DB::table('faqs')
+            ->where('tenant_id', $tenantId)
+            ->where('question', 'Где проходят занятия?')
+            ->update([
+                'answer' => 'Основная зона — Челябинск: встреча и старт занятия согласовываем под вас (район, ориентир у метро или удобная точка). Практика — в реальном городском трафике; при необходимости подключаем площадку или ледовый автодром отдельно. Выезд в область возможен по договорённости.',
+                'updated_at' => now(),
+            ]);
+
+        $homePageId = (int) DB::table('pages')->where('tenant_id', $tenantId)->where('slug', 'home')->value('id');
+        $aboutPageId = (int) DB::table('pages')->where('tenant_id', $tenantId)->where('slug', 'o-trener')->value('id');
+        foreach ([
+            $homePageId => 'about',
+            $aboutPageId => '',
+        ] as $pageId => $sectionId) {
+            if ($pageId <= 0) {
+                continue;
+            }
+            $merge = self::aflyatunovFounderExpertBioData($tenantId, $sectionId);
+            foreach (DB::table('page_sections')
+                ->where('tenant_id', $tenantId)
+                ->where('page_id', $pageId)
+                ->where('section_key', 'founder_expert_bio')
+                ->get() as $row) {
+                $data = json_decode((string) $row->data_json, true) ?: [];
+                $data = array_merge($data, $merge);
+                DB::table('page_sections')->where('id', $row->id)->update([
+                    'data_json' => json_encode($data, JSON_UNESCAPED_UNICODE),
+                    'updated_at' => now(),
+                ]);
+            }
+        }
+
+        self::applyAflyatunovExpertSeoPackage($tenantId);
+        HomeController::forgetCachedPayloadForTenant($tenantId);
+    }
+
+    /**
      * @return list<array<string, mixed>>
      */
     private static function contactsPageSections(int $pageId, int $tenantId, $now): array
@@ -571,12 +682,7 @@ final class AflyatunovExpertBootstrap
         ];
 
         return [
-            $mk('contacts', 'contacts', [
-                'heading' => 'Контакты',
-                'phone' => '+7 (950) 731-76-84',
-                'email' => 'Aflyatunov_m@mail.ru',
-                'social_note' => 'aflyatunov_driving174',
-            ], 'Контакты'),
+            $mk('contacts', 'contacts', self::aflyatunovContactsBlockData(), 'Контакты'),
             $mk('faq', 'faq', [
                 'section_heading' => 'Частые вопросы',
                 'source' => 'faqs_table',
@@ -821,7 +927,7 @@ final class AflyatunovExpertBootstrap
                 'teaser' => 'Права есть, а уверенности в потоке и на парковке не хватает.',
                 'description' => null,
                 'program_type' => 'program',
-                'price_amount' => null,
+                'price_amount' => 540000,
                 'price_prefix' => 'от',
                 'duration_label' => 'серия занятий',
                 'format_label' => 'Индивидуально · на вашем авто',
@@ -896,8 +1002,8 @@ final class AflyatunovExpertBootstrap
                 'teaser' => 'Любительские старты и техника безопасно.',
                 'description' => null,
                 'program_type' => 'sport_support',
-                'price_amount' => null,
-                'price_prefix' => null,
+                'price_amount' => 1500000,
+                'price_prefix' => 'от',
                 'duration_label' => 'по запросу',
                 'format_label' => 'Индивидуально',
                 'audience_json' => self::jl(['Для тех, кто выходит на автоспринт, тайм-аттак или джимхану.']),
@@ -1125,26 +1231,7 @@ final class AflyatunovExpertBootstrap
                 'section_lead' => 'Зима, город, упражнения и короткий ролик с практики — не стоковые картинки.',
                 'items' => self::aflyatunovEditorialGalleryItems($u),
             ]),
-            $mk('founder_expert_bio', 'founder_expert_bio', [
-                'heading' => 'О тренере',
-                'lead' => 'Я Марат Афлятунов — многократный призёр и победитель соревнований по автоспорту в Челябинске и Челябинской области, КМС по автомобильному спорту.',
-                'paragraphs' => [
-                    ['text' => 'Эта работа для меня не про «покататься», а про то, чтобы дать человеку уверенность за рулём, понимание автомобиля и навык, который реально помогает в жизни и на дороге.'],
-                    ['text' => 'На занятиях разбираем посадку, работу рулём и педалями, поведение автомобиля в разных условиях, парковку, маневрирование, движение в потоке и сложные дорожные ситуации.'],
-                ],
-                'photo_slot' => null,
-                'section_id' => 'about',
-                'portrait_image_url' => $u('portrait.jpg'),
-                'portrait_image_alt' => 'Марат Афлятунов',
-                'trust_points' => [
-                    ['text' => 'КМС по автоспорту'],
-                    ['text' => 'Работа с новичками и опытными водителями'],
-                    ['text' => 'Контраварийная подготовка и городское вождение'],
-                    ['text' => 'Подготовка и сопровождение в автоспорте'],
-                ],
-                'cta_label' => 'Записаться на занятие',
-                'cta_anchor' => '#expert-inquiry',
-            ]),
+            $mk('founder_expert_bio', 'founder_expert_bio', self::aflyatunovFounderExpertBioData($tenantId, 'about')),
             $mk('faq', 'faq', [
                 'section_heading' => 'Частые вопросы',
                 'source' => 'faqs_table',
@@ -1162,12 +1249,7 @@ final class AflyatunovExpertBootstrap
                     ['text' => 'Челябинск и область'],
                 ],
             ]),
-            $mk('contacts', 'contacts', [
-                'heading' => 'Контакты',
-                'phone' => '+7 (950) 731-76-84',
-                'email' => 'Aflyatunov_m@mail.ru',
-                'social_note' => 'aflyatunov_driving174',
-            ]),
+            $mk('contacts', 'contacts', self::aflyatunovContactsBlockData()),
         ];
     }
 
@@ -1218,7 +1300,7 @@ final class AflyatunovExpertBootstrap
             ['Можно ли заниматься только парковкой?', 'Да, программу можно сфокусировать на парковке и габаритах.'],
             ['Можно ли отработать конкретный маршрут?', 'Да, возможен разбор ваших маршрутов и сложных участков.'],
             ['Подходит ли контраварийка новичкам?', 'Да, подаётся с учётом уровня и задач.'],
-            ['Где проходят занятия?', 'В реальных городских условиях; при необходимости — площадки по договорённости.'],
+            ['Где проходят занятия?', 'Основная зона — Челябинск: встреча и старт занятия согласовываем под вас (район, ориентир у метро или удобная точка). Практика — в реальном городском трафике; при необходимости подключаем площадку или ледовый автодром отдельно. Выезд в область возможен по договорённости.'],
             ['Сколько длится одно занятие?', 'Одно занятие — 3 астрономических часа.'],
             ['Нужна ли предоплата?', 'Бронь времени согласуется после предоплаты по правилам, о которых сообщим при записи.'],
             ['Нужно ли ждать зимы для полезной подготовки?', 'Нет, много навыков отрабатывается круглый год.'],
@@ -1377,7 +1459,7 @@ final class AflyatunovExpertBootstrap
      */
     private static function homeSeoContentPayload(): array
     {
-        $description = 'Индивидуальные занятия по вождению в Челябинске: парковка, уверенность в городе, зимнее вождение, контраварийная подготовка. Занятия на вашем автомобиле.';
+        $description = 'Индивидуальные занятия по вождению в Челябинске от 2 700 руб. за занятие: парковка, уверенность в городе, зимнее вождение, контраварийная подготовка. Занятия на вашем автомобиле.';
 
         return [
             'meta_title' => 'Инструктор по вождению в Челябинске — парковка, город, контраварийная подготовка | Марат Афлятунов',
@@ -1419,7 +1501,7 @@ final class AflyatunovExpertBootstrap
     private static function aflyatunovLlmsIntro(): string
     {
         return <<<'TXT'
-Марат Афлятунов — инструктор по вождению и контраварийной подготовке в Челябинске и области. Индивидуальные занятия на автомобиле ученика: парковка, уверенность в городе, зимнее вождение, контраварийка и спортивные сценарии по запросу. На сайте — программы, отзывы, ответы на частые вопросы и форма записи; контакты с телефоном и email.
+Марат Афлятунов — инструктор по вождению и контраварийной подготовке в Челябинске и области. Индивидуальные занятия на автомобиле ученика от 2 700 руб. за занятие: парковка, уверенность в городе, зимнее вождение, контраварийка и спортивные сценарии по запросу. На сайте — программы, отзывы, ответы на частые вопросы и форма записи; контакты с телефоном, email, Telegram и ВКонтакте.
 TXT;
     }
 
@@ -1493,7 +1575,7 @@ TXT;
         $rows = [
             'contacts' => [
                 'meta_title' => 'Контакты — запись на занятия по вождению в Челябинске | Марат Афлятунов',
-                'meta_description' => 'Телефон +7 (950) 731-76-84, email Aflyatunov_m@mail.ru. Связь для записи на индивидуальные занятия: парковка, город, зимнее вождение, контраварийная подготовка.',
+                'meta_description' => 'Телефон +7 (950) 731-76-84, email aflyatunov_m@mail.ru, Telegram и ВКонтакте. Запись на индивидуальные занятия: парковка, город, зимнее вождение, контраварийная подготовка.',
                 'h1' => 'Контакты',
                 'og_title' => 'Контакты — Марат Афлятунов',
                 'og_description' => 'Телефон и email для записи на занятия по вождению и контраварийной подготовке в Челябинске.',
@@ -1507,7 +1589,7 @@ TXT;
             ],
             'o-trener' => [
                 'meta_title' => 'Марат Афлятунов — инструктор по вождению, КМС по автоспорту | Челябинск',
-                'meta_description' => 'Опыт соревнований, индивидуальный подход, занятия на автомобиле ученика в Челябинске и области.',
+                'meta_description' => 'Опыт соревнований и многолетняя практика, индивидуальный подход, занятия на автомобиле ученика в Челябинске и области. Контраварийка, город, парковка, подготовка к стартам.',
                 'h1' => 'О тренере',
                 'og_title' => 'О тренере — Марат Афлятунов',
                 'og_description' => 'Инструктор по вождению и контраварийной подготовке, кандидат в мастера спорта по автоспорту.',

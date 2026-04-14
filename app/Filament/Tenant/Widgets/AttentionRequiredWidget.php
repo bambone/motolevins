@@ -4,10 +4,14 @@ namespace App\Filament\Tenant\Widgets;
 
 use App\Models\Lead;
 use Filament\Widgets\Widget;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
 class AttentionRequiredWidget extends Widget
 {
+    /** См. {@see StatsOverviewWidget::$isLazy} */
+    protected static bool $isLazy = false;
+
     protected string $view = 'filament.tenant.widgets.attention-required-cards';
 
     protected int|string|array $columnSpan = 'full';
@@ -42,17 +46,20 @@ class AttentionRequiredWidget extends Widget
      */
     protected function getLeads(): Collection
     {
+        $staleNew = Carbon::now()->subHours(24);
+        $staleProgress = Carbon::now()->subHours(48);
+
         return Lead::query()
             ->with(['motorcycle.media'])
             ->whereIn('status', ['new', 'in_progress'])
-            ->orderByRaw("
-                CASE 
-                    WHEN status = 'new' AND created_at < NOW() - INTERVAL 24 HOUR THEN 1
-                    WHEN status = 'new' THEN 2
-                    WHEN status = 'in_progress' AND created_at < NOW() - INTERVAL 48 HOUR THEN 3
+            ->orderByRaw('
+                CASE
+                    WHEN status = ? AND created_at < ? THEN 1
+                    WHEN status = ? THEN 2
+                    WHEN status = ? AND created_at < ? THEN 3
                     ELSE 4
                 END ASC
-            ")
+            ', ['new', $staleNew, 'new', 'in_progress', $staleProgress])
             ->orderBy('created_at', 'desc')
             ->limit(7)
             ->get();

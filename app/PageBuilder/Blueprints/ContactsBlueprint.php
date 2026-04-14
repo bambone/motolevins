@@ -60,6 +60,7 @@ final class ContactsBlueprint extends AbstractPageSectionBlueprint
             'email' => '',
             'whatsapp' => '',
             'telegram' => '',
+            'vk_url' => '',
             'address' => '',
             'map_enabled' => true,
             'map_provider' => MapProvider::Yandex->value,
@@ -99,6 +100,10 @@ final class ContactsBlueprint extends AbstractPageSectionBlueprint
             TextInput::make('data_json.telegram')
                 ->label('Telegram (username или ссылка)')
                 ->maxLength(255),
+            TextInput::make('data_json.vk_url')
+                ->label('ВКонтакте (ссылка на профиль или id)')
+                ->maxLength(500)
+                ->placeholder('https://vk.com/id123456 или короткое имя'),
             Textarea::make('data_json.address')
                 ->label('Адрес')
                 ->rows(2)
@@ -271,8 +276,9 @@ final class ContactsBlueprint extends AbstractPageSectionBlueprint
     {
         $phone = trim((string) ($data['phone'] ?? ''));
         $email = trim((string) ($data['email'] ?? ''));
+        $vk = trim((string) ($data['vk_url'] ?? ''));
         $addr = $this->stringPreview($data, 'address', 50);
 
-        return trim(implode(' · ', array_filter([$phone, $email, $addr], fn (string $s): bool => $s !== ''))) ?: 'Контакты не заполнены';
+        return trim(implode(' · ', array_filter([$phone, $email, $vk, $addr], fn (string $s): bool => $s !== ''))) ?: 'Контакты не заполнены';
     }
 }

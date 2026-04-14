@@ -15,6 +15,14 @@
                 @php
                     $sk = (string) ($section->section_key ?? '');
                     $skClass = $sk !== '' ? 'expert-home-section--'.preg_replace('/[^a-z0-9_-]+/i', '-', $sk) : 'expert-home-section--unknown';
+                    $lazyAnchorId = '';
+                    if ($sk === 'expert_lead_form') {
+                        $dj = is_array($section->data_json ?? null) ? $section->data_json : [];
+                        $lazyAnchorId = trim((string) ($dj['section_id'] ?? ''));
+                        if ($lazyAnchorId === '') {
+                            $lazyAnchorId = 'expert-inquiry';
+                        }
+                    }
                     $slotVars = [
                         'section' => $section,
                         'bikes' => $bikes ?? collect(),
@@ -38,6 +46,9 @@
                         id="expert-home-section-host-{{ (int) $section->id }}"
                         data-expert-lazy-template="expert-home-section-tpl-{{ (int) $section->id }}"
                         data-expert-lazy-order="{{ (int) $loop->index }}"
+                        @if ($lazyAnchorId !== '')
+                            data-expert-lazy-anchor="{{ e($lazyAnchorId) }}"
+                        @endif
                         aria-busy="true"
                     >
                         <div class="expert-home-section__skeleton" aria-hidden="true">
@@ -90,6 +101,110 @@
                 document.dispatchEvent(new CustomEvent('rentbase:tenant-dom-mounted', { detail: { root: inner } }));
                 return true;
             }
+
+            function scrollToFragmentId(id) {
+                var el = document.getElementById(id);
+                if (el && typeof el.scrollIntoView === 'function') {
+                    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            }
+
+            function mountLazyAnchorIfNeeded(id) {
+                if (!id) {
+                    return false;
+                }
+                if (document.getElementById(id)) {
+                    return true;
+                }
+                var host = root.querySelector('[data-expert-lazy-anchor="' + id + '"]');
+                if (!host || !host.isConnected) {
+                    return false;
+                }
+                return mountFromTemplate(host);
+            }
+
+            function syncLocationHashToLazySection() {
+                var h = window.location.hash;
+                if (!h || h.length < 2) {
+                    return;
+                }
+                var id = decodeURIComponent(h.slice(1));
+                if (!id) {
+                    return;
+                }
+                if (document.getElementById(id)) {
+                    return;
+                }
+                if (!mountLazyAnchorIfNeeded(id)) {
+                    return;
+                }
+                requestAnimationFrame(function () {
+                    requestAnimationFrame(function () {
+                        scrollToFragmentId(id);
+                    });
+                });
+            }
+
+            document.addEventListener(
+                'click',
+                function (e) {
+                    var t = e.target;
+                    if (!t || typeof t.closest !== 'function') {
+                        return;
+                    }
+                    var a = t.closest('a[href]');
+                    if (!a) {
+                        return;
+                    }
+                    var raw = a.getAttribute('href');
+                    if (!raw || raw.indexOf('#') === -1) {
+                        return;
+                    }
+                    var u;
+                    try {
+                        u = new URL(raw, window.location.href);
+                    } catch (err) {
+                        return;
+                    }
+                    if (u.origin !== window.location.origin) {
+                        return;
+                    }
+                    if (u.pathname !== window.location.pathname) {
+                        return;
+                    }
+                    if (!u.hash || u.hash.length < 2) {
+                        return;
+                    }
+                    var id = decodeURIComponent(u.hash.slice(1));
+                    if (!id || document.getElementById(id)) {
+                        return;
+                    }
+                    var host = root.querySelector('[data-expert-lazy-anchor="' + id + '"]');
+                    if (!host || !host.isConnected) {
+                        return;
+                    }
+                    e.preventDefault();
+                    mountFromTemplate(host);
+                    if (window.history && window.history.pushState) {
+                        window.history.pushState(null, '', u.pathname + u.search + u.hash);
+                    } else {
+                        window.location.hash = u.hash;
+                    }
+                    requestAnimationFrame(function () {
+                        requestAnimationFrame(function () {
+                            scrollToFragmentId(id);
+                        });
+                    });
+                },
+                true
+            );
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', syncLocationHashToLazySection);
+            } else {
+                syncLocationHashToLazySection();
+            }
+            window.addEventListener('hashchange', syncLocationHashToLazySection);
 
             var next = 0;
             function observeNext() {

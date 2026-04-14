@@ -10,6 +10,9 @@ use Livewire\Attributes\Computed;
 
 class TenantStorageQuotaWidget extends Widget
 {
+    /** См. {@see StatsOverviewWidget::$isLazy} */
+    protected static bool $isLazy = false;
+
     protected string $view = 'filament.tenant.widgets.tenant-storage-quota-widget';
 
     protected int|string|array $columnSpan = 'full';

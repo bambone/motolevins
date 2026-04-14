@@ -9,6 +9,7 @@ use App\Models\Addon;
 use App\Models\Booking;
 use App\Models\Motorcycle;
 use App\Models\RentalUnit;
+use App\Money\MoneyBindingRegistry;
 use App\Services\AvailabilityService;
 use App\Services\BookingService;
 use App\Services\Catalog\MotorcycleLocationCatalogService;
@@ -132,6 +133,14 @@ class PublicBookingController extends Controller
         }
 
         $result = $this->pricingService->calculatePrice($target, $start, $end, 'daily', $addonIds);
+
+        $tenant = currentTenant();
+        if ($tenant !== null) {
+            $result['total_formatted'] = tenant_money_format((int) $result['total'], MoneyBindingRegistry::BOOKING_TOTAL_PRICE, $tenant);
+            $result['deposit_formatted'] = tenant_money_format((int) $result['deposit'], MoneyBindingRegistry::BOOKING_DEPOSIT_AMOUNT, $tenant);
+            $result['base_price_formatted'] = tenant_money_format((int) $result['base_price'], MoneyBindingRegistry::BOOKING_TOTAL_PRICE, $tenant);
+            $result['addons_total_formatted'] = tenant_money_format((int) $result['addons_total'], MoneyBindingRegistry::BOOKING_TOTAL_PRICE, $tenant);
+        }
 
         return response()->json([
             'available' => true,

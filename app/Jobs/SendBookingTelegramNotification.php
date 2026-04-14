@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\Booking;
+use App\Money\MoneyBindingRegistry;
 use App\Services\CurrentTenantManager;
 use App\Terminology\DomainTermKeys;
 use App\Terminology\TenantTerminologyService;
@@ -46,14 +47,18 @@ class SendBookingTelegramNotification implements ShouldQueue
 
         $vehicleName = $this->booking->bike?->name ?? $this->booking->motorcycle?->name ?? 'Неизвестный транспорт';
         $days = Carbon::parse($this->booking->start_date)->diffInDays(Carbon::parse($this->booking->end_date)) + 1;
-        $formattedPrice = number_format($this->booking->total_price, 0, ',', ' ');
-        $formattedSnapshot = number_format($this->booking->price_per_day_snapshot, 0, ',', ' ');
+        $formattedPrice = $tenant !== null
+            ? tenant_money_format((int) $this->booking->total_price, MoneyBindingRegistry::BOOKING_TOTAL_PRICE, $tenant)
+            : number_format((int) $this->booking->total_price, 0, ',', ' ').' '.chr(0xE2).chr(0x82).chr(0xBD);
+        $formattedSnapshot = $tenant !== null
+            ? tenant_money_format((int) $this->booking->price_per_day_snapshot, MoneyBindingRegistry::BOOKING_PRICE_PER_DAY_SNAPSHOT, $tenant)
+            : number_format((int) $this->booking->price_per_day_snapshot, 0, ',', ' ').' '.chr(0xE2).chr(0x82).chr(0xBD);
 
         $message = "📅 *Новое {$bookingLabel}*\n\n"
             ."{$resourceLabel}: {$vehicleName}\n"
             ."Даты: {$this->booking->start_date->format('d.m.Y')} — {$this->booking->end_date->format('d.m.Y')}\n"
-            ."Дней: {$days} (по {$formattedSnapshot} ₽/д)\n"
-            ."Цена: {$formattedPrice} ₽\n\n"
+            ."Дней: {$days} (по {$formattedSnapshot}/д)\n"
+            ."Цена: {$formattedPrice}\n\n"
             ."Клиент: {$this->booking->customer_name}\n"
             ."Телефон: {$this->booking->phone}\n";
 

@@ -8,10 +8,10 @@ use App\Enums\BookingStatus;
 use App\Filament\Tenant\Concerns\ResolvesDomainTermLabels;
 use App\Filament\Tenant\Resources\BookingResource\Pages;
 use App\Models\Booking;
+use App\Money\MoneyBindingRegistry;
 use App\Support\FilamentMotorcycleThumbnail;
 use App\Terminology\DomainTermKeys;
 use Filament\Infolists\Components\TextEntry;
-use App\Filament\Tenant\Resources\Resource;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\ImageColumn;
@@ -51,7 +51,7 @@ class BookingResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()->with(['motorcycle.media']);
+        return parent::getEloquentQuery()->with(['motorcycle.media', 'tenant']);
     }
 
     public static function form(Schema $schema): Schema
@@ -98,7 +98,14 @@ class BookingResource extends Resource
                             ->date('d.m.Y'),
                         TextEntry::make('total_price')
                             ->label('Сумма')
-                            ->money('RUB'),
+                            ->formatStateUsing(function ($state, Booking $record): string {
+                                $t = $record->tenant ?? currentTenant();
+                                if ($t === null) {
+                                    return (string) $state;
+                                }
+
+                                return tenant_money_format((int) $state, MoneyBindingRegistry::BOOKING_TOTAL_PRICE, $t);
+                            }),
                         TextEntry::make('created_at')
                             ->label('Создано')
                             ->dateTime('d.m.Y H:i'),
@@ -152,7 +159,14 @@ class BookingResource extends Resource
                     ->color(fn (BookingStatus $state): string => BookingStatusPresentation::filamentBadgeColor($state)),
                 TextColumn::make('total_price')
                     ->label('Сумма')
-                    ->money('RUB')
+                    ->formatStateUsing(function ($state, Booking $record): string {
+                        $t = $record->tenant ?? currentTenant();
+                        if ($t === null) {
+                            return (string) $state;
+                        }
+
+                        return tenant_money_format((int) $state, MoneyBindingRegistry::BOOKING_TOTAL_PRICE, $t);
+                    })
                     ->sortable(),
             ])
             ->defaultSort('start_date', 'desc')

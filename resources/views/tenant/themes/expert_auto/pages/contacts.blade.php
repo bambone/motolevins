@@ -27,26 +27,26 @@
                         <p class="mt-3 text-[15px] leading-relaxed text-silver/70">Отвечаю лично, обычно в течение пары часов.</p>
                         
                         <div class="mt-8 space-y-6">
-                            @if(filled(tenant()->phone))
+                            @if(filled($contacts['phone'] ?? ''))
                                 <div class="flex items-center gap-5">
                                     <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/[0.03] border border-white/[0.08] text-moto-amber">
                                         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
                                     </span>
                                     <div>
                                         <p class="text-[12px] font-bold uppercase tracking-widest text-silver/50">Телефон</p>
-                                        <a href="tel:{{ preg_replace('/[^+\d]/', '', tenant()->phone) }}" class="mt-1 block break-words text-lg font-semibold text-white/95 transition hover:text-moto-amber">{{ tenant()->phone }}</a>
+                                        <a href="tel:{{ preg_replace('/\D+/', '', $contacts['phone']) }}" class="mt-1 block break-words text-lg font-semibold text-white/95 transition hover:text-moto-amber">{{ $contacts['phone'] }}</a>
                                     </div>
                                 </div>
                             @endif
                             
-                            @if(filled(tenant()->email))
+                            @if(filled($contacts['email'] ?? ''))
                                 <div class="flex items-center gap-5">
                                     <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/[0.03] border border-white/[0.08] text-moto-amber">
                                         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
                                     </span>
                                     <div>
                                         <p class="text-[12px] font-bold uppercase tracking-widest text-silver/50">Email</p>
-                                        <a href="mailto:{{ tenant()->email }}" class="mt-1 block break-all text-lg font-semibold text-white/95 transition hover:text-moto-amber sm:break-words">{{ tenant()->email }}</a>
+                                        <a href="mailto:{{ $contacts['email'] }}" class="mt-1 block break-all text-lg font-semibold text-white/95 transition hover:text-moto-amber sm:break-words">{{ strtolower((string) $contacts['email']) }}</a>
                                     </div>
                                 </div>
                             @endif

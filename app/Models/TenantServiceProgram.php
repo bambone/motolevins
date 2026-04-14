@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\BelongsToTenant;
+use App\Money\MoneyBindingRegistry;
 use App\Support\Storage\TenantPublicAssetResolver;
 use App\Tenant\Expert\ServiceProgramType;
 use Illuminate\Database\Eloquent\Builder;
@@ -145,20 +146,19 @@ class TenantServiceProgram extends Model
     }
 
     /**
-     * Human price from minor units (e.g. kopecks for RUB).
+     * Human price from storage minor units via tenant money layer.
      */
-    public function formattedPriceLabel(?string $currencyCode = 'RUB'): ?string
+    public function formattedPriceLabel(?Tenant $tenant = null): ?string
     {
         if ($this->price_amount === null) {
             return null;
         }
-        if ($currencyCode === 'RUB') {
-            $rub = $this->price_amount / 100;
-
-            return number_format($rub, 0, ',', ' ').' ₽';
+        $t = $tenant ?? currentTenant();
+        if ($t === null) {
+            return (string) $this->price_amount;
         }
 
-        return (string) $this->price_amount;
+        return tenant_money_format((int) $this->price_amount, MoneyBindingRegistry::TENANT_SERVICE_PROGRAM_PRICE_AMOUNT, $t);
     }
 
     /**

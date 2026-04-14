@@ -9,6 +9,8 @@ use Filament\Widgets\Widget;
  */
 class BusinessHealthWidget extends Widget
 {
+    protected static bool $isLazy = false;
+
     protected static bool $isDiscovered = false;
 
     protected string $view = 'filament.tenant.widgets.business-health-placeholder';

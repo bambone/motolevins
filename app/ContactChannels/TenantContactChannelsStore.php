@@ -177,6 +177,18 @@ class TenantContactChannelsStore
             );
         }
 
+        $vk = trim((string) TenantSetting::getForTenant($tenantId, 'contacts.vk_url', ''));
+        if ($vk !== '') {
+            $c = $out[ContactChannelType::Vk->value];
+            $out[ContactChannelType::Vk->value] = new TenantContactChannelConfig(
+                usesChannel: true,
+                publicVisible: $c->publicVisible,
+                allowedInForms: true,
+                businessValue: $c->businessValue !== '' ? $c->businessValue : $vk,
+                sortOrder: $c->sortOrder,
+            );
+        }
+
         return $out;
     }
 

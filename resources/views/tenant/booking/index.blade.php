@@ -1,5 +1,8 @@
 @extends('tenant.layouts.app')
 
+@php use App\Money\MoneyBindingRegistry;
+@endphp
+
 @section('content')
 <section class="mx-auto max-w-6xl px-3 pb-12 pt-24 sm:px-4 sm:pb-16 sm:pt-28 md:px-8">
     <h1 class="mb-2 text-balance text-2xl font-bold leading-tight text-white sm:text-3xl">{{ ($resolvedSeo ?? null)?->h1 ?? 'Онлайн-бронирование' }}</h1>
@@ -26,7 +29,7 @@
                     <h3 class="mb-1 text-base font-bold text-white sm:text-lg">{{ $m->name }}</h3>
                     <p class="mb-3 line-clamp-2 text-xs text-silver sm:text-sm">{{ $m->short_description }}</p>
                     <div class="flex flex-wrap items-baseline justify-between gap-2">
-                        <span class="font-bold text-moto-amber">{{ number_format($m->price_per_day ?? 0) }} ₽</span>
+                        <span class="font-bold text-moto-amber">{{ tenant_money_format((int) ($m->price_per_day ?? 0), MoneyBindingRegistry::MOTORCYCLE_PRICE_PER_DAY) }}</span>
                         <span class="text-xs text-silver sm:text-sm">/ сутки</span>
                     </div>
                 </div>

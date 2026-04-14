@@ -7,8 +7,10 @@ namespace App\Filament\Tenant\Resources\MotorcycleResource\Form;
 use App\Enums\MotorcycleLocationMode;
 use App\Filament\Forms\Components\SeoMetaFields;
 use App\Filament\Forms\Components\TenantSpatieMediaLibraryFileUpload;
+use App\Filament\Tenant\Support\TenantMoneyForms;
 use App\Models\Motorcycle;
 use App\Models\TenantLocation;
+use App\Money\MoneyBindingRegistry;
 use App\Services\Seo\TenantSeoPublicPreviewService;
 use App\Support\CatalogHighlightNormalizer;
 use App\Support\Motorcycle\MotorcycleMediaPersistence;
@@ -298,23 +300,13 @@ final class MotorcycleFormFieldKit
                 ->relationship('category', 'name')
                 ->searchable()
                 ->preload(),
-            TextInput::make('price_per_day')
-                ->label('Цена за день')
+            TenantMoneyForms::moneyTextInput('price_per_day', MoneyBindingRegistry::MOTORCYCLE_PRICE_PER_DAY, 'Цена за день', required: true)
                 ->id('motorcycle-price-per-day')
-                ->numeric()
-                ->required()
-                ->default(0)
-                ->suffix('₽'),
-            TextInput::make('price_2_3_days')
-                ->label('2–3 дня')
-                ->id('motorcycle-price-2-3-days')
-                ->numeric()
-                ->suffix('₽'),
-            TextInput::make('price_week')
-                ->label('Неделя')
-                ->id('motorcycle-price-week')
-                ->numeric()
-                ->suffix('₽'),
+                ->default(0),
+            TenantMoneyForms::moneyTextInput('price_2_3_days', MoneyBindingRegistry::MOTORCYCLE_PRICE_2_3_DAYS, '2–3 дня', required: false, nullableStorage: true)
+                ->id('motorcycle-price-2-3-days'),
+            TenantMoneyForms::moneyTextInput('price_week', MoneyBindingRegistry::MOTORCYCLE_PRICE_WEEK, 'Неделя', required: false, nullableStorage: true)
+                ->id('motorcycle-price-week'),
             TextInput::make('catalog_price_note')
                 ->label('Подпись под ценой в каталоге')
                 ->id('motorcycle-catalog-price-note')

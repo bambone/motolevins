@@ -3,6 +3,9 @@
 use App\Models\Tenant;
 use App\Models\TenantDomain;
 use App\Models\TenantSetting;
+use App\Money\MoneyFormatter;
+use App\Money\MoneyViewData;
+use App\Money\TenantMoneySettingsResolver;
 use App\Services\Tenancy\TenantViewResolver;
 use App\Support\Storage\TenantPublicAssetResolver;
 use App\Support\Storage\TenantStorage;
@@ -415,5 +418,70 @@ if (! function_exists('filament_tenant_spatie_media_preview_url')) {
         } catch (Throwable) {
             return null;
         }
+    }
+}
+
+if (! function_exists('tenant_money_format')) {
+    /**
+     * Format integer storage amount using tenant money settings and binding.
+     */
+    function tenant_money_format(?int $storage, string $bindingKey, ?Tenant $tenant = null): string
+    {
+        $t = $tenant ?? tenant();
+        if ($t === null || $storage === null) {
+            return '—';
+        }
+
+        return app(MoneyFormatter::class)->formatStorageInt($storage, $bindingKey, $t)->formatted;
+    }
+}
+
+if (! function_exists('tenant_money_view_data')) {
+    function tenant_money_view_data(?int $storage, string $bindingKey, ?Tenant $tenant = null): ?MoneyViewData
+    {
+        $t = $tenant ?? tenant();
+        if ($t === null) {
+            return null;
+        }
+
+        return app(MoneyFormatter::class)->formatStorageIntNullable($storage, $bindingKey, $t);
+    }
+}
+
+if (! function_exists('tenant_money_public_config')) {
+    /**
+     * @return array<string, mixed>
+     */
+    function tenant_money_public_config(?Tenant $tenant = null): array
+    {
+        $t = $tenant ?? tenant();
+        if ($t === null) {
+            return [];
+        }
+
+        return app(TenantMoneySettingsResolver::class)->publicJsonConfigForTenant($t);
+    }
+}
+
+if (! function_exists('tenant_money_api_field')) {
+    /**
+     * API-friendly money field: raw storage, logical major amount, formatted string, currency meta.
+     *
+     * @return array<string, mixed>
+     */
+    function tenant_money_api_field(int $storage, string $bindingKey, Tenant $tenant): array
+    {
+        $view = app(MoneyFormatter::class)->formatStorageInt($storage, $bindingKey, $tenant);
+
+        return [
+            'storage' => $storage,
+            'amount' => $view->logicalMajorAmount,
+            'formatted' => $view->formatted,
+            'currency' => [
+                'code' => $view->currencyCode,
+                'symbol' => $view->currencySymbol,
+                'decimal_places' => $view->decimalPlaces,
+            ],
+        ];
     }
 }

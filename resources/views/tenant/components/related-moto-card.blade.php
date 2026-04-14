@@ -1,5 +1,7 @@
 @props(['bike'])
 @php
+    use App\Money\MoneyBindingRegistry;
+
     $imageUrl = $bike->publicCoverUrl();
     $detailUrl = route('motorcycle.show', $bike->slug);
     $card = $bike->catalogCardForView();
@@ -8,6 +10,9 @@
         $parts = array_filter([$card['scenario'] ?? '', $card['positioning'] ?? '']);
         $oneLine = implode(' · ', $parts);
     }
+    $priceDayFormatted = tenant() !== null
+        ? tenant_money_format((int) $bike->price_per_day, MoneyBindingRegistry::MOTORCYCLE_PRICE_PER_DAY)
+        : number_format((int) $bike->price_per_day, 0, ',', ' ').' '.chr(0xE2).chr(0x82).chr(0xBD);
 @endphp
 <article class="group/rel flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-carbon/90 shadow-lg shadow-black/30 transition-[border-color,box-shadow] duration-300 hover:border-white/18 hover:shadow-xl">
     <a href="{{ $detailUrl }}" class="relative block aspect-[16/10] shrink-0 overflow-hidden bg-[#0a0a0c] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moto-amber" aria-label="Фото: {{ $bike->name }}">
@@ -26,7 +31,7 @@
         </h3>
         <p class="mb-4 min-h-[1.25rem] line-clamp-1 text-sm leading-snug text-zinc-300">{{ $oneLine !== '' ? $oneLine : '—' }}</p>
         <p class="mb-4 text-lg font-extrabold tracking-tight text-white">
-            {{ number_format($bike->price_per_day, 0, ',', ' ') }} <span class="text-moto-amber">₽</span>
+            <span class="text-moto-amber">{{ $priceDayFormatted }}</span>
             <span class="text-sm font-semibold text-zinc-400">/ сутки</span>
         </p>
         <a href="{{ $detailUrl }}"

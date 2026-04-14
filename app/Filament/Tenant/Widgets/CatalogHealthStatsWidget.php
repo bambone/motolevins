@@ -13,6 +13,9 @@ use Filament\Widgets\StatsOverviewWidget\Stat;
 
 class CatalogHealthStatsWidget extends BaseWidget
 {
+    /** См. {@see StatsOverviewWidget::$isLazy} */
+    protected static bool $isLazy = false;
+
     protected static ?int $sort = 3;
 
     protected ?string $heading = 'Здоровье каталога';

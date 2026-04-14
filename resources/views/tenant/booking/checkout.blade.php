@@ -1,5 +1,9 @@
 @extends('tenant.layouts.app')
 
+@php
+    use App\Money\MoneyBindingRegistry;
+@endphp
+
 @section('title', 'Оформление бронирования')
 
 @section('content')
@@ -31,7 +35,7 @@
             <div class="mt-4 border-t border-white/10 pt-4">
                 <p class="mb-2 text-sm text-silver">Дополнительно:</p>
                 @foreach($addons as $item)
-                    <p class="text-sm text-white">{{ $item->addon->name }} × {{ $item->quantity }} — {{ number_format($item->addon->price * $item->quantity) }} ₽</p>
+                    <p class="text-sm text-white">{{ $item->addon->name }} × {{ $item->quantity }} — {{ tenant_money_format((int) ($item->addon->price * $item->quantity), MoneyBindingRegistry::ADDON_PRICE) }}</p>
                 @endforeach
             </div>
         @endif

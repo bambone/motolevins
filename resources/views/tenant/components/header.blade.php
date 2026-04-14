@@ -10,6 +10,8 @@
             $headerBrandTitle = 'Марат Афлятунов';
         }
     }
+    /** advocate_editorial: длинные ФИО + полное меню + телефон — только с lg, иначе бургер (см. tenant-advocate-editorial.css). */
+    $expertDesktopNavMinPx = $isAdvocateEditorial ? 1024 : 768;
     /** Scroll / overlay surfaces: opacity-only crossfade (see .tenant-header in app.css). */
     $headerSurfaceRest = $isAdvocateEditorial
         ? 'bg-gradient-to-b from-[#fdfcfa]/92 via-[#fdfcfa]/55 to-transparent'
@@ -21,6 +23,7 @@
 @endphp
 {{-- fixed: full-bleed hero under bar; flicker fix = opacity-only surfaces + 1px divider layer (no border-width toggle). --}}
 <header x-data="tenantHeader()"
+        data-nav-desktop-min="{{ $expertDesktopNavMinPx }}"
         x-init="init()"
         @keydown.escape.window="mobileNavOpen = false"
         @hero-video-playing.window="videoPlaying = true"
@@ -42,7 +45,7 @@
         @if($isExpertStyleNav)
         {{-- Три зоны: бренд | навигация | телефон; увеличенный отступ, убран конфликт --}}
         <div class="expert-header-bar mx-auto flex h-full w-full max-w-[100rem] items-center justify-between gap-3 px-4 md:gap-4 md:px-8 lg:px-12">
-            <a href="{{ route('home') }}" class="expert-header-bar__brand group relative flex min-w-0 max-w-[65vw] items-center gap-2.5 md:gap-3">
+            <a href="{{ route('home') }}" class="expert-header-bar__brand group relative flex min-w-0 {{ $isAdvocateEditorial ? '' : 'max-w-[65vw]' }} items-center gap-2.5 md:gap-3">
                 @if(($branding['logo'] ?? null))
                     <img src="{{ $branding['logo'] }}" alt="{{ $headerBrandTitle }}"
                          width="96" height="96"
@@ -55,7 +58,7 @@
                 <span class="min-w-0 truncate text-[15px] font-bold tracking-wide md:text-[17px] lg:text-[19px] {{ $isAdvocateEditorial ? 'text-stone-900' : 'text-white/95' }}">{{ $headerBrandTitle }}</span>
             </a>
 
-            <nav class="expert-header-bar__nav hidden flex-1 items-center justify-center gap-6 text-[14px] font-semibold tracking-wide md:flex lg:gap-10 lg:text-[15px]" aria-label="Основное меню">
+            <nav class="expert-header-bar__nav hidden flex-1 min-w-0 items-center justify-center gap-6 text-[14px] font-semibold tracking-wide {{ $isAdvocateEditorial ? 'lg:flex' : 'md:flex' }} lg:gap-10 lg:text-[15px]" aria-label="Основное меню">
                 <a href="{{ route('home') }}" class="shrink-0 transition-colors hover:text-moto-amber {{ $isAdvocateEditorial ? 'text-stone-800' : 'text-white/95' }}">Главная</a>
                 @foreach($tenantMainMenuPages ?? [] as $navItem)
                     <a href="{{ $navItem['url'] }}" class="shrink-0 transition-colors {{ $isAdvocateEditorial ? 'text-stone-600 hover:text-stone-900' : 'text-silver/80 hover:text-white' }}">{{ $navItem['label'] }}</a>
@@ -66,13 +69,13 @@
                 @if($contacts['phone'] ?? null)
                     @php $telDigits = preg_replace('/\D/', '', $contacts['phone']); @endphp
                     <a href="tel:{{ $telDigits }}"
-                       class="hidden text-[15px] font-semibold tracking-wide transition-colors hover:text-moto-amber md:block {{ $isAdvocateEditorial ? 'text-stone-800' : 'text-white/90' }}"
+                       class="hidden whitespace-nowrap text-[15px] font-semibold tracking-wide transition-colors hover:text-moto-amber {{ $isAdvocateEditorial ? 'lg:block text-stone-800' : 'md:block text-white/90' }}"
                        aria-label="Позвонить: {{ $contacts['phone'] }}">
                         {{ $contacts['phone'] }}
                     </a>
                 @endif
                 <button type="button"
-                        class="inline-flex h-11 w-11 items-center justify-center rounded-xl transition-colors md:hidden {{ $isAdvocateEditorial ? 'text-stone-800 hover:bg-stone-900/[0.06]' : 'text-white/90 hover:bg-white/[0.05]' }}"
+                        class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-colors {{ $isAdvocateEditorial ? 'lg:hidden text-stone-800 hover:bg-stone-900/[0.06]' : 'md:hidden text-white/90 hover:bg-white/[0.05]' }}"
                         @click.stop="mobileNavOpen = !mobileNavOpen"
                         :aria-expanded="mobileNavOpen"
                         aria-controls="tenant-mobile-nav"
@@ -145,7 +148,7 @@
              x-transition:leave="transition-opacity ease-in duration-150"
              x-transition:leave-start="opacity-100"
              x-transition:leave-end="opacity-0"
-             class="tenant-mobile-nav-panel absolute inset-x-0 top-full z-[45] -mt-px overflow-y-auto border-b px-3 py-3 shadow-lg md:hidden {{ $isAdvocateEditorial ? 'border-stone-200 bg-[#fbf9f6]' : 'border-white/[0.08] bg-[#080b10]' }} {{ $isExpertStyleNav ? 'max-h-[min(72vh,calc(100dvh-3.75rem))]' : 'max-h-[min(72vh,calc(100dvh-4.5rem))]' }}"
+             class="tenant-mobile-nav-panel absolute inset-x-0 top-full z-[45] -mt-px overflow-y-auto border-b px-3 py-3 shadow-lg {{ $isAdvocateEditorial ? 'lg:hidden' : 'md:hidden' }} {{ $isAdvocateEditorial ? 'border-stone-200 bg-[#fbf9f6]' : 'border-white/[0.08] bg-[#080b10]' }} {{ $isExpertStyleNav ? 'max-h-[min(72vh,calc(100dvh-3.75rem))]' : 'max-h-[min(72vh,calc(100dvh-4.5rem))]' }}"
              role="navigation"
              aria-label="Мобильное меню">
             <div class="flex flex-col gap-1">
@@ -196,7 +199,8 @@
                 this.$watch('mobileNavOpen', (open) => {
                     document.body.classList.toggle('overflow-hidden', open);
                 });
-                window.matchMedia('(min-width: 768px)').addEventListener('change', (e) => {
+                const navMin = parseInt(this.$el.dataset.navDesktopMin || '768', 10) || 768;
+                window.matchMedia(`(min-width: ${navMin}px)`).addEventListener('change', (e) => {
                     if (e.matches) {
                         this.mobileNavOpen = false;
                     }

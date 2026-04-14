@@ -15,6 +15,8 @@ use Illuminate\Support\Facades\Auth;
 
 class MailTenantActivityTableWidget extends TableWidget
 {
+    protected static bool $isLazy = false;
+
     protected static bool $isDiscovered = false;
 
     protected static ?string $panel = 'platform';

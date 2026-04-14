@@ -13,6 +13,8 @@ use Illuminate\Support\Facades\DB;
 
 class MailStatsOverviewWidget extends StatsOverviewWidget
 {
+    protected static bool $isLazy = false;
+
     protected static bool $isDiscovered = false;
 
     protected static ?string $panel = 'platform';
