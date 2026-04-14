@@ -5,6 +5,7 @@ namespace Tests\Feature\Tenant;
 use App\Models\CrmRequest;
 use App\Models\Page;
 use App\Models\PageSection;
+use App\Support\Typography\RussianTypography;
 use Database\Seeders\RolePermissionSeeder;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -68,9 +69,11 @@ class AdvocateEditorialTenantTest extends TestCase
             'status' => 'published',
         ]);
 
+        $heading = 'Уникальный заголовок адвоката — тест героя';
+
         $this->getWithHost($host, '/')
             ->assertOk()
-            ->assertSee('Уникальный заголовок адвоката — тест героя', false);
+            ->assertSee(RussianTypography::tiePrepositionsToNextWord($heading), false);
     }
 
     public function test_expert_inquiry_with_legal_services_domain_is_accepted(): void

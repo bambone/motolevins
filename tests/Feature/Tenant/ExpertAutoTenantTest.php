@@ -6,6 +6,7 @@ use App\Models\CrmRequest;
 use App\Models\Page;
 use App\Models\PageSection;
 use App\Models\TenantServiceProgram;
+use App\Support\Typography\RussianTypography;
 use App\Tenant\Expert\ServiceProgramType;
 use Database\Seeders\RolePermissionSeeder;
 use Filament\Facades\Filament;
@@ -127,9 +128,11 @@ class ExpertAutoTenantTest extends TestCase
             'status' => 'published',
         ]);
 
+        $heading = 'Уникальный заголовок эксперта — тест героя';
+
         $this->getWithHost($host, '/')
             ->assertOk()
-            ->assertSee('Уникальный заголовок эксперта — тест героя', false);
+            ->assertSee(RussianTypography::tiePrepositionsToNextWord($heading), false);
     }
 
     public function test_pricing_cards_section_not_rendered_without_programs_or_manual(): void
