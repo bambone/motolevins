@@ -402,3 +402,83 @@ jobs:
           fi
 
           echo "Post-deploy smoke passed"
+
+  # Докачка в локальное зеркало (MEDIA_LOCAL_ROOT) объектов из R2, которых нет на диске.
+  # Не создаёт файлы «из воздуха» — только то, что уже есть в бакете. См. tenant-media:backfill-from-r2.
+  media_backfill:
+    name: media-backfill-local-mirror
+    needs: deploy
+    if: ${{ github.ref == 'refs/heads/master' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && needs.deploy.result == 'success' && vars.DEPLOY_SKIP_MEDIA_BACKFILL != '1' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: Setup SSH
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.SSH_PRIVATE_KEY }}" | tr -d '\r' > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -p "${{ vars.SSH_PORT }}" -H "${{ vars.SSH_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Backfill mirror from R2 on server
+        shell: bash
+        env:
+          SSH_PORT: "${{ vars.SSH_PORT }}"
+          SSH_USER: "${{ vars.SSH_USER }}"
+          SSH_HOST: "${{ vars.SSH_HOST }}"
+          DEPLOY_PATH: "${{ vars.DEPLOY_PATH }}"
+          MEDIA_LOCAL_ROOT: "${{ vars.MEDIA_LOCAL_ROOT }}"
+          MEDIA_BACKFILL_AS_WWW_DATA: "${{ vars.MEDIA_BACKFILL_AS_WWW_DATA }}"
+        run: |
+          set -euo pipefail
+
+          REMOTE="${SSH_USER}@${SSH_HOST}"
+          APP_DIR="${DEPLOY_PATH}"
+          MEDIA_ROOT="${MEDIA_LOCAL_ROOT:-/srv/rentbase-media}"
+
+          ssh -p "$SSH_PORT" "$REMOTE" "APP_DIR='${APP_DIR}' MEDIA_ROOT='${MEDIA_ROOT}' MEDIA_BACKFILL_AS_WWW_DATA='${MEDIA_BACKFILL_AS_WWW_DATA:-1}' sh -se" <<'EOF'
+          set -eu
+          (set -o pipefail) 2>/dev/null && set -o pipefail || true
+
+          if [ ! -d "$APP_DIR" ]; then
+            echo "media-backfill: app dir not found: $APP_DIR"
+            exit 1
+          fi
+
+          if [ ! -d "$MEDIA_ROOT" ]; then
+            echo "media-backfill: media root not found: $MEDIA_ROOT (set MEDIA_LOCAL_ROOT Actions variable if path differs)"
+            exit 1
+          fi
+
+          LOG="$APP_DIR/storage/logs/tenant-media-backfill.log"
+          mkdir -p "$(dirname "$LOG")"
+
+          run_backfill () {
+            if [ "${MEDIA_BACKFILL_AS_WWW_DATA:-1}" != "0" ]; then
+              sudo -n -u www-data sh -lc "
+                set -e
+                cd '$APP_DIR'
+                php artisan optimize:clear >/dev/null 2>&1 || true
+                php artisan tenant-media:backfill-from-r2 \
+                  --target='$MEDIA_ROOT' \
+                  --only-missing \
+                  --no-interaction >> '$LOG' 2>&1
+              "
+            else
+              cd "$APP_DIR"
+              php artisan optimize:clear >/dev/null 2>&1 || true
+              php artisan tenant-media:backfill-from-r2 \
+                --target="$MEDIA_ROOT" \
+                --only-missing \
+                --no-interaction >> "$LOG" 2>&1
+            fi
+          }
+
+          run_backfill
+
+          echo "media-backfill: finished (log: $LOG)"
+          echo "media-backfill: tail of log"
+          tail -n 50 "$LOG" || true
+          EOF
