@@ -17,7 +17,7 @@
     @endif
     @if(filled($content))
         <div class="advocate-structured-text__body">
-            <x-tenant.rich-prose variant="default" :content="$content" />
+            <x-tenant.rich-prose variant="default" :content="$content" :demote-content-h1="filled($title)" />
         </div>
     @endif
 </section>

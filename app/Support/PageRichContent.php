@@ -22,6 +22,20 @@ final class PageRichContent
     /**
      * Plain-text excerpt for admin previews (no HTML in lists).
      */
+    /**
+     * Заменяет теги h1 на h2 в уже собранном HTML (страница уже имеет один h1 — hero/шапка блока).
+     */
+    public static function demoteInlineH1ToH2(string $html): string
+    {
+        if ($html === '') {
+            return $html;
+        }
+        $html = preg_replace('/<h1(\s[^>]*)?>/iu', '<h2$1>', $html) ?? $html;
+        $html = preg_replace('/<\/h1>/iu', '</h2>', $html) ?? $html;
+
+        return $html;
+    }
+
     public static function toPlainTextExcerpt(mixed $raw, int $maxLen = 200): string
     {
         $html = self::toHtml($raw);

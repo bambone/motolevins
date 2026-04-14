@@ -23,7 +23,7 @@
         <h1 class="mb-8 text-balance text-2xl font-bold leading-tight text-white sm:mb-10 sm:text-3xl md:text-4xl">{{ ($resolvedSeo ?? null)?->h1 ?? $page->name }}</h1>
 
         @if($mainSection && is_array($mainSection->data_json) && filled($mainSection->data_json['content'] ?? null))
-            <x-tenant.rich-prose variant="default" class="mb-12" :content="$mainSection->data_json['content']" />
+            <x-tenant.rich-prose variant="default" class="mb-12" :content="$mainSection->data_json['content']" :demote-content-h1="true" />
         @endif
 
         <div class="flex flex-col gap-14 sm:gap-16">
@@ -37,7 +37,7 @@
                 @else
                     @if($data !== [])
                         @if(! empty($data['content']))
-                            <x-tenant.rich-prose variant="default" :content="$data['content']" />
+                            <x-tenant.rich-prose variant="default" :content="$data['content']" :demote-content-h1="true" />
                         @elseif(! empty($data['heading']))
                             <div class="prose prose-invert max-w-none text-sm text-silver prose-headings:text-white prose-p:leading-relaxed sm:text-base">
                                 <h2>{{ $data['heading'] }}</h2>

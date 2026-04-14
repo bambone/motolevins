@@ -78,6 +78,38 @@ class TenantPublicAssetResolverTest extends TestCase
         );
     }
 
+    public function test_legacy_bare_storage_path_under_public_not_doubled_for_local_delivery(): void
+    {
+        $tenant = Tenant::query()->create([
+            'name' => 'Local nested path',
+            'slug' => 'lnp-'.Str::random(8),
+            'theme_key' => 'expert_auto',
+            'status' => 'trial',
+            'media_delivery_mode_override' => 'local',
+        ]);
+        $tid = (int) $tenant->id;
+
+        config([
+            'tenant_storage.public_cdn_base_url' => '',
+            'tenant_storage.media_local_public_base_path' => '/media',
+            'tenant_storage.public_url_version' => '',
+        ]);
+
+        $canonical = '/media/tenants/'.$tid.'/public/site/brand/portrait.jpg';
+
+        $legacyBare = '/storage/tenants/'.$tid.'/public/site/brand/portrait.jpg';
+        $outBare = TenantPublicAssetResolver::resolve($legacyBare, $tid);
+        $this->assertSame($canonical, $outBare);
+
+        $objectKey = 'tenants/'.$tid.'/public/storage/tenants/'.$tid.'/public/site/brand/portrait.jpg';
+        $outKey = TenantPublicAssetResolver::resolve($objectKey, $tid);
+        $this->assertSame($canonical, $outKey);
+        $this->assertStringNotContainsString(
+            'public/storage/tenants/',
+            parse_url((string) $outKey, PHP_URL_PATH) ?? ''
+        );
+    }
+
     public function test_https_legacy_storage_url_rewrites_to_cdn_when_cloud_disk_and_cdn_set(): void
     {
         $diskName = 'r2-resolver-rewrite-test';

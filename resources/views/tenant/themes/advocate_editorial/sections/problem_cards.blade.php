@@ -27,7 +27,7 @@
         @if($accent !== '')
             <div class="relative mt-8 w-full overflow-hidden rounded-2xl sm:mt-10" aria-hidden="true">
                 <div class="aspect-[21/9] w-full max-w-4xl">
-                    <img src="{{ e($accent) }}" alt="" class="h-full w-full object-cover opacity-60 mix-blend-luminosity">
+                    <img src="{{ e($accent) }}" alt="" class="h-full w-full object-cover opacity-60 mix-blend-luminosity" onerror="this.closest('[aria-hidden=true]')?.remove()">
                 </div>
                 <div class="absolute inset-0 rounded-2xl ring-1 ring-inset ring-white/10"></div>
             </div>
@@ -90,7 +90,7 @@
                 @if($accent !== '')
                     <div class="relative mt-8 hidden w-full overflow-hidden rounded-2xl lg:mt-10 lg:block xl:mt-14" aria-hidden="true">
                         <div class="aspect-[4/3] w-full">
-                            <img src="{{ e($accent) }}" alt="" class="h-full w-full object-cover opacity-60 mix-blend-luminosity transition-opacity hover:opacity-80">
+                            <img src="{{ e($accent) }}" alt="" class="h-full w-full object-cover opacity-60 mix-blend-luminosity transition-opacity hover:opacity-80" onerror="this.closest('[aria-hidden=true]')?.remove()">
                         </div>
                         <div class="absolute inset-0 rounded-2xl ring-1 ring-inset ring-white/10"></div>
                     </div>

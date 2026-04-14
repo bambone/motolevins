@@ -93,6 +93,7 @@
                                     height="640"
                                     loading="{{ $pi < 3 ? 'eager' : 'lazy' }}"
                                     decoding="async"
+                                    onerror="var w=this.closest('.expert-program-card__media');if(w)w.remove()"
                                     {!! $coverImgStyleAttr !!}
                                 />
                             </picture>
@@ -124,7 +125,12 @@
                                 @else
                                     <span class="text-lg font-bold tracking-tight text-white/90 sm:text-xl">По запросу</span>
                                 @endif
-                                <a href="#expert-inquiry" class="tenant-btn-primary inline-flex min-h-[3rem] w-full items-center justify-center rounded-xl px-5 text-sm font-bold uppercase tracking-wide transition-transform hover:-translate-y-0.5 sm:min-h-[3.25rem] sm:w-full sm:max-w-[17.5rem] sm:self-end">Записаться</a>
+                                <a
+                                    href="#expert-inquiry"
+                                    class="tenant-btn-primary inline-flex min-h-[3rem] w-full items-center justify-center rounded-xl px-5 text-sm font-bold uppercase tracking-wide transition-transform hover:-translate-y-0.5 sm:min-h-[3.25rem] sm:w-full sm:max-w-[17.5rem] sm:self-end"
+                                    data-expert-prefill-program="{{ e($program->slug) }}"
+                                    data-expert-prefill-program-title="{{ e($program->title) }}"
+                                >Записаться</a>
                             </div>
                         </div>
 

@@ -51,7 +51,7 @@ final class TenantPublicAssetResolver
             if ($id !== $tenantId) {
                 return null;
             }
-            $relativeUnderPublic = $m[2];
+            $relativeUnderPublic = self::normalizePathUnderTenantPublic($m[2], $tenantId);
 
             return self::safePublicUrl($tenantId, $relativeUnderPublic);
         }
@@ -60,7 +60,42 @@ final class TenantPublicAssetResolver
             return null;
         }
 
-        return self::safePublicUrl($tenantId, ltrim($v, '/'));
+        $bare = self::normalizePathUnderTenantPublic(ltrim($v, '/'), $tenantId);
+
+        return self::safePublicUrl($tenantId, $bare);
+    }
+
+    /**
+     * В JSON/настройках иногда хранят legacy-путь {@code storage/tenants/{id}/public/…} или
+     * {@code media/tenants/{id}/public/…} без схемы — его нельзя склеивать повторно с префиксом объекта.
+     */
+    private static function normalizePathUnderTenantPublic(string $pathUnderPublicSegment, int $tenantId): string
+    {
+        $path = ltrim(str_replace('\\', '/', $pathUnderPublicSegment), '/');
+        if ($path === '' || str_contains($path, '..')) {
+            return $path;
+        }
+
+        $tid = (int) $tenantId;
+        $prefixes = [
+            'storage/tenants/'.$tid.'/public/',
+            'media/tenants/'.$tid.'/public/',
+        ];
+
+        for ($i = 0; $i < 10; $i++) {
+            $stripped = false;
+            foreach ($prefixes as $prefix) {
+                if (str_starts_with($path, $prefix)) {
+                    $path = substr($path, strlen($prefix));
+                    $stripped = true;
+                }
+            }
+            if (! $stripped) {
+                break;
+            }
+        }
+
+        return ltrim($path, '/');
     }
 
     /**

@@ -68,7 +68,7 @@
                 @if($supportUrl !== '')
                     <div class="min-w-0 lg:col-span-5 xl:col-span-5 lg:pl-2 xl:pl-4">
                         <figure class="relative mx-auto max-w-md overflow-hidden rounded-[1.35rem] border border-white/10 shadow-[0_32px_80px_-24px_rgba(0,0,0,0.8)] ring-1 ring-inset ring-white/[0.05] sm:rounded-[1.75rem] lg:mx-0 lg:max-w-none">
-                            <img src="{{ e($supportUrl) }}" alt="{{ e($supportAlt) }}" class="aspect-[4/5] w-full object-cover object-[center_35%] transition-transform duration-[1.5s] hover:scale-105 sm:aspect-[3/4] lg:aspect-[4/5]" loading="lazy" decoding="async" width="640" height="800">
+                            <img src="{{ e($supportUrl) }}" alt="{{ e($supportAlt) }}" class="aspect-[4/5] w-full object-cover object-[center_35%] transition-transform duration-[1.5s] hover:scale-105 sm:aspect-[3/4] lg:aspect-[4/5]" loading="lazy" decoding="async" width="640" height="800" onerror="var g=this.closest('figure')?.parentElement;if(g)g.remove()">
                             <div class="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#050608]/80 via-transparent to-transparent"></div>
                         </figure>
                     </div>

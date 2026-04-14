@@ -38,7 +38,7 @@
                 @else
                     @if($data !== [])
                         @if(! empty($data['content']))
-                            <x-tenant.rich-prose variant="default" :content="$data['content']" />
+                            <x-tenant.rich-prose variant="default" :content="$data['content']" :demote-content-h1="true" />
                         @elseif(! empty($data['heading']))
                             <div class="prose prose-invert max-w-none text-sm text-silver prose-headings:text-white prose-p:leading-relaxed sm:text-base">
                                 <h2>{{ $data['heading'] }}</h2>

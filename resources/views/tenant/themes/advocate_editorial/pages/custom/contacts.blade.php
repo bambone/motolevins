@@ -12,7 +12,7 @@
     $main = $sections->firstWhere('section_key', 'main');
     $mainData = $main && is_array($main->data_json) ? $main->data_json : [];
     $introRaw = $mainData['content'] ?? '';
-    $introHtml = $introRaw !== '' ? PageRichContent::toHtml($introRaw) : null;
+    $introHtml = $introRaw !== '' ? PageRichContent::demoteInlineH1ToH2(PageRichContent::toHtml($introRaw)) : null;
 
     $contactsSection = $sections->firstWhere('section_key', 'contacts_block');
     $contactsData = ($contactsSection && is_array($contactsSection->data_json)) ? $contactsSection->data_json : [];
@@ -20,7 +20,7 @@
 
     $rightSection = $sections->firstWhere('section_key', 'contact_core_right');
     $rightRaw = $rightSection && is_array($rightSection->data_json) ? ($rightSection->data_json['content'] ?? '') : '';
-    $rightHtml = $rightRaw !== '' ? PageRichContent::toHtml($rightRaw) : '';
+    $rightHtml = $rightRaw !== '' ? PageRichContent::demoteInlineH1ToH2(PageRichContent::toHtml($rightRaw)) : '';
 
     $c = $contacts ?? [];
     if (! is_array($c)) {

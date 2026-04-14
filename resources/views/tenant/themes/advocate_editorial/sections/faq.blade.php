@@ -10,15 +10,18 @@
             ->map(fn ($faq) => ['question' => $faq->question, 'answer' => $faq->answer])
             ->all();
     }
+    $faqIdPrefix = (isset($section) && $section instanceof \App\Models\PageSection && (int) $section->id > 0)
+        ? 'expert-faq-ps-'.(int) $section->id
+        : 'expert-faq-'.substr(hash('sha256', json_encode($items, JSON_UNESCAPED_UNICODE)."\n".($h ?? '')), 0, 12);
 @endphp
 @if(count($items) > 0)
-<section class="expert-faq-mega relative mb-14 min-w-0 sm:mb-20 lg:mb-28">
+<section class="expert-faq-mega relative mb-14 min-w-0 sm:mb-20 lg:mb-28" data-expert-faq-scope>
     @if(filled($h))
         <h2 class="expert-section-title mb-8 max-w-4xl text-balance text-[clamp(1.65rem,4vw,3rem)] font-bold leading-[1.12] tracking-tight text-white/95 sm:mb-10 sm:leading-[1.1] lg:mb-12 lg:w-2/3">{{ $h }}</h2>
     @endif
     <dl class="expert-faq-list mx-auto min-w-0 max-w-5xl space-y-2 sm:space-y-4 lg:space-y-5 xl:max-w-6xl">
         @foreach($items as $i => $item)
-            @php $fid = 'expert-faq-'.$i; @endphp
+            @php $fid = $faqIdPrefix.'-'.$i; @endphp
             <div class="expert-faq-item overflow-hidden rounded-[1.15rem] border border-white/[0.05] bg-white/[0.015] backdrop-blur-sm transition-all duration-300 hover:border-white/[0.1] hover:bg-white/[0.03] sm:rounded-[1.5rem]">
                 <dt>
                     <button type="button" class="group flex w-full min-w-0 min-h-[3.25rem] items-center justify-between gap-3 px-4 py-3.5 text-left sm:min-h-0 sm:gap-5 sm:px-8 sm:py-6" aria-expanded="false" aria-controls="{{ $fid }}" data-expert-faq-toggle>
@@ -44,17 +47,19 @@
             document.addEventListener('click', function (e) {
                 var btn = e.target.closest('[data-expert-faq-toggle]');
                 if (!btn) return;
+                var scope = btn.closest('[data-expert-faq-scope]');
+                if (!scope) return;
                 var dd = btn.getAttribute('aria-controls');
                 if (!dd) return;
                 var panel = document.getElementById(dd);
-                if (!panel) return;
+                if (!panel || !scope.contains(panel)) return;
                 var row = btn.closest('.expert-faq-item');
                 var chev = row ? row.querySelector('.expert-faq-chevron') : null;
                 var open = !panel.classList.contains('hidden');
-                document.querySelectorAll('.expert-faq-panel').forEach(function (p) {
+                scope.querySelectorAll('.expert-faq-panel').forEach(function (p) {
                     if (p === panel) return;
                     p.classList.add('hidden');
-                    var b = document.querySelector('[aria-controls="' + p.id + '"]');
+                    var b = scope.querySelector('[aria-controls="' + p.id + '"]');
                     if (b) b.setAttribute('aria-expanded', 'false');
                     var r = b ? b.closest('.expert-faq-item') : null;
                     var prevChev = r ? r.querySelector('.expert-faq-chevron') : null;
@@ -65,12 +70,12 @@
                     panel.classList.add('hidden');
                     btn.setAttribute('aria-expanded', 'false');
                     var svg = chev ? chev.querySelector('svg path') : null;
-                    if (svg) svg.setAttribute('d', 'M12 6v12m-6-6h12'); // +
+                    if (svg) svg.setAttribute('d', 'M12 6v12m-6-6h12');
                 } else {
                     panel.classList.remove('hidden');
                     btn.setAttribute('aria-expanded', 'true');
                     var svg = chev ? chev.querySelector('svg path') : null;
-                    if (svg) svg.setAttribute('d', 'M18 12H6'); // -
+                    if (svg) svg.setAttribute('d', 'M18 12H6');
                 }
             });
         })();

@@ -43,6 +43,11 @@ location /media/ {
 
 URL в приложении: `/media/tenants/{id}/public/...`.
 
+## GitHub Actions (`media_backfill` в `ci.yml`)
+
+- Переменная репозитория **`MEDIA_BACKFILL_AS_WWW_DATA`**: если не задана или пустая, backfill запускается **от SSH-пользователя** (без `sudo`). Значение **`1`** — выполнять `sudo -n -u www-data` (нужен passwordless sudo для этого пользователя на сервере).
+- Убедитесь, что SSH-пользователь может писать в `MEDIA_LOCAL_ROOT` и читать/писать каталог приложения (или оставьте `1` и настройте sudoers).
+
 ## Rollout
 
 1. Подготовить каталог зеркала и `MEDIA_LOCAL_ROOT`.

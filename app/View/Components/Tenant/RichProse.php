@@ -14,11 +14,14 @@ final class RichProse extends Component
     public function __construct(
         public mixed $content = null,
         public string $variant = 'policy',
+        public bool $demoteContentH1 = false,
     ) {}
 
     public function html(): string
     {
-        return PageRichContent::toHtml($this->content);
+        $html = PageRichContent::toHtml($this->content);
+
+        return $this->demoteContentH1 ? PageRichContent::demoteInlineH1ToH2($html) : $html;
     }
 
     public function proseClass(): string

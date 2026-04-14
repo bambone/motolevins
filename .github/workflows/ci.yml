@@ -405,6 +405,8 @@ jobs:
 
   # Докачка в локальное зеркало (MEDIA_LOCAL_ROOT) объектов из R2, которых нет на диске.
   # Не создаёт файлы «из воздуха» — только то, что уже есть в бакете. См. tenant-media:backfill-from-r2.
+  # По умолчанию artisan запускается от SSH-пользователя (без sudo). Vars MEDIA_BACKFILL_AS_WWW_DATA=1
+  # только если на сервере настроен passwordless sudo для «sudo -u www-data» у этого пользователя.
   media_backfill:
     name: media-backfill-local-mirror
     needs: deploy
@@ -437,8 +439,9 @@ jobs:
           REMOTE="${SSH_USER}@${SSH_HOST}"
           APP_DIR="${DEPLOY_PATH}"
           MEDIA_ROOT="${MEDIA_LOCAL_ROOT:-/srv/rentbase-media}"
+          MEDIA_BACKFILL_AS_WWW_DATA="${MEDIA_BACKFILL_AS_WWW_DATA:-0}"
 
-          ssh -p "$SSH_PORT" "$REMOTE" "APP_DIR='${APP_DIR}' MEDIA_ROOT='${MEDIA_ROOT}' MEDIA_BACKFILL_AS_WWW_DATA='${MEDIA_BACKFILL_AS_WWW_DATA:-1}' sh -se" <<'EOF'
+          ssh -p "$SSH_PORT" "$REMOTE" "APP_DIR='${APP_DIR}' MEDIA_ROOT='${MEDIA_ROOT}' MEDIA_BACKFILL_AS_WWW_DATA='${MEDIA_BACKFILL_AS_WWW_DATA}' sh -se" <<'EOF'
           set -eu
           (set -o pipefail) 2>/dev/null && set -o pipefail || true
 
@@ -456,7 +459,7 @@ jobs:
           mkdir -p "$(dirname "$LOG")"
 
           run_backfill () {
-            if [ "${MEDIA_BACKFILL_AS_WWW_DATA:-1}" != "0" ]; then
+            if [ "${MEDIA_BACKFILL_AS_WWW_DATA:-0}" != "0" ]; then
               sudo -n -u www-data sh -lc "
                 set -e
                 cd '$APP_DIR'

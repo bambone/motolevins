@@ -10,8 +10,17 @@
             $headerBrandTitle = 'Марат Афлятунов';
         }
     }
-    /** advocate_editorial: длинные ФИО + полное меню + телефон — только с lg, иначе бургер (см. tenant-advocate-editorial.css). */
-    $expertDesktopNavMinPx = $isAdvocateEditorial ? 1024 : 768;
+    /** advocate_editorial: длинные ФИО + полное меню + телефон — с xl (1280px), иначе бургер; при переполнении Alpine включает бургер (см. tenantHeader). */
+    $expertDesktopNavMinPx = $isAdvocateEditorial ? 1280 : 768;
+    $expertHeaderShellHeight = $isAdvocateEditorial
+        ? 'min-h-[3.75rem] md:min-h-[5rem] lg:min-h-[5.5rem]'
+        : ($isExpertStyleNav ? 'h-[3.75rem] md:h-[5rem] lg:h-[5.5rem]' : 'h-[4.5rem] md:h-[5rem] lg:h-[5.5rem]');
+    $expertHeaderRowHeight = $isAdvocateEditorial
+        ? 'relative flex w-full shrink-0 items-center py-2 md:py-2.5 lg:py-3'
+        : 'relative flex h-full w-full shrink-0 items-center';
+    $expertHeaderChromeRow = $isAdvocateEditorial
+        ? 'relative z-10 flex w-full min-w-0 items-center'
+        : 'relative z-10 flex h-full w-full min-w-0 items-center';
     /** Scroll / overlay surfaces: opacity-only crossfade (see .tenant-header in app.css). */
     $headerSurfaceRest = $isAdvocateEditorial
         ? 'bg-gradient-to-b from-[#fdfcfa]/92 via-[#fdfcfa]/55 to-transparent'
@@ -24,12 +33,13 @@
 {{-- fixed: full-bleed hero under bar; flicker fix = opacity-only surfaces + 1px divider layer (no border-width toggle). --}}
 <header x-data="tenantHeader()"
         data-nav-desktop-min="{{ $expertDesktopNavMinPx }}"
+        data-advocate-nav-overflow="{{ $isAdvocateEditorial ? '1' : '0' }}"
         x-init="init()"
         @keydown.escape.window="mobileNavOpen = false"
         @hero-video-playing.window="videoPlaying = true"
         @hero-video-stopped.window="videoPlaying = false"
-        class="tenant-header fixed top-0 left-0 right-0 z-50 flex flex-col {{ $isExpertStyleNav ? 'h-[3.75rem]' : 'h-[4.5rem]' }} md:h-[5rem] lg:h-[5.5rem]">
-    <div class="relative flex h-full w-full shrink-0 items-center">
+        class="tenant-header fixed top-0 left-0 right-0 z-50 flex flex-col {{ $expertHeaderShellHeight }}">
+    <div class="{{ $expertHeaderRowHeight }}">
         {{-- Same backdrop-blur on both fills: avoids Safari/Retina hairline when blur toggles with opacity crossfade. --}}
         <div class="tenant-header__fill pointer-events-none absolute inset-0 z-0 transition-opacity duration-300 ease-out will-change-[opacity] backdrop-blur-xl {{ $headerSurfaceRest }}"
              aria-hidden="true"
@@ -41,11 +51,11 @@
              aria-hidden="true"
              :class="surfaceScrolled() ? 'opacity-100' : 'opacity-0'"></div>
 
-        <div class="relative z-10 flex h-full w-full min-w-0 items-center">
+        <div class="{{ $expertHeaderChromeRow }}">
         @if($isExpertStyleNav)
         {{-- Три зоны: бренд | навигация | телефон; увеличенный отступ, убран конфликт --}}
-        <div class="expert-header-bar mx-auto flex h-full w-full max-w-[100rem] items-center justify-between gap-3 px-4 md:gap-4 md:px-8 lg:px-12">
-            <a href="{{ route('home') }}" class="expert-header-bar__brand group relative flex min-w-0 {{ $isAdvocateEditorial ? '' : 'max-w-[65vw]' }} items-center gap-2.5 md:gap-3">
+        <div x-ref="expertHeaderBar" class="expert-header-bar mx-auto flex w-full max-w-[100rem] items-center justify-between gap-3 px-4 md:gap-4 md:px-8 lg:px-12 {{ $isAdvocateEditorial ? 'min-h-0 min-w-0 xl:gap-5' : 'h-full' }}">
+            <a href="{{ route('home') }}" class="expert-header-bar__brand group relative z-20 flex min-w-0 {{ $isAdvocateEditorial ? 'rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moto-amber' : 'max-w-[65vw]' }} items-center gap-2.5 md:gap-3">
                 @if(($branding['logo'] ?? null))
                     <img src="{{ $branding['logo'] }}" alt="{{ $headerBrandTitle }}"
                          width="96" height="96"
@@ -58,24 +68,45 @@
                 <span class="min-w-0 truncate text-[15px] font-bold tracking-wide md:text-[17px] lg:text-[19px] {{ $isAdvocateEditorial ? 'text-stone-900' : 'text-white/95' }}">{{ $headerBrandTitle }}</span>
             </a>
 
-            <nav class="expert-header-bar__nav hidden flex-1 min-w-0 items-center justify-center gap-6 text-[14px] font-semibold tracking-wide {{ $isAdvocateEditorial ? 'lg:flex' : 'md:flex' }} lg:gap-10 lg:text-[15px]" aria-label="Основное меню">
-                <a href="{{ route('home') }}" class="shrink-0 transition-colors hover:text-moto-amber {{ $isAdvocateEditorial ? 'text-stone-800' : 'text-white/95' }}">Главная</a>
+            @if($isAdvocateEditorial)
+            <nav class="expert-header-bar__nav relative z-20 flex-1 min-w-0 items-center justify-center gap-x-3 gap-y-1 text-[14px] font-semibold tracking-wide xl:flex-wrap xl:gap-x-5 xl:gap-y-1.5 xl:text-[15px]"
+                 :class="advocateNavInline() ? 'hidden xl:flex' : 'hidden'"
+                 aria-label="Основное меню">
+                <a href="{{ route('home') }}" class="shrink-0 rounded-sm px-0.5 py-1 transition-colors hover:text-moto-amber text-stone-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moto-amber">Главная</a>
                 @foreach($tenantMainMenuPages ?? [] as $navItem)
-                    <a href="{{ $navItem['url'] }}" class="shrink-0 transition-colors {{ $isAdvocateEditorial ? 'text-stone-600 hover:text-stone-900' : 'text-silver/80 hover:text-white' }}">{{ $navItem['label'] }}</a>
+                    <a href="{{ $navItem['url'] }}" class="shrink-0 rounded-sm px-0.5 py-1 transition-colors text-stone-600 hover:text-stone-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moto-amber">{{ $navItem['label'] }}</a>
                 @endforeach
             </nav>
+            @else
+            <nav class="expert-header-bar__nav relative z-20 hidden flex-1 min-w-0 items-center justify-center gap-6 text-[14px] font-semibold tracking-wide md:flex lg:gap-10 lg:text-[15px]" aria-label="Основное меню">
+                <a href="{{ route('home') }}" class="shrink-0 rounded-sm px-0.5 py-1 transition-colors hover:text-moto-amber text-white/95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moto-amber">Главная</a>
+                @foreach($tenantMainMenuPages ?? [] as $navItem)
+                    <a href="{{ $navItem['url'] }}" class="shrink-0 rounded-sm px-0.5 py-1 transition-colors text-silver/80 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moto-amber">{{ $navItem['label'] }}</a>
+                @endforeach
+            </nav>
+            @endif
 
-            <div class="expert-header-bar__actions flex shrink-0 items-center gap-4">
+            <div class="expert-header-bar__actions relative z-20 flex shrink-0 items-center gap-4">
                 @if($contacts['phone'] ?? null)
                     @php $telDigits = preg_replace('/\D/', '', $contacts['phone']); @endphp
                     <a href="tel:{{ $telDigits }}"
-                       class="hidden whitespace-nowrap text-[15px] font-semibold tracking-wide transition-colors hover:text-moto-amber {{ $isAdvocateEditorial ? 'lg:block text-stone-800' : 'md:block text-white/90' }}"
+                       @if($isAdvocateEditorial)
+                       class="relative z-20 whitespace-nowrap rounded-sm text-[15px] font-semibold tracking-wide transition-colors hover:text-moto-amber text-stone-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moto-amber"
+                       :class="advocateNavInline() ? 'hidden xl:block' : 'hidden'"
+                       @else
+                       class="hidden whitespace-nowrap text-[15px] font-semibold tracking-wide transition-colors hover:text-moto-amber md:block text-white/90"
+                       @endif
                        aria-label="Позвонить: {{ $contacts['phone'] }}">
                         {{ $contacts['phone'] }}
                     </a>
                 @endif
                 <button type="button"
-                        class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-colors {{ $isAdvocateEditorial ? 'lg:hidden text-stone-800 hover:bg-stone-900/[0.06]' : 'md:hidden text-white/90 hover:bg-white/[0.05]' }}"
+                        @if($isAdvocateEditorial)
+                        class="relative z-20 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-colors text-stone-800 hover:bg-stone-900/[0.06] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moto-amber"
+                        :class="advocateNavInline() ? 'xl:hidden' : 'xl:inline-flex'"
+                        @else
+                        class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-colors md:hidden text-white/90 hover:bg-white/[0.05]"
+                        @endif
                         @click.stop="mobileNavOpen = !mobileNavOpen"
                         :aria-expanded="mobileNavOpen"
                         aria-controls="tenant-mobile-nav"
@@ -148,7 +179,7 @@
              x-transition:leave="transition-opacity ease-in duration-150"
              x-transition:leave-start="opacity-100"
              x-transition:leave-end="opacity-0"
-             class="tenant-mobile-nav-panel absolute inset-x-0 top-full z-[45] -mt-px overflow-y-auto border-b px-3 py-3 shadow-lg {{ $isAdvocateEditorial ? 'lg:hidden' : 'md:hidden' }} {{ $isAdvocateEditorial ? 'border-stone-200 bg-[#fbf9f6]' : 'border-white/[0.08] bg-[#080b10]' }} {{ $isExpertStyleNav ? 'max-h-[min(72vh,calc(100dvh-3.75rem))]' : 'max-h-[min(72vh,calc(100dvh-4.5rem))]' }}"
+             class="tenant-mobile-nav-panel absolute inset-x-0 top-full z-[45] -mt-px overflow-y-auto border-b px-3 py-3 shadow-lg {{ $isAdvocateEditorial ? '' : 'md:hidden' }} {{ $isAdvocateEditorial ? 'border-stone-200 bg-[#fbf9f6]' : 'border-white/[0.08] bg-[#080b10]' }} {{ $isExpertStyleNav ? 'max-h-[min(72vh,calc(100dvh-3.75rem))]' : 'max-h-[min(72vh,calc(100dvh-4.5rem))]' }}"
              role="navigation"
              aria-label="Мобильное меню">
             <div class="flex flex-col gap-1">
@@ -187,8 +218,57 @@
             mobileNavOpen: false,
             compact: false,
             videoPlaying: false,
+            desktopMqMatches: false,
+            advocateNavOverflow: false,
+            advocateNavOverflowWidth: 0,
+            advocateNavCheck: false,
             surfaceScrolled() {
                 return this.compact || this.videoPlaying || this.mobileNavOpen;
+            },
+            advocateNavInline() {
+                return this.desktopMqMatches && ! this.advocateNavOverflow;
+            },
+            scheduleAdvocateNavFit() {
+                if (! this.advocateNavCheck) {
+                    return;
+                }
+                requestAnimationFrame(() => this.checkAdvocateNavFit());
+            },
+            checkAdvocateNavFit() {
+                if (! this.advocateNavCheck) {
+                    return;
+                }
+                if (! this.desktopMqMatches) {
+                    this.advocateNavOverflow = false;
+
+                    return;
+                }
+                if (this.advocateNavOverflow) {
+                    if (window.innerWidth > this.advocateNavOverflowWidth + 96) {
+                        this.advocateNavOverflow = false;
+                    } else {
+                        return;
+                    }
+                }
+                const bar = this.$refs.expertHeaderBar;
+                if (! bar) {
+                    return;
+                }
+                const brand = bar.querySelector('.expert-header-bar__brand');
+                const nav = bar.querySelector('.expert-header-bar__nav');
+                const actions = bar.querySelector('.expert-header-bar__actions');
+                if (! brand || ! nav || ! actions) {
+                    return;
+                }
+                const br = brand.getBoundingClientRect();
+                const nr = nav.getBoundingClientRect();
+                const ar = actions.getBoundingClientRect();
+                const overlap = nr.left < br.right - 8 || nr.right > ar.left + 8;
+                if (overlap) {
+                    this.advocateNavOverflow = true;
+                    this.advocateNavOverflowWidth = window.innerWidth;
+                    this.mobileNavOpen = false;
+                }
             },
             init() {
                 const update = () => {
@@ -200,11 +280,27 @@
                     document.body.classList.toggle('overflow-hidden', open);
                 });
                 const navMin = parseInt(this.$el.dataset.navDesktopMin || '768', 10) || 768;
-                window.matchMedia(`(min-width: ${navMin}px)`).addEventListener('change', (e) => {
+                this.advocateNavCheck = this.$el.dataset.advocateNavOverflow === '1';
+                const mq = window.matchMedia(`(min-width: ${navMin}px)`);
+                this.desktopMqMatches = mq.matches;
+                mq.addEventListener('change', (e) => {
+                    this.desktopMqMatches = e.matches;
                     if (e.matches) {
                         this.mobileNavOpen = false;
                     }
+                    this.scheduleAdvocateNavFit();
                 });
+                if (this.advocateNavCheck) {
+                    const ro = new ResizeObserver(() => this.scheduleAdvocateNavFit());
+                    if (this.$refs.expertHeaderBar) {
+                        ro.observe(this.$refs.expertHeaderBar);
+                    }
+                    window.addEventListener('resize', () => this.scheduleAdvocateNavFit(), { passive: true });
+                    this.$nextTick(() => {
+                        this.scheduleAdvocateNavFit();
+                        requestAnimationFrame(() => this.scheduleAdvocateNavFit());
+                    });
+                }
             },
         }));
     });

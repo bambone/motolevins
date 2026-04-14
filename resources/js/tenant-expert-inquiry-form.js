@@ -9,8 +9,107 @@ import {
     stripToAsciiContactTyping,
 } from './shared/visitorContactNormalize.js';
 
+const EXPERT_PROGRAM_PREFILL_SLUG_KEY = 'rentbase:expert-inquiry-program-slug';
+const EXPERT_PROGRAM_PREFILL_TITLE_KEY = 'rentbase:expert-inquiry-program-title';
+
 function getStickyOffset() {
     return 72;
+}
+
+/**
+ * Подстановка программы с карточки «Записаться» (select + текст цели), в т.ч. после ленивого монтирования формы.
+ */
+function applyExpertProgramPrefill(form, slug, title) {
+    if (!form) {
+        return;
+    }
+    const s = String(slug ?? '').trim();
+    const t = String(title ?? '').trim();
+    if (!s && !t) {
+        return;
+    }
+    const sel = form.querySelector('#expert-program');
+    if (sel && sel.tagName === 'SELECT' && s) {
+        const match = Array.from(sel.options).some((o) => o.value === s);
+        if (match) {
+            sel.value = s;
+            sel.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+    }
+    const goal = form.querySelector('[name="goal_text"]');
+    if (goal && t && goal.value.trim() === '') {
+        goal.value = `Запись на программу: «${t}»`;
+    }
+}
+
+function tryApplyExpertProgramPrefillFromStorage(form) {
+    if (!form) {
+        return;
+    }
+    let slug = '';
+    let title = '';
+    try {
+        slug = (sessionStorage.getItem(EXPERT_PROGRAM_PREFILL_SLUG_KEY) || '').trim();
+        title = (sessionStorage.getItem(EXPERT_PROGRAM_PREFILL_TITLE_KEY) || '').trim();
+    } catch {
+        return;
+    }
+    if (!slug && !title) {
+        return;
+    }
+    try {
+        sessionStorage.removeItem(EXPERT_PROGRAM_PREFILL_SLUG_KEY);
+        sessionStorage.removeItem(EXPERT_PROGRAM_PREFILL_TITLE_KEY);
+    } catch {
+        /* ignore */
+    }
+    applyExpertProgramPrefill(form, slug, title);
+}
+
+function bindExpertProgramCardPrefill() {
+    if (document.documentElement.dataset.rbExpertProgramPrefillBound === '1') {
+        return;
+    }
+    document.documentElement.dataset.rbExpertProgramPrefillBound = '1';
+    document.addEventListener(
+        'click',
+        (e) => {
+            const t = e.target;
+            if (!t || typeof t.closest !== 'function') {
+                return;
+            }
+            const a = t.closest('a[data-expert-prefill-program], a[data-expert-prefill-program-title]');
+            if (!a) {
+                return;
+            }
+            const slug = (a.getAttribute('data-expert-prefill-program') || '').trim();
+            const title = (a.getAttribute('data-expert-prefill-program-title') || '').trim();
+            if (!slug && !title) {
+                return;
+            }
+            try {
+                if (slug) {
+                    sessionStorage.setItem(EXPERT_PROGRAM_PREFILL_SLUG_KEY, slug);
+                } else {
+                    sessionStorage.removeItem(EXPERT_PROGRAM_PREFILL_SLUG_KEY);
+                }
+                if (title) {
+                    sessionStorage.setItem(EXPERT_PROGRAM_PREFILL_TITLE_KEY, title);
+                } else {
+                    sessionStorage.removeItem(EXPERT_PROGRAM_PREFILL_TITLE_KEY);
+                }
+            } catch {
+                /* ignore */
+            }
+            queueMicrotask(() => {
+                const form = document.getElementById('expert-inquiry-form');
+                if (form && form.dataset.expertInquiryBound === '1') {
+                    tryApplyExpertProgramPrefillFromStorage(form);
+                }
+            });
+        },
+        true,
+    );
 }
 
 function expertErrorKeyPriority(keys) {
@@ -37,11 +136,47 @@ function expertErrorKeyPriority(keys) {
     return keys[0] ?? null;
 }
 
+function appendAriaDescribedBy(el, id) {
+    if (!el || !id) {
+        return;
+    }
+    const cur = (el.getAttribute('aria-describedby') || '')
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean);
+    if (!cur.includes(id)) {
+        cur.push(id);
+    }
+    el.setAttribute('aria-describedby', cur.join(' '));
+}
+
+function removeAriaDescribedById(el, id) {
+    if (!el || !id) {
+        return;
+    }
+    const cur = (el.getAttribute('aria-describedby') || '')
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean);
+    const next = cur.filter((x) => x !== id);
+    if (next.length) {
+        el.setAttribute('aria-describedby', next.join(' '));
+    } else {
+        el.removeAttribute('aria-describedby');
+    }
+}
+
 function clearInlineErrors(form) {
     form.querySelectorAll('[data-rb-public-field]').forEach((wrap) => {
+        const fieldName = wrap.getAttribute('data-rb-public-field') || '';
+        const errId = fieldName ? `rb-inline-err-${fieldName}` : '';
         wrap.querySelectorAll('.expert-field-error').forEach((n) => n.remove());
         wrap.querySelectorAll('.expert-form-input, input, textarea, select').forEach((el) => {
             el.classList.remove('expert-form-input--error');
+            el.removeAttribute('aria-invalid');
+            if (errId) {
+                removeAriaDescribedById(el, errId);
+            }
         });
         wrap.classList.remove('expert-public-field-wrap--error');
     });
@@ -53,12 +188,17 @@ function setFieldError(form, fieldName, message) {
         return;
     }
     wrap.classList.add('expert-public-field-wrap--error');
-    const control = wrap.querySelector('input, textarea, select');
-    if (control && control.type !== 'radio' && control.type !== 'hidden') {
+    const errId = `rb-inline-err-${fieldName}`;
+    const control = wrap.querySelector('input:not([type="hidden"]):not([type="radio"]), textarea, select');
+    if (control && control.type !== 'radio') {
         control.classList.add('expert-form-input--error');
+        control.setAttribute('aria-invalid', 'true');
+        appendAriaDescribedBy(control, errId);
     }
     const p = document.createElement('p');
     p.className = 'expert-field-error mt-1.5 text-[13px] leading-snug text-red-400/95';
+    p.id = errId;
+    p.setAttribute('role', 'alert');
     p.textContent = message;
     wrap.appendChild(p);
 }
@@ -503,6 +643,18 @@ function validateClientSide(form, meta) {
             if (fname) {
                 flashPublicFieldWrap(form, fname, { getStickyOffset });
             }
+            const focusEl = firstBad.querySelector(
+                'input:not([type="hidden"]):not([type="radio"]), textarea, select',
+            );
+            if (focusEl && typeof focusEl.focus === 'function') {
+                requestAnimationFrame(() => {
+                    try {
+                        focusEl.focus({ preventScroll: true });
+                    } catch {
+                        focusEl.focus();
+                    }
+                });
+            }
         }
     }
 
@@ -529,6 +681,17 @@ function applyServerErrors(form, errors) {
         requestAnimationFrame(() => {
             requestAnimationFrame(() => {
                 flashPublicFieldWrap(form, first, { getStickyOffset });
+                const wrap = form.querySelector(`[data-rb-public-field="${first}"]`);
+                const focusEl = wrap?.querySelector(
+                    'input:not([type="hidden"]):not([type="radio"]), textarea, select',
+                );
+                if (focusEl && typeof focusEl.focus === 'function') {
+                    try {
+                        focusEl.focus({ preventScroll: true });
+                    } catch {
+                        focusEl.focus();
+                    }
+                }
             });
         });
     }
@@ -640,7 +803,11 @@ function bootExpertInquiryForm() {
             }
         }
     });
+
+    tryApplyExpertProgramPrefillFromStorage(form);
 }
+
+bindExpertProgramCardPrefill();
 
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', bootExpertInquiryForm);

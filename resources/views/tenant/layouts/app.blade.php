@@ -564,7 +564,8 @@
     'antialiased premium-bg overflow-x-clip pb-32 sm:pb-0',
     'text-silver' => ! $__tenantAdvocateEditorial,
     'text-stone-800' => $__tenantAdvocateEditorial,
-    'expert-auto-theme' => $__tenantExpertAuto,
+    {{-- expert_auto + advocate_editorial: общие секции (program cards и др.) стилизованы под body.expert-auto-theme в tenant-expert-auto.css; светлый фон advocate задаётся более специфичным .advocate-editorial-theme.premium-bg ниже по каскаду. --}}
+    'expert-auto-theme' => $__tenantExpertFamilyBody,
     'advocate-editorial-theme' => $__tenantAdvocateEditorial,
     'selection:bg-moto-amber selection:text-[#0c0c0c]' => true,
 ])>
