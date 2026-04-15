@@ -4,6 +4,7 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Auth\AccessRoles;
+use App\Support\TenantPanelMembershipCache;
 use Database\Factories\UserFactory;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
@@ -45,7 +46,7 @@ class User extends Authenticatable implements FilamentUser
                 return false;
             }
 
-            $membership = $this->tenants()->where('tenant_id', $tenant->id)->first();
+            $membership = TenantPanelMembershipCache::membershipFor(request(), $this, $tenant);
             if ($membership === null || $membership->pivot->status !== 'active') {
                 return false;
             }

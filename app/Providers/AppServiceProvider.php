@@ -55,6 +55,7 @@ use App\Services\Tenancy\TenantMainMenuPages;
 use App\Services\Tenancy\TenantPagePrimaryHtmlSync;
 use App\Services\Tenancy\TenantViewResolver;
 use App\Tenant\Reviews\TenantReviewSubmitConfig;
+use App\Support\TenantPanelMembershipCache;
 use App\Tenant\StorageQuota\TenantMediaStorageQuotaObserver;
 use App\Terminology\TenantTerminologyService;
 use App\Themes\ThemeRegistry;
@@ -64,6 +65,7 @@ use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
@@ -270,7 +272,7 @@ class AppServiceProvider extends ServiceProvider
                 return null;
             }
 
-            $membership = $user->tenants()->where('tenant_id', $tenant->id)->first();
+            $membership = TenantPanelMembershipCache::membershipFor(request(), $user, $tenant);
             if ($membership === null || $membership->pivot->status !== 'active') {
                 return false;
             }
@@ -290,6 +292,14 @@ class AppServiceProvider extends ServiceProvider
             $attrKey = '_tenant_public_layout_vars';
             if ($request->attributes->has($attrKey)) {
                 $view->with($request->attributes->get($attrKey));
+
+                return;
+            }
+
+            if (self::shouldSkipTenantPublicLayoutBundle($request)) {
+                $bundle = self::tenantPublicLayoutPlaceholderBundle();
+                $request->attributes->set($attrKey, $bundle);
+                $view->with($bundle);
 
                 return;
             }
@@ -349,5 +359,68 @@ class AppServiceProvider extends ServiceProvider
             $request->attributes->set($attrKey, $bundle);
             $view->with($bundle);
         });
+    }
+
+    /**
+     * Кабинет Filament / Livewire: не собираем бандл публичного лейаута (меню сайта, футер, контакты, обзоры).
+     */
+    private static function shouldSkipTenantPublicLayoutBundle(Request $request): bool
+    {
+        $routeName = $request->route()?->getName();
+        if (is_string($routeName) && str_starts_with($routeName, 'filament.')) {
+            return true;
+        }
+
+        $host = strtolower($request->getHost());
+        $platform = strtolower(trim((string) config('app.platform_host', '')));
+        if ($platform !== '' && $host === $platform) {
+            return true;
+        }
+
+        $path = trim($request->path(), '/');
+        if ($path === 'admin' || str_starts_with($path, 'admin/')) {
+            return true;
+        }
+
+        if ($request->is('livewire/*')) {
+            $referer = $request->headers->get('referer');
+            if (is_string($referer) && preg_match('#/admin(?:/|$|\?)#', $referer) === 1) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private static function tenantPublicLayoutPlaceholderBundle(): array
+    {
+        return [
+            'contacts' => [
+                'phone' => '',
+                'phone_alt' => '',
+                'email' => '',
+                'whatsapp' => '',
+                'telegram' => '',
+                'vk_url' => '',
+            ],
+            'floating_messenger_buttons_enabled' => false,
+            'branding' => [
+                'logo' => '',
+                'primary_color' => '#f59e0b',
+                'favicon' => '',
+                'hero_image' => '',
+                'favicon_16' => '',
+                'favicon_32' => '',
+                'favicon_ico' => '',
+                'apple_touch_icon' => '',
+            ],
+            'site_name' => config('app.name'),
+            'tenantMainMenuPages' => collect(),
+            'tenantAdvocateFooter' => null,
+            'tenantReviewSubmitConfig' => null,
+        ];
     }
 }

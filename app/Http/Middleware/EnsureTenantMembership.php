@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Auth\AccessRoles;
+use App\Support\TenantPanelMembershipCache;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -23,7 +24,7 @@ class EnsureTenantMembership
             return $next($request);
         }
 
-        $membership = $user->tenants()->where('tenant_id', $tenant->id)->first();
+        $membership = TenantPanelMembershipCache::membershipFor($request, $user, $tenant);
 
         if ($membership === null) {
             abort(403, 'У вас нет доступа к этому клиенту.');
