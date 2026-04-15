@@ -20,8 +20,11 @@ use App\Support\Phone\IntlPhoneNormalizer;
 use App\Support\PhoneNormalizer;
 use Carbon\Carbon;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -33,6 +36,11 @@ use Illuminate\Validation\ValidationException;
 final class ManualLeadBookingService
 {
     public const REQUEST_TYPE_TENANT_OPERATOR = 'tenant_operator';
+
+    /**
+     * Окно защиты от случайного двойного submit (одинаковый payload, один оператор).
+     */
+    private const ACCIDENTAL_DUPLICATE_TTL_SECONDS = 12;
 
     public function __construct(
         private readonly CreateCrmRequestFromPublicForm $createCrmRequestFromPublicForm,
@@ -75,6 +83,27 @@ final class ManualLeadBookingService
                 Gate::authorize('create', Booking::class);
             }
 
+            $this->preventAccidentalDuplicateOperatorSubmission('manual_lead', [
+                'tenant_id' => $data->tenantId,
+                'name' => $data->name,
+                'phone' => $this->normalizedOperatorPhone($data->phone),
+                'email' => $this->optionalOperatorEmail($data->email),
+                'comment' => $data->comment,
+                'create_crm' => $data->createCrm,
+                'create_booking' => $data->createBooking,
+                'motorcycle_id' => $data->motorcycleId,
+                'rental_from' => $data->rentalDateFromYmd,
+                'rental_to' => $data->rentalDateToYmd,
+                'rental_unit_id' => $data->rentalUnitId,
+            ]);
+
+            Log::info('crm.manual.operator_lead_submit', [
+                'tenant_id' => $data->tenantId,
+                'user_id' => Auth::id(),
+                'create_crm' => $data->createCrm,
+                'create_booking' => $data->createBooking,
+            ]);
+
             $crm = null;
             if ($data->createCrm) {
                 $submission = $this->buildInboundSubmissionForManualLead($data);
@@ -113,6 +142,14 @@ final class ManualLeadBookingService
                     endDateYmd: (string) $data->rentalDateToYmd,
                 );
             }
+
+            Log::info('crm.manual.operator_lead_success', [
+                'tenant_id' => $data->tenantId,
+                'user_id' => Auth::id(),
+                'lead_id' => $lead->id,
+                'crm_request_id' => $crm?->id,
+                'booking_id' => $booking?->id,
+            ]);
 
             return new ManualOperatorResult(lead: $lead, crmRequest: $crm, booking: $booking);
         });
@@ -185,6 +222,29 @@ final class ManualLeadBookingService
 
             $this->applyContactAndRentalHintsToLead($lead, $data);
 
+            $this->preventAccidentalDuplicateOperatorSubmission('manual_booking', [
+                'tenant_id' => $data->tenantId,
+                'lead_id' => $lead->id,
+                'existing_lead_id' => $data->existingLeadId,
+                'create_lead' => $data->createLead,
+                'create_crm' => $data->createCrm,
+                'motorcycle_id' => $data->motorcycleId,
+                'rental_unit_id' => $data->rentalUnitId,
+                'start' => $data->startDateYmd,
+                'end' => $data->endDateYmd,
+                'name' => $data->name,
+                'phone' => $this->normalizedOperatorPhone($data->phone),
+            ]);
+
+            Log::info('crm.manual.operator_booking_submit', [
+                'tenant_id' => $data->tenantId,
+                'user_id' => Auth::id(),
+                'lead_id' => $lead->id,
+                'existing_lead_id' => $data->existingLeadId,
+                'create_lead' => $data->createLead,
+                'create_crm' => $data->createCrm,
+            ]);
+
             $booking = $this->insertBookingForLead(
                 tenantId: $data->tenantId,
                 lead: $lead,
@@ -194,8 +254,44 @@ final class ManualLeadBookingService
                 endDateYmd: $data->endDateYmd,
             );
 
+            Log::info('crm.manual.operator_booking_success', [
+                'tenant_id' => $data->tenantId,
+                'user_id' => Auth::id(),
+                'lead_id' => $lead->id,
+                'crm_request_id' => $crm?->id,
+                'booking_id' => $booking->id,
+            ]);
+
             return new ManualOperatorResult(lead: $lead, crmRequest: $crm, booking: $booking);
         });
+    }
+
+    /**
+     * Защита от двойного клика / повторной отправки с тем же содержимым в коротком окне (UI + Livewire).
+     *
+     * @param  array<string, mixed>  $fingerprint
+     */
+    private function preventAccidentalDuplicateOperatorSubmission(string $channel, array $fingerprint): void
+    {
+        $userId = Auth::id();
+        if ($userId === null) {
+            return;
+        }
+
+        try {
+            $encoded = json_encode($fingerprint, JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            $encoded = serialize($fingerprint);
+        }
+
+        $hash = hash('sha256', $encoded);
+        $key = sprintf('crm:manual_op:%s:user:%s:%s', $channel, $userId, $hash);
+
+        if (! Cache::add($key, microtime(true), self::ACCIDENTAL_DUPLICATE_TTL_SECONDS)) {
+            throw ValidationException::withMessages([
+                'name' => 'Запрос уже обрабатывается или только что был отправлен. Подождите несколько секунд и проверьте список — обращение могло уже появиться.',
+            ]);
+        }
     }
 
     private function assertTenantMatchesContext(int $tenantId): void

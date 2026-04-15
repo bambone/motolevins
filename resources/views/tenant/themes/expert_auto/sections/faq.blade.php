@@ -24,7 +24,7 @@
             @php $fid = $faqIdPrefix.'-'.$i; @endphp
             <div class="expert-faq-item overflow-hidden rounded-[1.15rem] border border-white/[0.05] bg-white/[0.015] backdrop-blur-sm transition-all duration-300 hover:border-white/[0.1] hover:bg-white/[0.03] sm:rounded-[1.5rem]">
                 <dt>
-                    <button type="button" class="group flex w-full min-w-0 min-h-[3.25rem] items-center justify-between gap-3 px-4 py-3.5 text-left sm:min-h-0 sm:gap-5 sm:px-8 sm:py-6" aria-expanded="false" aria-controls="{{ $fid }}" data-expert-faq-toggle>
+                    <button type="button" class="group flex w-full min-w-0 min-h-[3.25rem] items-center justify-between gap-3 px-4 py-3.5 text-left sm:min-h-0 sm:gap-5 sm:px-8 sm:py-6 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moto-amber" aria-expanded="false" aria-controls="{{ $fid }}" data-expert-faq-toggle>
                         <span class="min-w-0 flex-1 text-[1rem] font-bold leading-snug tracking-wide text-white/95 sm:text-[1.05rem] md:text-[1.15rem]">{{ $item['question'] ?? '' }}</span>
                         <span class="expert-faq-chevron relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-moto-amber/10 text-moto-amber ring-1 ring-inset ring-moto-amber/30 transition-transform duration-300 group-hover:bg-moto-amber/20 sm:h-10 sm:w-10" aria-hidden="true">
                             <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v12m-6-6h12" class="expert-faq-icon-line transition-transform duration-300"/></svg>

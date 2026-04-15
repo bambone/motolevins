@@ -25,6 +25,7 @@ final class CrmSharedInfolist
                 ])
                 ->columns(2),
             Section::make('Атрибуция')
+                ->description('Откуда пришла заявка: реклама, метки кампаний (UTM), переход с другого сайта.')
                 ->schema([
                     TextEntry::make('request_type')->label('Тип заявки'),
                     TextEntry::make('source')->label('Источник')->placeholder('—'),
@@ -33,18 +34,18 @@ final class CrmSharedInfolist
                     TextEntry::make('status')
                         ->label('Статус')
                         ->formatStateUsing(fn (?string $state): string => $state ? (CrmRequest::statusLabels()[$state] ?? $state) : '—'),
-                    TextEntry::make('utm_source')->label('utm_source')->placeholder('—'),
-                    TextEntry::make('utm_medium')->label('utm_medium')->placeholder('—'),
-                    TextEntry::make('utm_campaign')->label('utm_campaign')->placeholder('—'),
+                    TextEntry::make('utm_source')->label('UTM (источник)')->placeholder('—'),
+                    TextEntry::make('utm_medium')->label('UTM (канал / medium)')->placeholder('—'),
+                    TextEntry::make('utm_campaign')->label('UTM (кампания)')->placeholder('—'),
                     TextEntry::make('landing_page')->label('Страница')->columnSpanFull()->placeholder('—'),
-                    TextEntry::make('referrer')->label('Referrer')->columnSpanFull()->placeholder('—'),
-                    TextEntry::make('ip')->label('IP')->placeholder('—'),
+                    TextEntry::make('referrer')->label('Сайт-источник перехода')->columnSpanFull()->placeholder('—'),
+                    TextEntry::make('ip')->label('IP-адрес')->placeholder('—'),
                 ])
                 ->columns(2),
             Section::make('Технические данные')
                 ->schema([
                     TextEntry::make('payload_json')
-                        ->label('JSON')
+                        ->label('Доп. данные (JSON)')
                         ->columnSpanFull()
                         ->formatStateUsing(function ($state): string {
                             if ($state === null || $state === []) {

@@ -44,12 +44,36 @@
 @endpush
 @endif
 @else
+@php
+    /** Абсолютный URL без query; предпочтительный хост тенанта, не «текущий request» целиком. */
+    $seoFallbackCanonical = '';
+    if (tenant()) {
+        $seoFallbackCanonical = rtrim(app(\App\Services\Seo\TenantCanonicalPublicBaseUrl::class)->resolve(tenant()), '/');
+        $path = (string) request()->path();
+        $path = trim($path, '/');
+        $seoFallbackCanonical .= $path === '' ? '/' : '/'.$path;
+    } else {
+        $seoFallbackCanonical = rtrim((string) request()->url(), '/');
+    }
+    $seoFallbackDesc = trim((string) ($site_name ?? ''));
+    if ($seoFallbackDesc === '') {
+        $seoFallbackDesc = trim((string) $fallbackTitle);
+    }
+    if ($seoFallbackDesc !== '') {
+        $seoFallbackDesc .= ' — условия и актуальная информация на официальном сайте.';
+    } else {
+        $seoFallbackDesc = 'Актуальная информация на официальном сайте.';
+    }
+@endphp
 <title>{{ $fallbackTitle }}</title>
-<link rel="canonical" href="{{ url()->current() }}">
+<meta name="description" content="{{ \Illuminate\Support\Str::limit($seoFallbackDesc, 320, '') }}">
+<link rel="canonical" href="{{ $seoFallbackCanonical }}">
 <meta property="og:title" content="{{ $fallbackTitle }}">
+<meta property="og:description" content="{{ \Illuminate\Support\Str::limit($seoFallbackDesc, 300, '') }}">
 <meta property="og:site_name" content="{{ $fallbackTitle }}">
-<meta property="og:url" content="{{ url()->current() }}">
+<meta property="og:url" content="{{ $seoFallbackCanonical }}">
 <meta property="og:type" content="website">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="{{ $fallbackTitle }}">
+<meta name="twitter:description" content="{{ \Illuminate\Support\Str::limit($seoFallbackDesc, 200, '') }}">
 @endif

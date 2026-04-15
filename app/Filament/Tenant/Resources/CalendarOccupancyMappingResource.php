@@ -2,6 +2,8 @@
 
 namespace App\Filament\Tenant\Resources;
 
+use App\Filament\Shared\Lifecycle\AdminFilamentDelete;
+use App\Filament\Support\AdminEmptyState;
 use App\Filament\Tenant\Resources\CalendarOccupancyMappingResource\Pages;
 use App\Models\CalendarOccupancyMapping;
 use App\Models\CalendarSubscription;
@@ -12,11 +14,10 @@ use App\Scheduling\Enums\MatchMode;
 use App\Scheduling\Enums\OccupancyMappingType;
 use App\Scheduling\Enums\SchedulingScope;
 use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\CreateAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Toggle;
-use App\Filament\Tenant\Resources\Resource;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
@@ -65,22 +66,10 @@ class CalendarOccupancyMappingResource extends Resource
     {
         $tenantId = currentTenant()?->id;
 
-        $mapTypes = [];
-        foreach (OccupancyMappingType::cases() as $c) {
-            $mapTypes[$c->value] = $c->value;
-        }
-        $modes = [];
-        foreach (MatchMode::cases() as $c) {
-            $modes[$c->value] = $c->value;
-        }
-        $conf = [];
-        foreach (MatchConfidence::cases() as $c) {
-            $conf[$c->value] = $c->value;
-        }
-
         return $schema
             ->components([
-                Section::make('Маппинг')
+                Section::make('Сопоставление календаря с расписанием')
+                    ->description('Связывает события из подключённого календаря с объектом или ресурсом на сайте (занятость, бронирования).')
                     ->schema([
                         Select::make('calendar_subscription_id')
                             ->label('Календарь (подписка)')
@@ -94,9 +83,14 @@ class CalendarOccupancyMappingResource extends Resource
                                 ]))
                             ->required()
                             ->native(),
-                        Select::make('mapping_type')->label('Тип')->options($mapTypes)->required()->native(),
+                        Select::make('mapping_type')
+                            ->label('Тип связи')
+                            ->options(self::occupancyMappingTypeOptions())
+                            ->required()
+                            ->native(),
                         Select::make('scheduling_target_id')
-                            ->label('Target')
+                            ->label('Объект в расписании')
+                            ->helperText('Сущность, для которой учитывается занятость (например точка проката).')
                             ->options(fn () => SchedulingTarget::query()
                                 ->where('scheduling_scope', SchedulingScope::Tenant)
                                 ->where('tenant_id', $tenantId)
@@ -104,34 +98,109 @@ class CalendarOccupancyMappingResource extends Resource
                             ->native()
                             ->nullable(),
                         Select::make('scheduling_resource_id')
-                            ->label('Ресурс')
+                            ->label('Ресурс записи')
+                            ->helperText('Если занятость привязана к конкретному ресурсу (место/линия), а не только к объекту.')
                             ->options(fn () => SchedulingResource::query()
                                 ->where('scheduling_scope', SchedulingScope::Tenant)
                                 ->where('tenant_id', $tenantId)
                                 ->pluck('label', 'id'))
                             ->native()
                             ->nullable(),
-                        Select::make('match_mode')->label('Режим сопоставления')->options($modes)->required()->native(),
-                        Select::make('match_confidence')->label('Уверенность')->options($conf)->required()->native(),
+                        Select::make('match_mode')
+                            ->label('Как сопоставлять события')
+                            ->options(self::matchModeOptions())
+                            ->required()
+                            ->native(),
+                        Select::make('match_confidence')
+                            ->label('Порог уверенности')
+                            ->options(self::matchConfidenceOptions())
+                            ->required()
+                            ->native(),
                         Toggle::make('is_active')->label('Активно')->default(true),
                     ]),
             ]);
     }
 
+    /**
+     * @return array<string, string>
+     */
+    private static function occupancyMappingTypeOptions(): array
+    {
+        return [
+            OccupancyMappingType::CalendarToTarget->value => 'События календаря → объект в расписании',
+            OccupancyMappingType::CalendarToResource->value => 'События календаря → ресурс записи',
+            OccupancyMappingType::EventRuleToTarget->value => 'Правило события → объект в расписании',
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private static function matchModeOptions(): array
+    {
+        return [
+            MatchMode::EntireCalendar->value => 'Весь календарь целиком',
+            MatchMode::SummaryContains->value => 'По тексту события (вхождение)',
+            MatchMode::SummaryRegex->value => 'По тексту события (шаблон)',
+            MatchMode::LocationContains->value => 'По полю «место»',
+            MatchMode::ManualAssignment->value => 'Только вручную',
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private static function matchConfidenceOptions(): array
+    {
+        return [
+            MatchConfidence::Exact->value => 'Точное совпадение',
+            MatchConfidence::High->value => 'Высокая уверенность',
+            MatchConfidence::Medium->value => 'Средняя',
+            MatchConfidence::ManualReviewRequired->value => 'Нужна проверка менеджером',
+        ];
+    }
+
     public static function table(Table $table): Table
     {
-        return $table
-            ->columns([
-                TextColumn::make('calendarSubscription.title')->label('Календарь')->placeholder('—'),
-                TextColumn::make('mapping_type')->label('Тип'),
-                TextColumn::make('match_mode')->label('Режим'),
-            ])
-            ->actions([EditAction::make()])
-            ->bulkActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make(),
+        return AdminEmptyState::applyInitial(
+            $table
+                ->columns([
+                    TextColumn::make('calendarSubscription.title')->label('Календарь')->placeholder('—'),
+                    TextColumn::make('mapping_type')
+                        ->label('Тип связи')
+                        ->formatStateUsing(function (mixed $state): string {
+                            $key = $state instanceof OccupancyMappingType
+                                ? $state->value
+                                : (string) ($state ?? '');
+
+                            return $key !== ''
+                                ? (self::occupancyMappingTypeOptions()[$key] ?? $key)
+                                : '—';
+                        }),
+                    TextColumn::make('match_mode')
+                        ->label('Сопоставление')
+                        ->formatStateUsing(function (mixed $state): string {
+                            $key = $state instanceof MatchMode
+                                ? $state->value
+                                : (string) ($state ?? '');
+
+                            return $key !== ''
+                                ? (self::matchModeOptions()[$key] ?? $key)
+                                : '—';
+                        }),
+                ])
+                ->actions([EditAction::make()])
+                ->bulkActions([
+                    BulkActionGroup::make([
+                        AdminFilamentDelete::makeBulkDeleteAction(),
+                    ]),
                 ]),
-            ]);
+            'Сопоставлений пока нет',
+            'Свяжите события из подключённого календаря с объектом или ресурсом записи — так учитывается занятость на сайте.'
+                .AdminEmptyState::hintFiltersAndSearch(),
+            'heroicon-o-arrows-right-left',
+            [CreateAction::make()->label('Добавить сопоставление')],
+        );
     }
 
     public static function getPages(): array

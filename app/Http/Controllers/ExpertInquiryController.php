@@ -8,9 +8,12 @@ use App\Product\CRM\Actions\CreateCrmRequestFromPublicForm;
 use App\Product\CRM\DTO\PublicInboundContext;
 use App\Product\CRM\DTO\PublicInboundSubmission;
 use App\Tenant\Expert\ExpertInquiryIntentResolver;
+use App\Tenant\Expert\TenantEnrollmentCtaConfig;
 use App\Terminology\DomainTermKeys;
 use App\Terminology\TenantTerminologyService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\RateLimiter;
 
 final class ExpertInquiryController extends Controller
 {
@@ -22,6 +25,33 @@ final class ExpertInquiryController extends Controller
     ): JsonResponse {
         $tenant = currentTenant();
         abort_if($tenant === null, 404);
+
+        $honeypot = trim((string) $request->input('website', ''));
+        if ($honeypot !== '') {
+            Log::warning('expert_inquiry_honeypot_triggered', [
+                'tenant_id' => $tenant->id,
+                'ip' => $request->ip(),
+                'ua' => $request->userAgent(),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Спасибо! Заявка отправлена. Мы свяжемся с вами.',
+            ]);
+        }
+
+        $rateKey = 'expert-inquiry:'.$tenant->id.':'.($request->ip() ?? '0');
+        if (RateLimiter::tooManyAttempts($rateKey, 8)) {
+            Log::notice('expert_inquiry_rate_limited', [
+                'tenant_id' => $tenant->id,
+                'ip' => $request->ip(),
+            ]);
+
+            return response()->json([
+                'message' => 'Слишком много отправок. Подождите минуту и попробуйте снова.',
+            ], 429);
+        }
+        RateLimiter::hit($rateKey, 60);
 
         $validated = $request->validated();
 
@@ -60,15 +90,49 @@ final class ExpertInquiryController extends Controller
             }
         }
 
+        $sourceType = $validated['source_type'] ?? null;
+        $isProgramEnrollment = $sourceType === 'program_enrollment';
+        $isEnrollmentCta = $sourceType === 'enrollment_cta';
+        $isInboundEnrollment = $isProgramEnrollment || $isEnrollmentCta;
+
+        if ($isInboundEnrollment) {
+            $payloadJson['source_type'] = (string) $sourceType;
+            $spRaw = trim((string) ($validated['source_page'] ?? ''));
+            if ($spRaw !== '') {
+                $payloadJson['source_page'] = $spRaw;
+            }
+            $ctx = trim((string) ($validated['source_context'] ?? ''));
+            if ($ctx !== '') {
+                $payloadJson['source_context'] = $ctx;
+            }
+            if ($isProgramEnrollment) {
+                $pid = $validated['program_id'] ?? null;
+                if ($pid !== null && (int) $pid > 0) {
+                    $payloadJson['program_id'] = (int) $pid;
+                }
+            }
+        }
+
+        $inboundSource = match ($sourceType) {
+            'program_enrollment' => 'programs_page',
+            'enrollment_cta' => 'expert_enrollment',
+            default => 'expert_lead_form',
+        };
+
         $submission = new PublicInboundSubmission(
             requestType: 'expert_service_inquiry',
             name: $validated['name'],
             phone: $validated['phone'],
             email: null,
             message: $message,
-            source: 'expert_lead_form',
+            source: $inboundSource,
             channel: 'web',
             payloadJson: $payloadJson,
+            utmSource: $validated['utm_source'] ?? null,
+            utmMedium: $validated['utm_medium'] ?? null,
+            utmCampaign: $validated['utm_campaign'] ?? null,
+            utmContent: $validated['utm_content'] ?? null,
+            utmTerm: $validated['utm_term'] ?? null,
             landingPage: $validated['page_url'] ?? $request->header('referer'),
             referrer: $request->header('referer'),
             ip: $request->ip(),
@@ -85,9 +149,14 @@ final class ExpertInquiryController extends Controller
 
         $leadWord = app(TenantTerminologyService::class)->label($tenant, DomainTermKeys::LEAD);
 
+        $responseMessage = 'Спасибо! Заявка отправлена. Мы свяжемся с вами.';
+        if ($isInboundEnrollment) {
+            $responseMessage = TenantEnrollmentCtaConfig::forCurrent()?->modalSuccessMessage() ?? $responseMessage;
+        }
+
         return response()->json([
             'success' => true,
-            'message' => 'Спасибо! Заявка отправлена. Мы свяжемся с вами.',
+            'message' => $responseMessage,
             'lead_word' => $leadWord,
             'lead_id' => $lead->id,
             'crm_request_id' => $result->crmRequest->id,

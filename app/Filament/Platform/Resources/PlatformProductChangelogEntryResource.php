@@ -4,9 +4,9 @@ namespace App\Filament\Platform\Resources;
 
 use App\Filament\Platform\Resources\Concerns\GrantsPlatformPanelAccess;
 use App\Filament\Platform\Resources\PlatformProductChangelogEntryResource\Pages;
+use App\Filament\Shared\Lifecycle\AdminFilamentDelete;
 use App\Models\PlatformProductChangelogEntry;
 use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\MarkdownEditor;
@@ -163,7 +163,7 @@ class PlatformProductChangelogEntryResource extends Resource
             ->actions([EditAction::make()])
             ->bulkActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make(),
+                    AdminFilamentDelete::makeBulkDeleteAction(),
                 ]),
             ])
             ->defaultSort('entry_date', 'desc');

@@ -4,10 +4,10 @@ namespace App\Filament\Platform\Resources;
 
 use App\Filament\Platform\Resources\Concerns\GrantsPlatformPanelAccess;
 use App\Filament\Platform\Resources\PlatformSettingResource\Pages;
+use App\Filament\Shared\Lifecycle\AdminFilamentDelete;
 use App\Filament\Support\PlatformSettingRegistry;
 use App\Models\PlatformSetting;
 use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -149,7 +149,7 @@ class PlatformSettingResource extends Resource
             ->actions([EditAction::make()])
             ->bulkActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make()
+                    AdminFilamentDelete::makeBulkDeleteAction()
                         ->modalHeading('Удалить выбранные параметры?')
                         ->modalDescription('Приложение перестанет получать эти значения из настроек платформы. Убедитесь, что ключи не нужны интеграциям.'),
                 ]),

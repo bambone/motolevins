@@ -56,6 +56,16 @@ class PageSection extends Model
         return $this->belongsTo(Page::class);
     }
 
+    /**
+     * Суффикс для путей вида tenant.themes.*.sections.{section_type_key} (в т.ч. кастомные страницы).
+     */
+    public function getSectionTypeKeyAttribute(): string
+    {
+        $t = $this->section_type;
+
+        return is_string($t) ? $t : '';
+    }
+
     public static function sectionKeys(): array
     {
         return [

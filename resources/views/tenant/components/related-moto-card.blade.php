@@ -32,7 +32,7 @@
         <p class="mb-4 min-h-[1.25rem] line-clamp-1 text-sm leading-snug text-zinc-300">{{ $oneLine !== '' ? $oneLine : '—' }}</p>
         <p class="mb-4 text-lg font-extrabold tracking-tight text-white">
             <span class="text-moto-amber">{{ $priceDayFormatted }}</span>
-            <span class="text-sm font-semibold text-zinc-400">/ сутки</span>
+            <span class="text-sm font-semibold text-zinc-300">/ сутки</span>
         </p>
         <a href="{{ $detailUrl }}"
            class="tenant-btn-primary mt-auto w-full touch-manipulation">

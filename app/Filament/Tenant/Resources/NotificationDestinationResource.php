@@ -2,6 +2,7 @@
 
 namespace App\Filament\Tenant\Resources;
 
+use App\Filament\Shared\Lifecycle\AdminFilamentDelete;
 use App\Filament\Tenant\Resources\NotificationDestinationResource\Pages;
 use App\Models\NotificationDestination;
 use App\NotificationCenter\NotificationChannelType;
@@ -13,7 +14,6 @@ use Filament\Forms\Components\KeyValue;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
-use App\Filament\Tenant\Resources\Resource;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
@@ -126,7 +126,10 @@ class NotificationDestinationResource extends Resource
             ])
             ->actions([
                 EditAction::make(),
-                DeleteAction::make(),
+                AdminFilamentDelete::configureTableDeleteAction(
+                    DeleteAction::make(),
+                    ['entry' => 'filament.tenant.notification_destination.table'],
+                ),
             ])
             ->defaultSort('id', 'desc');
     }

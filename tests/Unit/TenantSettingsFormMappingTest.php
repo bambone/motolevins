@@ -33,6 +33,15 @@ class TenantSettingsFormMappingTest extends TestCase
             'contacts_telegram' => 'contacts.telegram',
             'contacts_address' => 'contacts.address',
             'contacts_hours' => 'contacts.hours',
+            'programs_cta_behavior' => 'programs.cta_behavior',
+            'programs_enrollment_page_slug' => 'programs.enrollment_page_slug',
+            'programs_modal_title' => 'programs.modal_title',
+            'programs_modal_success_message' => 'programs.modal_success_message',
+            'reviews_public_submit_enabled' => 'reviews.public_submit_enabled',
+            'reviews_moderation_enabled' => 'reviews.moderation_enabled',
+            'reviews_form_show_rating' => 'reviews.form_show_rating',
+            'reviews_success_message_pending' => 'reviews.success_message_pending',
+            'reviews_success_message_published' => 'reviews.success_message_published',
         ];
 
         $this->assertSame($expected, Settings::formFieldToSettingKeyMap());

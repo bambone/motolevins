@@ -13,7 +13,7 @@ use App\Http\Middleware\EnsureTenantContext;
 use App\Http\Middleware\EnsureTenantMembership;
 use App\Http\Middleware\FilamentTenantPanelAuthenticate;
 use App\Http\Middleware\ResolveTenantFromDomain;
-use App\Http\Middleware\SetTenantFilamentLocale;
+use App\Http\Middleware\SetFilamentLocale;
 use App\Models\TenantSetting;
 use App\Terminology\DomainTermKeys;
 use App\Terminology\TenantTerminologyService;
@@ -141,7 +141,7 @@ class AdminPanelProvider extends PanelProvider
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,
                 StartSession::class,
-                SetTenantFilamentLocale::class,
+                SetFilamentLocale::class,
                 ShareErrorsFromSession::class,
                 AuthenticateSession::class,
                 SubstituteBindings::class,

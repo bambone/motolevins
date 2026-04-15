@@ -2,18 +2,20 @@
 
 namespace App\Filament\Tenant\Resources;
 
+use App\Filament\Shared\Lifecycle\AdminFilamentDelete;
+use App\Filament\Support\AdminEmptyState;
 use App\Filament\Tenant\Resources\NotificationSubscriptionResource\Pages;
 use App\Models\NotificationDestination;
 use App\Models\NotificationSubscription;
 use App\NotificationCenter\NotificationEventRegistry;
 use App\NotificationCenter\NotificationSeverity;
+use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
-use App\Filament\Tenant\Resources\Resource;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
@@ -111,17 +113,26 @@ class NotificationSubscriptionResource extends Resource
 
     public static function table(Table $table): Table
     {
-        return $table
-            ->columns([
-                TextColumn::make('name')->label('Название'),
-                TextColumn::make('event_key')->label('Событие')->badge(),
-                IconColumn::make('enabled')->label('Вкл.')->boolean(),
-            ])
-            ->actions([
-                EditAction::make(),
-                DeleteAction::make(),
-            ])
-            ->defaultSort('id', 'desc');
+        return AdminEmptyState::applyInitial(
+            $table
+                ->columns([
+                    TextColumn::make('name')->label('Название'),
+                    TextColumn::make('event_key')->label('Событие')->badge(),
+                    IconColumn::make('enabled')->label('Вкл.')->boolean(),
+                ])
+                ->actions([
+                    EditAction::make(),
+                    AdminFilamentDelete::configureTableDeleteAction(
+                        DeleteAction::make(),
+                        ['entry' => 'filament.tenant.notification_subscription.table'],
+                    ),
+                ])
+                ->defaultSort('id', 'desc'),
+            'Правил уведомлений пока нет',
+            'Создайте правило: какое событие и кому доставлять. Если списка получателей не хватает — сначала добавьте их в разделе «Получатели уведомлений».',
+            'heroicon-o-bell-alert',
+            [CreateAction::make()->label('Создать правило')],
+        );
     }
 
     public static function getPages(): array

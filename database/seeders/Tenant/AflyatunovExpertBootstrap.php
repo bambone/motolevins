@@ -443,6 +443,15 @@ final class AflyatunovExpertBootstrap
         ];
 
         return [
+            $mk('enrollment_cta_top', 'enrollment_cta_strip', [
+                'enabled' => true,
+                'section_id' => 'programs-enrollment-cta',
+                'heading' => 'Запишитесь на занятие',
+                'lead' => 'Не нужно искать форму внизу страницы — оставьте заявку здесь или выберите программу ниже.',
+                'button_label' => 'Записаться на занятие',
+                'source_context' => 'programs_page_strip',
+                'goal_prefill' => 'Хочу записаться на индивидуальное занятие (со страницы программ).',
+            ], 'Запись (верх страницы)'),
             $mk('service_program_cards', 'service_program_cards', [
                 'section_heading' => 'Направления занятий',
                 'section_id' => '',
@@ -581,6 +590,8 @@ final class AflyatunovExpertBootstrap
             ],
             'cta_label' => 'Записаться на занятие',
             'cta_anchor' => '#expert-inquiry',
+            'cta_goal_prefill' => 'Хочу записаться на индивидуальное занятие с инструктором.',
+            'cta_repeat_after_trust' => true,
         ];
     }
 
@@ -683,17 +694,22 @@ final class AflyatunovExpertBootstrap
 
         return [
             $mk('contacts', 'contacts', self::aflyatunovContactsBlockData(), 'Контакты'),
+            $mk('contact_inquiry', 'contact_inquiry', [
+                'enabled' => true,
+                'heading' => 'Напишите нам',
+                'subheading' => 'Оставьте сообщение, и мы свяжемся с вами удобным способом.',
+                'submit_label' => 'Отправить сообщение',
+                'success_message' => 'Спасибо! Мы получили ваше сообщение и свяжемся с вами.',
+                'section_id' => 'contact-inquiry',
+                'show_email' => true,
+                'show_preferred_channel' => true,
+                'consent_enabled' => false,
+                'consent_label' => 'Я согласен(на) на обработку персональных данных.',
+            ], 'Форма на странице контактов'),
             $mk('faq', 'faq', [
                 'section_heading' => 'Частые вопросы',
                 'source' => 'faqs_table',
             ], 'FAQ'),
-            $mk('expert_lead_form', 'expert_lead_form', [
-                'heading' => 'Записаться на занятие',
-                'subheading' => 'Оставьте заявку — подберём время и формат.',
-                'form_key' => 'expert_lead',
-                'section_id' => 'expert-inquiry',
-                'sticky_cta_label' => 'Записаться',
-            ], 'Заявка'),
         ];
     }
 

@@ -338,6 +338,60 @@ class ManualLeadBookingServiceTest extends TestCase
         $this->assertNotNull($result->booking);
     }
 
+    public function test_duplicate_quick_repeat_same_manual_lead_payload_is_rejected(): void
+    {
+        [$tenant] = $this->tenantWithActiveUnit('mlb_idem');
+        $this->bindTenantContext($tenant);
+
+        $user = User::factory()->create(['status' => 'active']);
+        $user->tenants()->attach($tenant->id, ['role' => 'operator', 'status' => 'active']);
+
+        $this->actingAs($user);
+
+        $svc = app(ManualLeadBookingService::class);
+        $payload = new ManualLeadCreateData(
+            tenantId: $tenant->id,
+            name: 'Повтор',
+            phone: '+79991119999',
+            createCrm: false,
+            createBooking: false,
+        );
+
+        $svc->createManualLead($payload);
+
+        $this->expectException(ValidationException::class);
+        $svc->createManualLead($payload);
+    }
+
+    public function test_manual_lead_with_different_phone_after_idempotency_window_allowed(): void
+    {
+        [$tenant] = $this->tenantWithActiveUnit('mlb_idem2');
+        $this->bindTenantContext($tenant);
+
+        $user = User::factory()->create(['status' => 'active']);
+        $user->tenants()->attach($tenant->id, ['role' => 'operator', 'status' => 'active']);
+
+        $this->actingAs($user);
+
+        $svc = app(ManualLeadBookingService::class);
+        $first = $svc->createManualLead(new ManualLeadCreateData(
+            tenantId: $tenant->id,
+            name: 'А',
+            phone: '+79991110001',
+            createCrm: false,
+            createBooking: false,
+        ));
+        $second = $svc->createManualLead(new ManualLeadCreateData(
+            tenantId: $tenant->id,
+            name: 'Б',
+            phone: '+79991110002',
+            createCrm: false,
+            createBooking: false,
+        ));
+
+        $this->assertNotSame($first->lead->id, $second->lead->id);
+    }
+
     public function test_user_without_tenant_membership_cannot_create_lead(): void
     {
         [$tenant] = $this->tenantWithActiveUnit('mlb_nomem');

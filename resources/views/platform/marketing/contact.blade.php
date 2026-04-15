@@ -46,6 +46,7 @@
         'needs_phone' => $o['needs_phone'],
         'value_hint' => (string) ($o['value_hint'] ?? ''),
         'value_placeholder' => (string) ($o['value_placeholder'] ?? ''),
+        'value_label' => (string) ($o['value_label'] ?? ''),
     ], $pmPreferredOptions);
 @endphp
 
@@ -198,12 +199,13 @@
             </div>
 
             <div id="pm-contact-pref-value-block" class="rb-public-field-group hidden space-y-1" data-rb-public-field="preferred_contact_value">
-                <label for="pm-contact-pref-value" class="block text-sm font-medium text-slate-800">Контакт в выбранном канале <span class="text-red-600">*</span></label>
+                <label for="pm-contact-pref-value" class="block text-sm font-medium text-slate-800"><span data-pm-pref-value-label-text>Контакт в выбранном канале</span> <span class="text-red-600">*</span></label>
                 <input id="pm-contact-pref-value" name="preferred_contact_value" type="text" maxlength="500" autocomplete="off" value="{{ old('preferred_contact_value') }}"
                        aria-describedby="pm-contact-pref-value-dynamic-hint"
                        class="mt-2 block w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-pm-accent focus:outline-none focus:ring-1 focus:ring-pm-accent @error('preferred_contact_value') border-red-400 @enderror"
                        placeholder="">
                 <p id="pm-contact-pref-value-dynamic-hint" class="rb-public-field-hint text-slate-600" role="note"></p>
+                <p id="pm-contact-pref-value-client-err" class="mt-1 hidden text-sm text-red-600" role="alert"></p>
                 @error('preferred_contact_value')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
             </div>
 

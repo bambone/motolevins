@@ -13,9 +13,12 @@ use Filament\Actions\Action;
 use Filament\Actions\ExportAction;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ListRecords;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\HtmlString;
+use Illuminate\Validation\ValidationException;
+use Throwable;
 
 class ListLeads extends ListRecords
 {
@@ -41,10 +44,17 @@ class ListLeads extends ListRecords
                 ->label('Добавить обращение')
                 ->icon('heroicon-o-plus')
                 ->visible(fn (): bool => Gate::allows('create', Lead::class))
+                ->modalSubmitActionLabel('Создать')
                 ->form(ManualOperatorBookingForm::leadCreateComponents())
                 ->action(function (array $data): void {
                     $tenant = currentTenant();
                     if ($tenant === null) {
+                        Notification::make()
+                            ->title('Контекст клиента недоступен')
+                            ->body('Обновите страницу или войдите в кабинет снова.')
+                            ->danger()
+                            ->send();
+
                         return;
                     }
 
@@ -62,24 +72,56 @@ class ListLeads extends ListRecords
                     $motorcycleId = isset($data['motorcycle_id']) ? (int) $data['motorcycle_id'] : null;
                     $rentalUnitId = isset($data['rental_unit_id']) ? (int) $data['rental_unit_id'] : null;
 
-                    app(ManualLeadBookingService::class)->createManualLead(new ManualLeadCreateData(
-                        tenantId: $tenant->id,
-                        name: (string) $data['name'],
-                        phone: (string) $data['phone'],
-                        email: $data['email'] ?? null,
-                        comment: $data['comment'] ?? null,
-                        motorcycleId: $motorcycleId ?: null,
-                        rentalDateFromYmd: $fromYmd,
-                        rentalDateToYmd: $toYmd,
-                        createCrm: $createCrm,
-                        createBooking: $createBooking,
-                        rentalUnitId: $rentalUnitId ?: null,
-                    ));
+                    try {
+                        $result = app(ManualLeadBookingService::class)->createManualLead(new ManualLeadCreateData(
+                            tenantId: $tenant->id,
+                            name: (string) $data['name'],
+                            phone: (string) $data['phone'],
+                            email: $data['email'] ?? null,
+                            comment: $data['comment'] ?? null,
+                            motorcycleId: $motorcycleId ?: null,
+                            rentalDateFromYmd: $fromYmd,
+                            rentalDateToYmd: $toYmd,
+                            createCrm: $createCrm,
+                            createBooking: $createBooking,
+                            rentalUnitId: $rentalUnitId ?: null,
+                        ));
+                    } catch (ValidationException $e) {
+                        throw $e;
+                    } catch (AuthorizationException $e) {
+                        Notification::make()
+                            ->title('Действие недоступно')
+                            ->body($e->getMessage())
+                            ->danger()
+                            ->send();
+
+                        return;
+                    } catch (Throwable $e) {
+                        report($e);
+                        Notification::make()
+                            ->title('Не удалось создать обращение')
+                            ->body('Попробуйте ещё раз. Если ошибка повторяется — сообщите в поддержку.')
+                            ->danger()
+                            ->send();
+
+                        return;
+                    }
+
+                    $bodyParts = ['Лид №'.$result->lead->id];
+                    if ($result->crmRequest !== null) {
+                        $bodyParts[] = 'CRM №'.$result->crmRequest->id;
+                    }
+                    if ($result->booking !== null) {
+                        $bodyParts[] = 'Бронь №'.$result->booking->id;
+                    }
 
                     Notification::make()
                         ->title('Обращение создано')
+                        ->body(implode(' · ', $bodyParts))
                         ->success()
                         ->send();
+
+                    $this->dispatch('$refresh');
                 }),
             ExportAction::make()
                 ->exporter(LeadExporter::class)

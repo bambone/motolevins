@@ -27,16 +27,28 @@ class VisitorContactNormalizerTest extends TestCase
         yield 'cyrillic_in_tme' => ['https://t.me/марат', null];
     }
 
-    public function test_normalize_vk_to_https_url(): void
+    #[DataProvider('vkProvider')]
+    public function test_normalize_vk(string $raw, ?string $expected): void
     {
-        $this->assertSame(
-            'https://vk.com/durov',
-            VisitorContactNormalizer::normalizeVk('durov')
-        );
-        $this->assertSame(
-            'https://vk.com/id1',
-            VisitorContactNormalizer::normalizeVk('https://vk.com/id1')
-        );
+        $this->assertSame($expected, VisitorContactNormalizer::normalizeVk($raw));
+    }
+
+    /**
+     * @return iterable<string, array{0: string, 1: ?string}>
+     */
+    public static function vkProvider(): iterable
+    {
+        yield 'username' => ['durov', 'https://vk.com/durov'];
+        yield 'https' => ['https://vk.com/id1', 'https://vk.com/id1'];
+        yield 'vk_com_no_scheme' => ['vk.com/team', 'https://vk.com/team'];
+        yield 'mobile_host' => ['https://m.vk.com/nickname', 'https://vk.com/nickname'];
+        yield 'empty' => ['', null];
+        yield 'whitespace' => ['   ', null];
+        yield 'just_vk' => ['vk', null];
+        yield 'just_vk_url' => ['https://vk.com/vk', null];
+        yield 'at_only' => ['@', null];
+        yield 'foreign_url' => ['https://example.com/user', null];
+        yield 'cyrillic_noise' => ['пишите в вк', null];
     }
 
     public function test_normalize_max_accepts_url_or_string(): void

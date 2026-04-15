@@ -33,7 +33,7 @@
                                         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
                                     </span>
                                     <div>
-                                        <p class="text-[12px] font-bold uppercase tracking-widest text-silver/50">Телефон</p>
+                                        <p class="text-[12px] font-bold uppercase tracking-widest text-silver/70">Телефон</p>
                                         <a href="tel:{{ preg_replace('/\D+/', '', $contacts['phone']) }}" class="mt-1 block break-words text-lg font-semibold text-white/95 transition hover:text-moto-amber">{{ $contacts['phone'] }}</a>
                                     </div>
                                 </div>
@@ -45,7 +45,7 @@
                                         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
                                     </span>
                                     <div>
-                                        <p class="text-[12px] font-bold uppercase tracking-widest text-silver/50">Email</p>
+                                        <p class="text-[12px] font-bold uppercase tracking-widest text-silver/70">Email</p>
                                         <a href="mailto:{{ $contacts['email'] }}" class="mt-1 block break-all text-lg font-semibold text-white/95 transition hover:text-moto-amber sm:break-words">{{ strtolower((string) $contacts['email']) }}</a>
                                     </div>
                                 </div>
@@ -86,7 +86,7 @@
                         
                         @if(filled(tenant()->address))
                             <div class="mt-8">
-                                <p class="text-[11px] font-bold uppercase tracking-widest text-silver/50 mb-2 border-b border-white/[0.05] pb-2">Локация</p>
+                                <p class="text-[11px] font-bold uppercase tracking-widest text-silver/70 mb-2 border-b border-white/[0.05] pb-2">Локация</p>
                                 <p class="text-[15px] font-medium leading-[1.6] text-white/90">{{ tenant()->address }}</p>
                             </div>
                         @else
@@ -96,7 +96,7 @@
                         @endif
                         
                         <div class="mt-auto pt-10">
-                            <p class="text-[11px] font-bold uppercase tracking-widest text-silver/50 mb-3 border-b border-white/[0.05] pb-2">Реквизиты</p>
+                            <p class="text-[11px] font-bold uppercase tracking-widest text-silver/70 mb-3 border-b border-white/[0.05] pb-2">Реквизиты</p>
                             <p class="text-[12px] leading-relaxed text-silver/60">
                                 @if(filled(tenant()->company_name))
                                     {{ tenant()->company_name }}<br>
@@ -111,5 +111,31 @@
                 </div>
             </div>
         </section>
+
+        @php
+            $sectionResolver = app(\App\Services\PageBuilder\SectionViewResolver::class);
+            $ciSections = $page->sections()
+                ->where('status', 'published')
+                ->where('is_visible', true)
+                ->where('section_type', 'contact_inquiry')
+                ->orderBy('sort_order')
+                ->orderBy('id')
+                ->get();
+        @endphp
+        @if($ciSections->isNotEmpty())
+            <section class="relative z-10 border-t border-white/[0.06] pt-12 sm:pt-16" aria-label="Форма обратной связи">
+                <div class="mx-auto max-w-5xl px-4 sm:px-6 md:px-8">
+                    @foreach($ciSections as $section)
+                        @php
+                            $data = is_array($section->data_json) ? $section->data_json : [];
+                            $viewName = $sectionResolver->resolveViewName($section);
+                        @endphp
+                        @if($viewName !== null)
+                            @include($viewName, ['section' => $section, 'data' => $data, 'page' => $page])
+                        @endif
+                    @endforeach
+                </div>
+            </section>
+        @endif
     </div>
 @endsection

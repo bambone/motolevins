@@ -41,7 +41,7 @@
         @endif
     </div>
 
-    <form action="{{ route('booking.store-checkout') }}" method="POST" class="glass rounded-2xl p-4 sm:p-6 md:p-8">
+    <form action="{{ route('booking.store-checkout') }}" method="POST" class="glass rounded-2xl p-4 sm:p-6 md:p-8" data-rb-booking-checkout-form="1">
         @csrf
         <h2 class="mb-5 text-lg font-bold text-white sm:mb-6 sm:text-xl">Контактные данные</h2>
 
@@ -55,7 +55,7 @@
             <div>
                 <label class="mb-2 block text-sm text-silver" for="checkout-name">Ваше имя *</label>
                 <input id="checkout-name" type="text" name="customer_name" value="{{ old('customer_name') }}" required autocomplete="name" placeholder="Как к вам обращаться"
-                    class="h-12 w-full rounded-xl border border-white/10 bg-black/50 px-4 py-3 text-base text-white placeholder:text-zinc-500 outline-none focus:border-moto-amber focus:ring-1 focus:ring-moto-amber @error('customer_name') border-red-500 @enderror">
+                    class="h-12 w-full rounded-xl border border-white/10 bg-black/50 px-4 py-3 text-base text-white placeholder:text-zinc-400 outline-none focus:border-moto-amber focus:ring-1 focus:ring-moto-amber @error('customer_name') border-red-500 @enderror">
                 @error('customer_name')
                     <p class="mt-1 text-sm text-red-400">{{ $message }}</p>
                 @enderror
@@ -66,7 +66,7 @@
                     data-rb-intl-phone="1"
                     aria-describedby="checkout-phone-hint"
                     placeholder="+7 (900) 000-00-00" maxlength="28" inputmode="tel"
-                    class="h-12 w-full rounded-xl border border-white/10 bg-black/50 px-4 py-3 text-base text-white placeholder:text-zinc-500 outline-none focus:border-moto-amber focus:ring-1 focus:ring-moto-amber @error('phone') border-red-500 @enderror">
+                    class="h-12 w-full rounded-xl border border-white/10 bg-black/50 px-4 py-3 text-base text-white placeholder:text-zinc-400 outline-none focus:border-moto-amber focus:ring-1 focus:ring-moto-amber @error('phone') border-red-500 @enderror">
                 <p id="checkout-phone-hint" class="mt-2 text-xs leading-snug text-zinc-500 sm:text-sm"></p>
                 @error('phone')
                     <p class="mt-1 text-sm text-red-400">{{ $message }}</p>
@@ -95,10 +95,11 @@
                         <p class="mt-2 text-sm text-red-400">{{ $message }}</p>
                     @enderror
                     <div id="checkout-pref-extra" class="mt-4 hidden border-t border-white/[0.08] pt-4">
-                        <label class="mb-2 block text-sm text-silver" for="checkout-pref-value">Контакт в мессенджере *</label>
+                        <label id="checkout-pref-value-label" class="mb-2 block text-sm text-silver" for="checkout-pref-value">Контакт в мессенджере *</label>
                         <input id="checkout-pref-value" type="text" name="preferred_contact_value" value="{{ old('preferred_contact_value') }}" autocomplete="off"
-                            class="h-12 w-full rounded-xl border border-white/10 bg-black/50 px-4 py-3 text-base text-white placeholder:text-zinc-500 outline-none focus:border-moto-amber focus:ring-1 focus:ring-moto-amber">
+                            class="h-12 w-full rounded-xl border border-white/10 bg-black/50 px-4 py-3 text-base text-white placeholder:text-zinc-400 outline-none focus:border-moto-amber focus:ring-1 focus:ring-moto-amber">
                         <p id="checkout-pref-hint" class="mt-2 text-xs leading-relaxed text-zinc-500"></p>
+                        <p id="checkout-pref-value-client-err" class="mt-1 hidden text-sm text-red-400" role="alert"></p>
                         @error('preferred_contact_value')
                             <p class="mt-1 text-sm text-red-400">{{ $message }}</p>
                         @enderror
@@ -110,12 +111,12 @@
             <div>
                 <label class="mb-2 block text-sm text-silver" for="checkout-email">Email</label>
                 <input id="checkout-email" type="email" name="email" value="{{ old('email') }}" autocomplete="email" placeholder="name@example.com"
-                    class="h-12 w-full rounded-xl border border-white/10 bg-black/50 px-4 py-3 text-base text-white placeholder:text-zinc-500 outline-none focus:border-moto-amber focus:ring-1 focus:ring-moto-amber">
+                    class="h-12 w-full rounded-xl border border-white/10 bg-black/50 px-4 py-3 text-base text-white placeholder:text-zinc-400 outline-none focus:border-moto-amber focus:ring-1 focus:ring-moto-amber">
             </div>
             <div>
                 <label class="mb-2 block text-sm text-silver" for="checkout-comment">Комментарий</label>
                 <textarea id="checkout-comment" name="customer_comment" rows="3" placeholder="Пожелания по времени выдачи и т.п."
-                    class="w-full resize-none rounded-xl border border-white/10 bg-black/50 px-4 py-3 text-base text-white placeholder:text-zinc-500 outline-none focus:border-moto-amber focus:ring-1 focus:ring-moto-amber">{{ old('customer_comment') }}</textarea>
+                    class="w-full resize-none rounded-xl border border-white/10 bg-black/50 px-4 py-3 text-base text-white placeholder:text-zinc-400 outline-none focus:border-moto-amber focus:ring-1 focus:ring-moto-amber">{{ old('customer_comment') }}</textarea>
             </div>
         </div>
 
@@ -128,10 +129,12 @@
     @php($needsMap = collect($preferredChannelFormOptions)->mapWithKeys(fn ($o) => [$o['id'] => !empty($o['needs_value'])])->all())
     @php($prefHintsMap = collect($preferredChannelFormOptions)->mapWithKeys(fn ($o) => [$o['id'] => (string) ($o['value_hint'] ?? '')])->all())
     @php($prefPlaceholdersMap = collect($preferredChannelFormOptions)->mapWithKeys(fn ($o) => [$o['id'] => (string) ($o['value_placeholder'] ?? '')])->all())
+    @php($prefLabelsMap = collect($preferredChannelFormOptions)->mapWithKeys(fn ($o) => [$o['id'] => (string) ($o['value_label'] ?? '')])->all())
     @php($checkoutPreferredChannelJson = json_encode([
         'needs' => $needsMap,
         'hints' => $prefHintsMap,
         'placeholders' => $prefPlaceholdersMap,
+        'labels' => $prefLabelsMap,
     ], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR))
     <script type="application/json" id="checkout-preferred-channel-config">{!! $checkoutPreferredChannelJson !!}</script>
     <script>
@@ -140,10 +143,13 @@
             const needs = cfg.needs;
             const hints = cfg.hints;
             const placeholders = cfg.placeholders;
+            const labels = cfg.labels || {};
             const radios = document.querySelectorAll('input[name="preferred_contact_channel"]');
             const extra = document.getElementById('checkout-pref-extra');
             const input = document.getElementById('checkout-pref-value');
             const hintEl = document.getElementById('checkout-pref-hint');
+            const labelEl = document.getElementById('checkout-pref-value-label');
+            let prevChannel = null;
             function currentChannel() {
                 let v = 'phone';
                 radios.forEach((r) => { if (r.checked) v = r.value; });
@@ -162,12 +168,20 @@
             }
             function sync() {
                 const v = currentChannel();
+                if (prevChannel !== null && prevChannel !== v && input) {
+                    input.value = '';
+                }
+                prevChannel = v;
                 const show = needs[v] === true;
                 if (extra) extra.classList.toggle('hidden', !show);
                 if (input) input.required = show;
                 if (hintEl) {
                     hintEl.textContent = hints[v] || '';
                     hintEl.classList.toggle('hidden', !hints[v]);
+                }
+                if (labelEl) {
+                    var lb = (labels[v] || '').trim();
+                    labelEl.textContent = (lb || 'Контакт в мессенджере') + ' *';
                 }
                 if (input) {
                     input.placeholder = placeholders[v] || '';
@@ -241,6 +255,67 @@
             }
             radios.forEach((r) => r.addEventListener('change', sync));
             sync();
+
+            const checkoutForm = document.querySelector('[data-rb-booking-checkout-form="1"]');
+            const prefClientErr = document.getElementById('checkout-pref-value-client-err');
+            function clearPrefClientErr() {
+                if (prefClientErr) {
+                    prefClientErr.textContent = '';
+                    prefClientErr.classList.add('hidden');
+                }
+                if (input) {
+                    input.classList.remove('border-red-500');
+                }
+            }
+            if (checkoutForm) {
+                checkoutForm.addEventListener('submit', function (e) {
+                    clearPrefClientErr();
+                    var ch = currentChannel();
+                    if (!needs[ch] || !input) {
+                        return;
+                    }
+                    var raw = (input.value || '').trim();
+                    var N = window.RentBaseVisitorContactNormalize;
+                    if (raw === '') {
+                        e.preventDefault();
+                        var emptyMsg = N && typeof N.preferredContactValueEmptyMessageRu === 'function'
+                            ? N.preferredContactValueEmptyMessageRu(ch)
+                            : 'Укажите контакт для выбранного способа связи.';
+                        if (prefClientErr) {
+                            prefClientErr.textContent = emptyMsg;
+                            prefClientErr.classList.remove('hidden');
+                        }
+                        input.classList.add('border-red-500');
+                        input.focus();
+                        return;
+                    }
+                    if (ch === 'telegram' && N && typeof N.normalizeTelegramVisitorInput === 'function' && N.normalizeTelegramVisitorInput(raw) === null) {
+                        e.preventDefault();
+                        var invTg = N && typeof N.preferredContactValueInvalidMessageRu === 'function'
+                            ? N.preferredContactValueInvalidMessageRu('telegram')
+                            : 'Проверьте контакт Telegram.';
+                        if (prefClientErr) {
+                            prefClientErr.textContent = invTg;
+                            prefClientErr.classList.remove('hidden');
+                        }
+                        input.classList.add('border-red-500');
+                        input.focus();
+                        return;
+                    }
+                    if (ch === 'vk' && N && typeof N.normalizeVkVisitorInput === 'function' && N.normalizeVkVisitorInput(raw) === null) {
+                        e.preventDefault();
+                        var invVk = N && typeof N.preferredContactValueInvalidMessageRu === 'function'
+                            ? N.preferredContactValueInvalidMessageRu('vk')
+                            : 'Проверьте контакт VK.';
+                        if (prefClientErr) {
+                            prefClientErr.textContent = invVk;
+                            prefClientErr.classList.remove('hidden');
+                        }
+                        input.classList.add('border-red-500');
+                        input.focus();
+                    }
+                });
+            }
         })();
     </script>
 @endif

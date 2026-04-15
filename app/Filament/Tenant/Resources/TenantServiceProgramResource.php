@@ -49,10 +49,10 @@ class TenantServiceProgramResource extends Resource
                     ->description('Данные карточек блока «Программы обучения» на сайте. Состав страниц и порядок секций — в «Страницы» (конструктор).')
                     ->schema([
                         TextInput::make('slug')
-                            ->label('Slug')
+                            ->label('URL-идентификатор')
                             ->required()
                             ->maxLength(128)
-                            ->helperText('Уникален внутри клиента.'),
+                            ->helperText('Короткий адрес в ссылке, без пробелов. Уникален внутри клиента.'),
                         TextInput::make('title')->label('Название')->required()->maxLength(255),
                         Textarea::make('teaser')->label('Короткий лид')->rows(2)->columnSpanFull(),
                         Textarea::make('description')->label('Описание')->rows(4)->columnSpanFull(),

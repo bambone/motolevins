@@ -51,6 +51,12 @@
                 <p class="text-sm leading-relaxed text-silver sm:text-base">Пока нет опубликованных отзывов.</p>
             @endisset
 
+            @include('tenant.components.review-submit-block', [
+                'pageUrl' => request()->getRequestUri(),
+                'sectionSuffix' => 'page-reviews',
+                'blockId' => 'rb-review-page-reviews',
+            ])
+
             {{-- JSON для виджетов: GET /api/tenant/reviews?limit=20 --}}
         </div>
     </section>

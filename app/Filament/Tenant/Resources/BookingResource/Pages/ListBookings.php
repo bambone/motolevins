@@ -13,7 +13,11 @@ class ListBookings extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            ManualOperatorBookingForm::standaloneBookingCreateAction(),
+            ManualOperatorBookingForm::standaloneBookingCreateAction(
+                afterSubmit: function (): void {
+                    $this->dispatch('$refresh');
+                },
+            ),
         ];
     }
 }

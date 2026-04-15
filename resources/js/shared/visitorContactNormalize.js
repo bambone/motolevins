@@ -2,6 +2,50 @@
  * Зеркало App\ContactChannels\VisitorContactNormalizer для публичных форм (без PHP round-trip).
  */
 
+/** @param {string} id */
+function isValidVkPathSegment(id) {
+    if (!id) {
+        return false;
+    }
+    if (id.toLowerCase() === 'vk') {
+        return false;
+    }
+    return /^[a-zA-Z0-9._-]+$/.test(id);
+}
+
+/**
+ * Сообщения валидации (RU), синхронно с PreferredContactValueMessages (PHP).
+ * @param {string} channelId
+ */
+export function preferredContactValueEmptyMessageRu(channelId) {
+    switch (channelId) {
+        case 'vk':
+            return 'Укажите контакт VK, чтобы мы могли связаться с вами этим способом.';
+        case 'telegram':
+            return 'Укажите контакт Telegram, чтобы мы могли связаться с вами этим способом.';
+        case 'max':
+            return 'Укажите контакт MAX, чтобы мы могли связаться с вами этим способом.';
+        default:
+            return 'Укажите контакт для выбранного способа связи.';
+    }
+}
+
+/**
+ * @param {string} channelId
+ */
+export function preferredContactValueInvalidMessageRu(channelId) {
+    switch (channelId) {
+        case 'vk':
+            return 'Укажите ссылку на профиль VK или короткое имя (ник), например vk.com/username.';
+        case 'telegram':
+            return 'Укажите корректный Telegram (username или ссылка https://t.me/…).';
+        case 'max':
+            return 'Укажите контакт MAX (текст или ссылку).';
+        default:
+            return 'Проверьте контакт для выбранного способа связи.';
+    }
+}
+
 /** Telegram / VK: в поле допускаем только печатный ASCII (ник и URL). */
 export function preferredChannelNeedsAsciiValue(channelId) {
     return channelId === 'telegram' || channelId === 'vk';
@@ -43,13 +87,22 @@ export function normalizeVkVisitorInput(raw) {
     }
     let m = s.match(/^https?:\/\/(?:m\.)?vk\.com\/([a-zA-Z0-9._-]+)\/?$/i);
     if (m) {
+        if (!isValidVkPathSegment(m[1])) {
+            return null;
+        }
         return 'https://vk.com/' + m[1];
     }
     m = s.match(/^vk\.com\/([a-zA-Z0-9._-]+)$/i);
     if (m) {
+        if (!isValidVkPathSegment(m[1])) {
+            return null;
+        }
         return 'https://vk.com/' + m[1];
     }
     if (/^[a-zA-Z0-9._-]{2,}$/.test(s) && !s.includes('://')) {
+        if (!isValidVkPathSegment(s)) {
+            return null;
+        }
         return 'https://vk.com/' + s;
     }
 

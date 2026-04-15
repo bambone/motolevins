@@ -3,7 +3,8 @@
 :root {
     --ex-accent: #c9a87c;
     --ex-accent-soft: rgba(201, 168, 124, 0.16);
-    --ex-hero-overlay: rgba(6, 9, 14, 0.52);
+    /* Сильнее базовое затемнение hero — типографика не зависит от «удачного» кадра фото */
+    --ex-hero-overlay: rgba(6, 9, 14, 0.6);
     --ex-surface: rgba(22, 26, 34, 0.78);
     --ex-border: rgba(255, 255, 255, 0.09);
     --ex-ink: #e8eaef;
@@ -15,6 +16,9 @@
  */
 body.expert-auto-theme {
     --color-moto-amber: #c9a87c;
+    /* Светлее базовый silver для AA на тёмном premium-bg (утилиты text-silver / *-opacity) */
+    --color-silver: #aeb6c6;
+    --rb-focus-ring: #c9a87c;
 }
 
 body.expert-auto-theme.premium-bg {
@@ -166,7 +170,7 @@ body.expert-auto-theme .tenant-floating-chats.expert-auto-floating-chats {
     font-size: 0.75rem;
     font-weight: 500;
     letter-spacing: 0.03em;
-    color: rgba(248, 250, 252, 0.85);
+    color: rgba(248, 250, 252, 0.92);
     backdrop-filter: blur(8px);
 }
 
@@ -536,7 +540,7 @@ body.expert-auto-theme .tenant-thin-scrollbar::-webkit-scrollbar-thumb:hover {
     padding: 0.35rem 0.75rem;
     font-size: 0.75rem;
     font-weight: 500;
-    color: rgba(248, 250, 252, 0.75);
+    color: rgba(248, 250, 252, 0.88);
     letter-spacing: 0.03em;
     backdrop-filter: blur(4px);
     transition: color 0.3s, background 0.3s, border-color 0.3s;
@@ -1055,6 +1059,11 @@ body.expert-auto-theme .expert-review--spotlight::before {
 body.expert-auto-theme .expert-form-input:focus-visible {
     outline: 2px solid rgba(201, 168, 124, 0.55);
     outline-offset: 2px;
+}
+
+body.expert-auto-theme :is(.expert-form-input, .rb-contact-inquiry input, .rb-contact-inquiry textarea)::placeholder {
+    color: rgb(163 172 188);
+    opacity: 1;
 }
 
 body.expert-auto-theme .expert-form-input--error {

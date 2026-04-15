@@ -35,7 +35,7 @@
                             </div>
                             <div>
                                 <span class="block text-white font-bold text-sm">{{ $review->name }}</span>
-                                <span class="block text-zinc-400 text-xs mt-0.5">{{ $review->city ?? '' }}</span>
+                                <span class="block text-zinc-300 text-xs mt-0.5">{{ $review->city ?? '' }}</span>
                             </div>
                         </div>
                     </div>
@@ -60,7 +60,7 @@
                     </div>
                     <div>
                         <span class="block text-white font-bold text-sm">Алексей М.</span>
-                        <span class="block text-zinc-400 text-xs mt-0.5">Геленджик</span>
+                        <span class="block text-zinc-300 text-xs mt-0.5">Геленджик</span>
                     </div>
                 </div>
             </div>
@@ -84,7 +84,7 @@
                     </div>
                     <div>
                         <span class="block text-white font-bold text-sm">Игорь С.</span>
-                        <span class="block text-zinc-400 text-xs mt-0.5">Анапа</span>
+                        <span class="block text-zinc-300 text-xs mt-0.5">Анапа</span>
                     </div>
                 </div>
             </div>
@@ -108,7 +108,7 @@
                     </div>
                     <div>
                         <span class="block text-white font-bold text-sm">Анна В.</span>
-                        <span class="block text-zinc-400 text-xs mt-0.5">Новороссийск</span>
+                        <span class="block text-zinc-300 text-xs mt-0.5">Новороссийск</span>
                     </div>
                 </div>
             </div>

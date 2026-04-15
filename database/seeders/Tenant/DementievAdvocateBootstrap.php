@@ -13,13 +13,14 @@ use App\Models\TenantSetting;
 use App\Support\Storage\TenantStorage;
 use App\Support\Storage\TenantStorageArea;
 use App\Tenant\StorageQuota\TenantStorageQuotaService;
+use Database\Seeders\DementievAdvocateBootstrapSeeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 
 /**
  * Демо-контент тенанта dementiev: тема advocate_editorial, страницы адвоката, FAQ, формы, SEO.
  *
- * Для `php artisan db:seed --class=…` используйте {@see \Database\Seeders\DementievAdvocateBootstrapSeeder} (это не Seeder).
+ * Для `php artisan db:seed --class=…` используйте {@see DementievAdvocateBootstrapSeeder} (это не Seeder).
  */
 final class DementievAdvocateBootstrap
 {
@@ -870,6 +871,55 @@ final class DementievAdvocateBootstrap
                 'content' => $introHtml,
                 'max_width' => 'wide',
             ], 'Вводный текст', 0),
+            $mk('practice_grid', 'problem_cards', [
+                'section_heading' => 'Направления практики',
+                'section_lead' => 'Выберите профиль ситуации — на каждой странице описан формат работы и типовые этапы.',
+                'footnote' => '',
+                'accent_image_url' => '',
+                'full_width_cards' => true,
+                'items' => [
+                    [
+                        'title' => 'Уголовная защита',
+                        'description' => 'Проверка и следствие, суд. Позиция защиты или потерпевшего, меры пресечения и доказательства.',
+                        'solution' => '',
+                        'link_url' => '/criminal-defense',
+                        'link_label' => 'Открыть раздел',
+                        'is_featured' => true,
+                    ],
+                    [
+                        'title' => 'Суд присяжных',
+                        'description' => 'Особая процедура и коммуникация с коллегией. Углублённый разбор — на отдельной странице.',
+                        'solution' => '',
+                        'link_url' => '/jury-trial',
+                        'link_label' => 'Подробнее',
+                        'is_featured' => false,
+                    ],
+                    [
+                        'title' => 'Гражданские споры',
+                        'description' => 'Семья, земля, договоры. Документы, переговоры, суд при необходимости.',
+                        'solution' => '',
+                        'link_url' => '/civil-disputes',
+                        'link_label' => 'Открыть раздел',
+                        'is_featured' => false,
+                    ],
+                    [
+                        'title' => 'Арбитраж',
+                        'description' => 'Корпоративные и коммерческие конфликты, сделки, суды для бизнеса.',
+                        'solution' => '',
+                        'link_url' => '/arbitration',
+                        'link_label' => 'Открыть раздел',
+                        'is_featured' => false,
+                    ],
+                    [
+                        'title' => 'Иностранные граждане и миграция',
+                        'description' => 'Статус, органы, процессуальное сопровождение споров и обжалований.',
+                        'solution' => '',
+                        'link_url' => '/migration',
+                        'link_label' => 'Открыть раздел',
+                        'is_featured' => false,
+                    ],
+                ],
+            ], 'Сетка направлений', 10),
             $mk('flagship_jury', 'founder_expert_bio', [
                 'heading' => 'Отдельная компетенция — защита в суде с участием присяжных',
                 'lead' => 'Защита по делам с участием присяжных требует не только глубокого знания уголовного процесса, но и специальной подготовки к судебной коммуникации, структуре позиции и работе в особом формате рассмотрения дела.',
@@ -879,56 +929,8 @@ final class DementievAdvocateBootstrap
                 'portrait_image_url' => '',
                 'cta_label' => 'Подробнее о практике суда присяжных',
                 'cta_anchor' => '/jury-trial',
-            ], 'Акцент: суд присяжных', 10),
-            $mk('practice_grid', 'problem_cards', [
-                'section_heading' => 'Направления практики',
-                'section_lead' => '',
-                'footnote' => '',
-                'accent_image_url' => '',
-                'full_width_cards' => true,
-                'items' => [
-                    [
-                        'title' => 'Уголовная защита',
-                        'description' => 'Защита подозреваемых и обвиняемых на стадии проверки, предварительного следствия и в суде. Представление интересов потерпевших, анализ процессуальных рисков и выстраивание правовой позиции по делу.',
-                        'solution' => '',
-                        'link_url' => '/criminal-defense',
-                        'link_label' => 'Подробнее',
-                        'is_featured' => true,
-                    ],
-                    [
-                        'title' => 'Суд присяжных',
-                        'description' => 'Отдельное направление практики, требующее специальной подготовки, другой логики защиты и особого подхода к судебному процессу. Одно из ключевых экспертных направлений сайта.',
-                        'solution' => '',
-                        'link_url' => '/jury-trial',
-                        'link_label' => 'Подробнее',
-                        'is_featured' => false,
-                    ],
-                    [
-                        'title' => 'Гражданские споры',
-                        'description' => 'Семейные, земельные, договорные и иные гражданско-правовые споры. Подготовка процессуальных документов, правовая позиция, сопровождение переговоров и представительство в суде.',
-                        'solution' => '',
-                        'link_url' => '/civil-disputes',
-                        'link_label' => 'Подробнее',
-                        'is_featured' => false,
-                    ],
-                    [
-                        'title' => 'Арбитраж',
-                        'description' => 'Корпоративные споры, споры по сделкам, коммерческие конфликты и споры с государственными органами. Представление интересов бизнеса в арбитражном процессе.',
-                        'solution' => '',
-                        'link_url' => '/arbitration',
-                        'link_label' => 'Подробнее',
-                        'is_featured' => false,
-                    ],
-                    [
-                        'title' => 'Иностранные граждане и миграция',
-                        'description' => 'Защита прав иностранных граждан на территории Российской Федерации, вопросы миграционного законодательства и сопровождение в правовых ситуациях, требующих точной процессуальной работы.',
-                        'solution' => '',
-                        'link_url' => '/migration',
-                        'link_label' => 'Подробнее',
-                        'is_featured' => false,
-                    ],
-                ],
-            ], 'Сетка направлений', 20),
+                'cta_repeat_after_trust' => false,
+            ], 'Акцент: суд присяжных', 20),
             $mk('helper_uncertain', 'notice_box', [
                 'title' => 'Если ваша ситуация не укладывается в одно название',
                 'text' => $helperHtml,
@@ -1089,9 +1091,9 @@ final class DementievAdvocateBootstrap
         $lat = self::OFFICE_MAP_LAT;
         $mapUrl = 'https://yandex.ru/map-widget/v1/?ll='.$lon.'%2C'.$lat.'&z=18&pt='.$lon.'%2C'.$lat.'%2Cpm2rdm';
 
-        $introHtml = '<p class="text-pretty">Для консультации и записи на встречу свяжитесь удобным способом. Очный приём в Челябинске — по предварительной договорённости.</p>';
+        $introHtml = '<p class="text-pretty">Если нужно обсудить ситуацию, можно позвонить, написать или оставить краткое обращение через форму. Этого достаточно, чтобы понять ситуацию и согласовать следующий шаг.</p>';
 
-        $rightCoreHtml = '<p>Кратко можно описать ситуацию в форме ниже — этого достаточно, чтобы договориться о следующем шаге.</p>';
+        $rightCoreHtml = '<p>Офис находится в Челябинске. Очный приём — по предварительной договорённости. Кратко описать вопрос можно по телефону, через форму или письменно.</p>';
 
         $channelRows = [
             [
@@ -1142,7 +1144,7 @@ final class DementievAdvocateBootstrap
             ], 'Вводный текст', 0),
             $mk('contacts_block', 'contacts_info', [
                 'title' => 'Контактные данные',
-                'description' => 'Телефон, электронная почта и адрес офиса.',
+                'description' => 'Телефон, почта и адрес. При необходимости можно сначала кратко описать вопрос по телефону или в форме ниже.',
                 'phone' => '+7 (965) 853-44-83',
                 'email' => 'adv174ur@gmail.com',
                 'address' => self::OFFICE_ADDRESS_LINE,
@@ -1161,26 +1163,32 @@ final class DementievAdvocateBootstrap
                 'content' => $rightCoreHtml,
                 'max_width' => 'full',
             ], 'Сценарии и карта', 15),
-            $mk('expert_lead_form', 'expert_lead_form', [
-                'heading' => 'Описать ситуацию',
-                'subheading' => 'Кратко изложите вопрос и укажите удобный способ ответа. Не нужно готовить «идеальное» письмо — достаточно сути и контакта, чтобы согласовать дальнейший формат общения.',
-                'form_key' => 'expert_lead',
-                'section_id' => 'expert-inquiry',
-                'sticky_cta_label' => 'Форма',
-                'trust_chips' => [],
+            $mk('contact_inquiry', 'contact_inquiry', [
+                'enabled' => true,
+                'heading' => 'Кратко описать ситуацию',
+                'subheading' => 'Изложите суть вопроса и оставьте удобный способ связи. Не нужно готовить «официальное письмо» — достаточно нескольких фраз, чтобы понять ситуацию и договориться о следующем шаге.',
+                'expectation_note' => 'После отправки обращения я ознакомлюсь с описанием и свяжусь с вами удобным способом. Если вопрос требует срочной реакции, лучше позвонить напрямую.',
+                'message_label' => 'Суть вопроса',
+                'submit_label' => 'Отправить обращение',
+                'success_message' => 'Спасибо! Обращение получено — отвечу по существу, без автоматических рассылок.',
+                'section_id' => 'contact-inquiry',
+                'show_email' => true,
+                'show_preferred_channel' => true,
+                'consent_enabled' => false,
+                'consent_label' => 'Я согласен(на) на обработку персональных данных.',
             ], 'Форма', 20),
             $mk('contacts_reassurance', 'structured_text', [
                 'title' => null,
-                'content' => '<p>Ответ по существу, без автоматических рассылок. Если ситуация не терпит задержки, надёжнее сразу <a href="tel:+79658534483">позвонить</a> — так быстрее согласовать следующий шаг.</p>',
+                'content' => '<p>Обычно сначала достаточно кратко описать ситуацию и оставить контакт — после этого можно согласовать следующий шаг. Если ситуация не терпит задержки, надёжнее сразу <a href="tel:+79658534483">позвонить</a>.</p>',
                 'max_width' => 'full',
             ], 'Резюме перед футером', 30),
             $mk('contacts_closing', 'cta', [
-                'heading' => 'Ещё варианты связи',
-                'body' => 'Можно оставить заявку выше или выбрать привычный канал — телефон, почта или форма.',
-                'button_text' => 'Позвонить',
-                'button_url' => 'tel:+79658534483',
-                'secondary_button_text' => 'Перейти к форме',
-                'secondary_button_url' => '#expert-inquiry',
+                'heading' => '',
+                'body' => 'Если ситуация требует срочной реакции, лучше связаться по телефону. Если вопрос можно изложить письменно — достаточно краткого обращения через форму.',
+                'button_text' => '',
+                'button_url' => '',
+                'secondary_button_text' => '',
+                'secondary_button_url' => '',
             ], 'Финальный блок', 40),
         ];
     }

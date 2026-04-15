@@ -81,7 +81,7 @@ final class ContactChannelRegistry
     {
         return match ($type) {
             ContactChannelType::Telegram->value => 'Ник в Telegram — только латиница, цифры и подчёркивание (5–32 символа), либо ссылка https://t.me/… Скопируйте username в приложении: Настройки → Имя пользователя.',
-            ContactChannelType::Vk->value => 'Вставьте ссылку на профиль: https://vk.com/id123 или https://vk.com/nickname. Короткий id или ник после vk.com/ тоже подойдут — мы сохраним канонический адрес. Выбрать профиль из приложения VK на сайте нельзя; откройте свой профиль и скопируйте URL из адресной строки.',
+            ContactChannelType::Vk->value => 'Укажите ссылку на ваш профиль VK или короткое имя (ник). Мы сохраним канонический адрес https://vk.com/… Скопируйте URL из браузера или введите ник без лишнего текста.',
             ContactChannelType::Max->value => 'Укажите ссылку из мессенджера MAX, если есть, или любой понятный текст для связи. Автоподстановка из приложения в обычной веб-форме недоступна.',
             default => '',
         };
@@ -91,8 +91,21 @@ final class ContactChannelRegistry
     {
         return match ($type) {
             ContactChannelType::Telegram->value => '@username / t.me/username',
-            ContactChannelType::Vk->value => 'https://vk.com/… / id123456',
+            ContactChannelType::Vk->value => 'Например: vk.com/username',
             ContactChannelType::Max->value => 'Ссылка или текст для связи в MAX',
+            default => '',
+        };
+    }
+
+    /**
+     * Подпись поля контакта на публичной форме (когда канал требует отдельного value).
+     */
+    public static function visitorValueFieldLabelRu(string $type): string
+    {
+        return match ($type) {
+            ContactChannelType::Vk->value => 'Ссылка или username VK',
+            ContactChannelType::Telegram->value => 'Ссылка или username Telegram',
+            ContactChannelType::Max->value => 'Контакт в MAX',
             default => '',
         };
     }

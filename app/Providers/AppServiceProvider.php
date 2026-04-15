@@ -54,10 +54,12 @@ use App\Services\Tenancy\TenantAdvocateEditorialFooterData;
 use App\Services\Tenancy\TenantMainMenuPages;
 use App\Services\Tenancy\TenantPagePrimaryHtmlSync;
 use App\Services\Tenancy\TenantViewResolver;
+use App\Tenant\Reviews\TenantReviewSubmitConfig;
 use App\Tenant\StorageQuota\TenantMediaStorageQuotaObserver;
 use App\Terminology\TenantTerminologyService;
 use App\Themes\ThemeRegistry;
 use Filament\Facades\Filament;
+use Filament\Schemas\Components\Form as SchemaForm;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Gate;
@@ -131,6 +133,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        SchemaForm::configureUsing(
+            fn (SchemaForm $form) => $form->extraAttributes(['novalidate' => true], merge: true),
+        );
+
         // Filament FileUpload: дольше ждём завершения временной загрузки Livewire (по умолчанию 5 мин).
         config([
             'livewire.temporary_file_upload.max_upload_time' => max(
@@ -310,6 +316,7 @@ class AppServiceProvider extends ServiceProvider
                     'tenantAdvocateFooter' => $tenant->themeKey() === 'advocate_editorial'
                         ? app(TenantAdvocateEditorialFooterData::class)->build($tenant)
                         : null,
+                    'tenantReviewSubmitConfig' => TenantReviewSubmitConfig::forTenant((int) $tenant->id),
                 ];
             } else {
                 $bundle = [
@@ -335,6 +342,7 @@ class AppServiceProvider extends ServiceProvider
                     'site_name' => config('app.name'),
                     'tenantMainMenuPages' => collect(),
                     'tenantAdvocateFooter' => null,
+                    'tenantReviewSubmitConfig' => null,
                 ];
             }
 

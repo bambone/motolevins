@@ -2,6 +2,7 @@
 
 namespace App\Filament\Tenant\Resources;
 
+use App\Filament\Shared\Lifecycle\AdminFilamentDelete;
 use App\Filament\Tenant\Resources\SchedulingTargetResource\Pages;
 use App\Models\SchedulingTarget;
 use App\Scheduling\Enums\CalendarUsageMode;
@@ -11,12 +12,10 @@ use App\Scheduling\Enums\SchedulingScope;
 use App\Scheduling\Enums\SchedulingTargetType;
 use App\Scheduling\Enums\StaleBusyPolicy;
 use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
-use App\Filament\Tenant\Resources\Resource;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
@@ -122,7 +121,7 @@ class SchedulingTargetResource extends Resource
             ->actions([EditAction::make()])
             ->bulkActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make(),
+                    AdminFilamentDelete::makeBulkDeleteAction(),
                 ]),
             ]);
     }

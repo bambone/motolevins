@@ -7,6 +7,7 @@ use App\Filament\Platform\Resources\CrmRequestResource\Pages;
 use App\Filament\Shared\CRM\CrmSharedFilters;
 use App\Filament\Shared\CRM\CrmSharedInfolist;
 use App\Filament\Shared\CRM\CrmSharedTable;
+use App\Filament\Support\AdminEmptyState;
 use App\Models\CrmRequest;
 use Filament\Actions\Action;
 use Filament\Resources\Resource;
@@ -56,29 +57,35 @@ class CrmRequestResource extends Resource
 
     public static function table(Table $table): Table
     {
-        return $table
-            ->columns(CrmSharedTable::columns())
-            ->filters(CrmSharedFilters::tableFilters(static::getEloquentQuery()))
-            ->defaultSort('id', 'desc')
-            ->recordAction('open')
-            ->recordUrl(null)
-            ->recordClasses(CrmSharedTable::recordClasses())
-            ->actions([
-                Action::make('open')
-                    ->label('Открыть')
-                    ->slideOver()
-                    ->modalWidth('7xl')
-                    ->modalHeading(fn (CrmRequest $record): string => trim((string) $record->name) !== ''
-                        ? (string) $record->name
-                        : 'Обращение №'.$record->getKey())
-                    ->modalSubmitAction(false)
-                    ->modalCancelActionLabel(__('filament-actions::view.single.modal.actions.close.label'))
-                    ->extraModalWindowAttributes(['class' => 'crm-ws-modal'])
-                    ->modalContent(fn (CrmRequest $record) => view('filament.shared.crm.crm-workspace-modal', [
-                        'crmRequestId' => (int) $record->getKey(),
-                    ])),
-            ])
-            ->paginated([25, 50, 100]);
+        return AdminEmptyState::applyInitial(
+            $table
+                ->columns(CrmSharedTable::columns())
+                ->filters(CrmSharedFilters::tableFilters(static::getEloquentQuery()))
+                ->defaultSort('id', 'desc')
+                ->recordAction('open')
+                ->recordUrl(null)
+                ->recordClasses(CrmSharedTable::recordClasses())
+                ->actions([
+                    Action::make('open')
+                        ->label('Открыть')
+                        ->slideOver()
+                        ->modalWidth('7xl')
+                        ->modalHeading(fn (CrmRequest $record): string => trim((string) $record->name) !== ''
+                            ? (string) $record->name
+                            : 'Обращение №'.$record->getKey())
+                        ->modalSubmitAction(false)
+                        ->modalCancelActionLabel(__('filament-actions::view.single.modal.actions.close.label'))
+                        ->extraModalWindowAttributes(['class' => 'crm-ws-modal'])
+                        ->modalContent(fn (CrmRequest $record) => view('filament.shared.crm.crm-workspace-modal', [
+                            'crmRequestId' => (int) $record->getKey(),
+                        ])),
+                ])
+                ->paginated([25, 50, 100]),
+            'Заявок не найдено',
+            'Здесь обращения без привязки к клиенту платформы (маркетинг, контакты с центрального сайта).'
+                .AdminEmptyState::hintFiltersAndSearch(),
+            'heroicon-o-inbox-arrow-down',
+        );
     }
 
     public static function canCreate(): bool

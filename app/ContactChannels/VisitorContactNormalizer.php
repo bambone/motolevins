@@ -29,6 +29,8 @@ final class VisitorContactNormalizer
 
     /**
      * В value всегда канонический https URL профиля VK.
+     *
+     * Отклоняем неоднозначный ввод вроде «vk» (не идентификатор профиля).
      */
     public static function normalizeVk(string $raw): ?string
     {
@@ -39,19 +41,44 @@ final class VisitorContactNormalizer
 
         if (preg_match('#^https?://(?:m\.)?vk\.com/([a-zA-Z0-9._-]+)/?#i', $s, $m)) {
             $id = $m[1];
+            if (! self::isValidVkPathSegment($id)) {
+                return null;
+            }
 
             return 'https://vk.com/'.$id;
         }
 
         if (preg_match('#^vk\.com/([a-zA-Z0-9._-]+)#i', $s, $m)) {
-            return 'https://vk.com/'.$m[1];
+            $id = $m[1];
+            if (! self::isValidVkPathSegment($id)) {
+                return null;
+            }
+
+            return 'https://vk.com/'.$id;
         }
 
         if (preg_match('/^[a-zA-Z0-9._-]{2,}$/', $s) && ! str_contains($s, '://')) {
+            if (! self::isValidVkPathSegment($s)) {
+                return null;
+            }
+
             return 'https://vk.com/'.$s;
         }
 
         return null;
+    }
+
+    private static function isValidVkPathSegment(string $id): bool
+    {
+        if ($id === '') {
+            return false;
+        }
+
+        if (strcasecmp($id, 'vk') === 0) {
+            return false;
+        }
+
+        return (bool) preg_match('/^[a-zA-Z0-9._-]+$/', $id);
     }
 
     /**

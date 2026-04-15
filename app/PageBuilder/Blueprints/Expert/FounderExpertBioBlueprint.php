@@ -6,6 +6,7 @@ use App\PageBuilder\PageSectionCategory;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 
 final class FounderExpertBioBlueprint extends ExpertSectionBlueprint
 {
@@ -47,6 +48,8 @@ final class FounderExpertBioBlueprint extends ExpertSectionBlueprint
             'trust_points' => [],
             'cta_label' => '',
             'cta_anchor' => '',
+            'cta_goal_prefill' => '',
+            'cta_repeat_after_trust' => true,
         ];
     }
 
@@ -80,7 +83,16 @@ final class FounderExpertBioBlueprint extends ExpertSectionBlueprint
                 ])
                 ->columnSpanFull(),
             TextInput::make('data_json.cta_label')->label('Текст CTA')->maxLength(120),
-            TextInput::make('data_json.cta_anchor')->label('Якорь CTA (#id или URL)')->maxLength(255),
+            TextInput::make('data_json.cta_anchor')->label('Якорь при режиме «прокрутка» (#expert-inquiry)')->maxLength(255),
+            Textarea::make('data_json.cta_goal_prefill')
+                ->label('Текст цели в модалке / после якоря')
+                ->rows(2)
+                ->maxLength(500)
+                ->helperText('Короткая формулировка для поля «цель обращения» при записи с этой страницы.')
+                ->columnSpanFull(),
+            Toggle::make('data_json.cta_repeat_after_trust')
+                ->label('Повторить CTA после блока доверия')
+                ->default(true),
         ];
     }
 

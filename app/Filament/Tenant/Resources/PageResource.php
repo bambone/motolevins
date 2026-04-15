@@ -3,16 +3,18 @@
 namespace App\Filament\Tenant\Resources;
 
 use App\Filament\Forms\Components\SeoMetaFields;
+use App\Filament\Shared\Lifecycle\AdminFilamentDelete;
 use App\Filament\Tenant\Resources\PageResource\Pages;
 use App\Filament\Tenant\Resources\PageResource\RelationManagers\PageSectionsBuilderRelationManager;
 use App\Filament\Tenant\Support\TenantPageRichEditor;
 use App\Models\Page;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\RichEditor;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
-use App\Filament\Tenant\Resources\Resource;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
@@ -147,6 +149,19 @@ class PageResource extends Resource
             ])
             ->actions([
                 EditAction::make(),
+                AdminFilamentDelete::configureTableDeleteAction(
+                    DeleteAction::make()
+                        ->label('Удалить')
+                        ->modalHeading('Удалить страницу?')
+                        ->modalDescription('Страница будет удалена вместе с блоками и SEO-данными. Для главной (home) удаление недоступно.')
+                        ->visible(fn (Page $record): bool => $record->slug !== 'home'),
+                    ['entry' => 'filament.tenant.page.table'],
+                ),
+            ])
+            ->bulkActions([
+                BulkActionGroup::make([
+                    AdminFilamentDelete::makeBulkDeleteAction(['entry' => 'filament.tenant.page.bulk']),
+                ]),
             ])
             ->emptyStateHeading('Страниц пока нет')
             ->emptyStateDescription('Создайте страницу — например «О нас», «Контакты» или лендинг.')

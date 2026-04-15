@@ -2,6 +2,7 @@
 
 namespace App\Filament\Tenant\Resources;
 
+use App\Filament\Shared\Lifecycle\AdminFilamentDelete;
 use App\Filament\Tenant\Concerns\ResolvesDomainTermLabels;
 use App\Filament\Tenant\Forms\LinkedBookableSchedulingForm;
 use App\Filament\Tenant\Resources\MotorcycleResource\Form\MotorcycleFormFieldKit;
@@ -17,7 +18,6 @@ use App\Terminology\DomainTermKeys;
 use Filament\Actions\Action;
 use Filament\Actions\BulkAction;
 use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ForceDeleteBulkAction;
 use Filament\Actions\RestoreBulkAction;
@@ -305,7 +305,7 @@ class MotorcycleResource extends Resource
                             }
                             Notification::make()->title('Онлайн-запись включена по выбранным карточкам')->success()->send();
                         }),
-                    DeleteBulkAction::make(),
+                    AdminFilamentDelete::makeBulkDeleteAction(),
                     ForceDeleteBulkAction::make(),
                     RestoreBulkAction::make(),
                 ]),

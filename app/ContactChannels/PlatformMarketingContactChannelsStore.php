@@ -91,7 +91,7 @@ class PlatformMarketingContactChannelsStore
     }
 
     /**
-     * @return list<array{id: string, label: string, needs_value: bool, needs_phone: bool, value_hint: string, value_placeholder: string}>
+     * @return list<array{id: string, label: string, needs_value: bool, needs_phone: bool, value_hint: string, value_placeholder: string, value_label: string}>
      */
     public function publicFormPreferredOptions(): array
     {
@@ -106,6 +106,7 @@ class PlatformMarketingContactChannelsStore
                     'needs_phone' => false,
                     'value_hint' => '',
                     'value_placeholder' => '',
+                    'value_label' => '',
                 ];
 
                 continue;
@@ -126,6 +127,7 @@ class PlatformMarketingContactChannelsStore
                 'needs_phone' => $needsPhone,
                 'value_hint' => $needs ? ContactChannelRegistry::visitorValueHintRu($id) : '',
                 'value_placeholder' => $needs ? ContactChannelRegistry::visitorValuePlaceholderRu($id) : '',
+                'value_label' => $needs ? ContactChannelRegistry::visitorValueFieldLabelRu($id) : '',
             ];
         }
 

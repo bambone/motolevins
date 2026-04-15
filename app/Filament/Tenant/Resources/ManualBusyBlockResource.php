@@ -2,6 +2,7 @@
 
 namespace App\Filament\Tenant\Resources;
 
+use App\Filament\Shared\Lifecycle\AdminFilamentDelete;
 use App\Filament\Tenant\Resources\ManualBusyBlockResource\Pages;
 use App\Models\ManualBusyBlock;
 use App\Scheduling\Enums\ManualBusySeverity;
@@ -9,12 +10,10 @@ use App\Scheduling\Enums\ManualBusySource;
 use App\Scheduling\Enums\SchedulingScope;
 use App\Tenant\Filament\TenantPanelSelectScope;
 use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
-use App\Filament\Tenant\Resources\Resource;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
@@ -115,7 +114,7 @@ class ManualBusyBlockResource extends Resource
             ->actions([EditAction::make()])
             ->bulkActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make(),
+                    AdminFilamentDelete::makeBulkDeleteAction(),
                 ]),
             ]);
     }

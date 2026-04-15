@@ -9,6 +9,10 @@
     if ($programs->isEmpty()) {
         return;
     }
+    $ctaCfg = \App\Tenant\Expert\TenantEnrollmentCtaConfig::forCurrent();
+    $ctaMode = $ctaCfg?->mode() ?? \App\Tenant\Expert\TenantEnrollmentCtaConfig::MODE_MODAL;
+    $enrollmentSlug = trim((string) ($ctaCfg?->enrollmentPageSlug() ?? 'programs')) ?: 'programs';
+    $enrollmentUrl = url('/'.$enrollmentSlug);
     $h = trim((string) ($data['section_heading'] ?? ''));
     $sectionLead = array_key_exists('section_lead', $data)
         ? trim((string) $data['section_lead'])
@@ -122,12 +126,27 @@
                                 @else
                                     <span class="text-lg font-bold tracking-tight text-white/90 sm:text-xl">По запросу</span>
                                 @endif
-                                <a
-                                    href="#expert-inquiry"
-                                    class="tenant-btn-primary inline-flex min-h-[3rem] w-full items-center justify-center rounded-xl px-5 text-sm font-bold uppercase tracking-wide transition-transform hover:-translate-y-0.5 sm:min-h-[3.25rem] sm:w-full sm:max-w-[17.5rem] sm:self-end"
-                                    data-expert-prefill-program="{{ e($program->slug) }}"
-                                    data-expert-prefill-program-title="{{ e($program->title) }}"
-                                >Записаться</a>
+                                @if ($ctaMode === \App\Tenant\Expert\TenantEnrollmentCtaConfig::MODE_SCROLL)
+                                    <a
+                                        href="#expert-inquiry"
+                                        class="tenant-btn-primary inline-flex min-h-[3rem] w-full items-center justify-center rounded-xl px-5 text-sm font-bold uppercase tracking-wide transition-transform hover:-translate-y-0.5 sm:min-h-[3.25rem] sm:w-full sm:max-w-[17.5rem] sm:self-end"
+                                        data-expert-prefill-program="{{ e($program->slug) }}"
+                                        data-expert-prefill-program-title="{{ e($program->title) }}"
+                                    >Записаться</a>
+                                @elseif ($ctaMode === \App\Tenant\Expert\TenantEnrollmentCtaConfig::MODE_PAGE)
+                                    <a
+                                        href="{{ $enrollmentUrl }}?program={{ rawurlencode($program->slug) }}"
+                                        class="tenant-btn-primary inline-flex min-h-[3rem] w-full items-center justify-center rounded-xl px-5 text-sm font-bold uppercase tracking-wide transition-transform hover:-translate-y-0.5 sm:min-h-[3.25rem] sm:w-full sm:max-w-[17.5rem] sm:self-end"
+                                    >Записаться</a>
+                                @else
+                                    <button
+                                        type="button"
+                                        class="tenant-btn-primary inline-flex min-h-[3rem] w-full cursor-pointer items-center justify-center rounded-xl border-0 px-5 text-sm font-bold uppercase tracking-wide transition-transform hover:-translate-y-0.5 sm:min-h-[3.25rem] sm:w-full sm:max-w-[17.5rem] sm:self-end"
+                                        data-rb-program-enrollment-cta="1"
+                                        data-expert-prefill-program="{{ e($program->slug) }}"
+                                        data-expert-prefill-program-title="{{ e($program->title) }}"
+                                    >Записаться</button>
+                                @endif
                             </div>
                         </div>
 
@@ -146,7 +165,7 @@
                                             </ul>
                                             @if($audienceMore !== [])
                                                 <details class="expert-program-card__more mt-4 rounded-xl border border-white/[0.08] bg-white/[0.02] px-4 py-3 sm:px-5 sm:py-3.5">
-                                                    <summary class="cursor-pointer list-none text-[13px] font-semibold text-moto-amber/90 outline-none transition hover:text-moto-amber [&::-webkit-details-marker]:hidden">
+                                                    <summary class="cursor-pointer list-none text-[13px] font-semibold text-moto-amber/90 outline-none transition hover:text-moto-amber focus-visible:rounded-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moto-amber [&::-webkit-details-marker]:hidden">
                                                         <span class="inline-flex items-center gap-2">
                                                             <span aria-hidden="true" class="text-moto-amber">+</span>
                                                             Развернуть список (ещё {{ count($audienceMore) }})
@@ -182,7 +201,7 @@
                                             </ul>
                                             @if($outcomesMore !== [])
                                                 <details class="expert-program-card__more mt-4 rounded-xl border border-moto-amber/20 bg-moto-amber/[0.04] px-4 py-3 sm:px-5 sm:py-3.5">
-                                                    <summary class="cursor-pointer list-none text-[13px] font-semibold text-moto-amber outline-none transition hover:text-moto-amber/90 [&::-webkit-details-marker]:hidden">
+                                                    <summary class="cursor-pointer list-none text-[13px] font-semibold text-moto-amber outline-none transition hover:text-moto-amber/90 focus-visible:rounded-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moto-amber [&::-webkit-details-marker]:hidden">
                                                         <span class="inline-flex items-center gap-2">
                                                             <span aria-hidden="true">+</span>
                                                             Развернуть список (ещё {{ count($outcomesMore) }})

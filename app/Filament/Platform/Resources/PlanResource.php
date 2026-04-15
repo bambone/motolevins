@@ -4,10 +4,10 @@ namespace App\Filament\Platform\Resources;
 
 use App\Filament\Platform\Resources\Concerns\GrantsPlatformPanelAccess;
 use App\Filament\Platform\Resources\PlanResource\Pages;
+use App\Filament\Shared\Lifecycle\AdminFilamentDelete;
 use App\Filament\Support\PlanUiSchema;
 use App\Models\Plan;
 use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\KeyValue;
@@ -126,7 +126,7 @@ class PlanResource extends Resource
             ->actions([EditAction::make()])
             ->bulkActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make()
+                    AdminFilamentDelete::makeBulkDeleteAction()
                         ->modalHeading('Удалить тарифы?')
                         ->modalDescription('Клиенты с этим тарифом могут остаться без привязки к тарифу. Проверьте назначения перед удалением.'),
                 ]),

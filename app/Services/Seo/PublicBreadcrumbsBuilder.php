@@ -104,4 +104,27 @@ final class PublicBreadcrumbsBuilder
             ['name' => $name, 'url' => $base.'/landings/'.rawurlencode($slug)],
         ];
     }
+
+    /**
+     * Универсальная цепочка из двух уровней: главная + текущая страница (canonical = последний URL).
+     *
+     * @return list<Crumb>
+     */
+    public function twoLevel(Tenant $tenant, string $currentName, string $canonicalUrl): array
+    {
+        $base = rtrim($this->canonicalBase->resolve($tenant), '/');
+        $name = trim($currentName);
+        if ($name === '') {
+            return [];
+        }
+        $url = trim($canonicalUrl);
+        if ($url === '') {
+            return [];
+        }
+
+        return [
+            ['name' => 'Главная', 'url' => $base.'/'],
+            ['name' => $name, 'url' => $url],
+        ];
+    }
 }

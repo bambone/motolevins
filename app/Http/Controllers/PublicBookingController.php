@@ -20,6 +20,8 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Session;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class PublicBookingController extends Controller
@@ -86,14 +88,18 @@ class PublicBookingController extends Controller
      */
     public function calculate(Request $request)
     {
+        $tenant = currentTenant();
+        abort_if($tenant === null, 404);
+        $tenantId = (int) $tenant->id;
+
         $validated = $request->validate([
-            'motorcycle_id' => ['required', 'exists:motorcycles,id'],
-            'rental_unit_id' => ['nullable', 'exists:rental_units,id'],
+            'motorcycle_id' => ['required', Rule::exists('motorcycles', 'id')->where('tenant_id', $tenantId)],
+            'rental_unit_id' => ['nullable', Rule::exists('rental_units', 'id')->where('tenant_id', $tenantId)],
             'start_date' => ['required', 'date', 'after_or_equal:today'],
             'end_date' => ['required', 'date', 'after_or_equal:start_date'],
             'addons' => ['nullable', 'array'],
-            'addons.*' => ['integer', 'exists:addons,id'],
         ]);
+        $this->validatePublicBookingAddonsMap($tenantId, $validated['addons'] ?? []);
 
         $motorcycle = Motorcycle::findOrFail($validated['motorcycle_id']);
 
@@ -159,7 +165,14 @@ class PublicBookingController extends Controller
             return redirect()->route('booking.index')->with('error', 'Сначала выберите транспорт и даты.');
         }
 
-        $motorcycle = Motorcycle::find($session['motorcycle_id']);
+        $tenant = currentTenant();
+        abort_if($tenant === null, 404);
+        $tenantId = (int) $tenant->id;
+
+        $motorcycle = Motorcycle::query()
+            ->where('tenant_id', $tenantId)
+            ->whereKey((int) $session['motorcycle_id'])
+            ->first();
         if (! $motorcycle) {
             Session::forget('booking_draft');
 
@@ -176,7 +189,10 @@ class PublicBookingController extends Controller
 
         $allowedUnits = $this->activeRentalUnitsForPublicBooking($motorcycle);
         if ($motorcycle->uses_fleet_units && ! empty($session['rental_unit_id'])) {
-            $sessionUnit = RentalUnit::find($session['rental_unit_id']);
+            $sessionUnit = RentalUnit::query()
+                ->where('tenant_id', $tenantId)
+                ->whereKey((int) $session['rental_unit_id'])
+                ->first();
             if (! $sessionUnit || $sessionUnit->motorcycle_id !== $motorcycle->id || ! $allowedUnits->contains('id', (int) $session['rental_unit_id'])) {
                 Session::forget('booking_draft');
 
@@ -186,16 +202,16 @@ class PublicBookingController extends Controller
 
         $addons = collect();
         foreach ($session['addons'] ?? [] as $addonId => $qty) {
-            $addon = Addon::find($addonId);
+            $addon = Addon::query()
+                ->where('tenant_id', $tenantId)
+                ->whereKey((int) $addonId)
+                ->first();
             if ($addon && $qty > 0) {
                 $addons->push((object) ['addon' => $addon, 'quantity' => $qty]);
             }
         }
 
-        $tenant = currentTenant();
-        $preferredChannelFormOptions = $tenant !== null
-            ? app(TenantContactChannelsStore::class)->publicFormPreferredOptions($tenant->id)
-            : [];
+        $preferredChannelFormOptions = app(TenantContactChannelsStore::class)->publicFormPreferredOptions($tenant->id);
 
         return view('tenant.booking.checkout', [
             'motorcycle' => $motorcycle,
@@ -219,6 +235,7 @@ class PublicBookingController extends Controller
         $validated = $request->validated();
         $tenant = currentTenant();
         abort_if($tenant === null, 404);
+        $tenantId = (int) $tenant->id;
 
         $contact = $contactPayloadBuilder->build($tenant->id, [
             'phone' => $validated['phone'],
@@ -226,7 +243,15 @@ class PublicBookingController extends Controller
             'preferred_contact_value' => $validated['preferred_contact_value'] ?? null,
         ]);
 
-        $motorcycle = Motorcycle::findOrFail($session['motorcycle_id']);
+        $motorcycle = Motorcycle::query()
+            ->where('tenant_id', $tenantId)
+            ->whereKey((int) $session['motorcycle_id'])
+            ->first();
+        if ($motorcycle === null) {
+            Session::forget('booking_draft');
+
+            return redirect()->route('booking.index')->with('error', 'Транспорт не найден. Оформите бронь заново.');
+        }
 
         $selectedCatalogLocation = $this->catalogLocation->resolve();
         if ($selectedCatalogLocation !== null
@@ -239,7 +264,10 @@ class PublicBookingController extends Controller
         $allowedUnits = $this->activeRentalUnitsForPublicBooking($motorcycle);
         $rentalUnit = null;
         if ($motorcycle->uses_fleet_units && isset($session['rental_unit_id'])) {
-            $rentalUnit = RentalUnit::find($session['rental_unit_id']);
+            $rentalUnit = RentalUnit::query()
+                ->where('tenant_id', $tenantId)
+                ->whereKey((int) $session['rental_unit_id'])
+                ->first();
             if ($rentalUnit !== null) {
                 if ($rentalUnit->motorcycle_id !== $motorcycle->id || ! $allowedUnits->contains('id', $rentalUnit->id)) {
                     Session::forget('booking_draft');
@@ -306,9 +334,21 @@ class PublicBookingController extends Controller
      */
     public function thankYou(Request $request, ?string $booking = null): View
     {
-        $bookingModel = $request->session()->get('booking');
-        if (! $bookingModel && $booking) {
-            $bookingModel = Booking::where('booking_number', $booking)->first();
+        $tenant = currentTenant();
+        $bookingModel = null;
+
+        $fromSession = $request->session()->get('booking');
+        if ($fromSession instanceof Booking
+            && $tenant !== null
+            && (int) $fromSession->tenant_id === (int) $tenant->id) {
+            $bookingModel = $fromSession;
+        }
+
+        if ($bookingModel === null && $booking !== null && $booking !== '' && $tenant !== null) {
+            $bookingModel = Booking::query()
+                ->where('tenant_id', $tenant->id)
+                ->where('booking_number', $booking)
+                ->first();
         }
 
         return view('tenant.booking.thank-you', ['booking' => $bookingModel]);
@@ -319,14 +359,18 @@ class PublicBookingController extends Controller
      */
     public function storeDraft(Request $request)
     {
+        $tenant = currentTenant();
+        abort_if($tenant === null, 404);
+        $tenantId = (int) $tenant->id;
+
         $validated = $request->validate([
-            'motorcycle_id' => ['required', 'exists:motorcycles,id'],
-            'rental_unit_id' => ['nullable', 'exists:rental_units,id'],
+            'motorcycle_id' => ['required', Rule::exists('motorcycles', 'id')->where('tenant_id', $tenantId)],
+            'rental_unit_id' => ['nullable', Rule::exists('rental_units', 'id')->where('tenant_id', $tenantId)],
             'start_date' => ['required', 'date', 'after_or_equal:today'],
             'end_date' => ['required', 'date', 'after_or_equal:start_date'],
             'addons' => ['nullable', 'array'],
-            'addons.*' => ['integer', 'min:0'],
         ]);
+        $this->validatePublicBookingAddonsMap($tenantId, $validated['addons'] ?? []);
 
         $motorcycle = Motorcycle::findOrFail($validated['motorcycle_id']);
 
@@ -373,6 +417,54 @@ class PublicBookingController extends Controller
     }
 
     /**
+     * {@code addons} — map {@code addonId => qty}. Laravel's {@code addons.*} validates values, not keys;
+     * this enforces tenant-scoped addon IDs and non-negative integer quantities.
+     *
+     * @param  array<int|string, mixed>  $addons
+     *
+     * @throws ValidationException
+     */
+    private function validatePublicBookingAddonsMap(int $tenantId, array $addons): void
+    {
+        foreach ($addons as $addonIdKey => $qty) {
+            if (! is_numeric($addonIdKey)) {
+                throw ValidationException::withMessages([
+                    'addons' => ['Некорректный идентификатор дополнения.'],
+                ]);
+            }
+
+            $addonId = (int) $addonIdKey;
+            if ($addonId < 1) {
+                throw ValidationException::withMessages([
+                    'addons' => ['Некорректный идентификатор дополнения.'],
+                ]);
+            }
+
+            if (! Addon::query()
+                ->where('tenant_id', $tenantId)
+                ->whereKey($addonId)
+                ->exists()) {
+                throw ValidationException::withMessages([
+                    'addons' => ['Выбрано неизвестное дополнение.'],
+                ]);
+            }
+
+            $qtyInt = filter_var($qty, FILTER_VALIDATE_INT);
+            if ($qtyInt === false) {
+                throw ValidationException::withMessages([
+                    'addons' => ['Некорректное количество дополнения.'],
+                ]);
+            }
+
+            if ($qtyInt < 0) {
+                throw ValidationException::withMessages([
+                    'addons' => ['Некорректное количество дополнения.'],
+                ]);
+            }
+        }
+    }
+
+    /**
      * @return Collection<int, RentalUnit>
      */
     private function activeRentalUnitsForPublicBooking(Motorcycle $motorcycle): Collection
@@ -415,7 +507,10 @@ class PublicBookingController extends Controller
         }
 
         if ($rentalUnitId) {
-            $rentalUnit = RentalUnit::find($rentalUnitId);
+            $rentalUnit = RentalUnit::query()
+                ->where('tenant_id', (int) $motorcycle->tenant_id)
+                ->whereKey((int) $rentalUnitId)
+                ->first();
             if (! $rentalUnit || $rentalUnit->motorcycle_id !== $motorcycle->id) {
                 return response()->json([
                     'available' => false,

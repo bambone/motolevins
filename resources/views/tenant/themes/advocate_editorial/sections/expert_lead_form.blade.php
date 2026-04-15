@@ -46,20 +46,37 @@
         ? 'Интервал, когда вам удобно ответить на звонок или сообщение (необязательно).'
         : 'Интервал, когда вам удобно заниматься (необязательно). На телефоне откроется выбор времени.';
     $isContactsPage = ! empty($advocateContactsPage ?? false);
+    if ($isContactsPage) {
+        $goalLabel = 'Кратко опишите ситуацию';
+    }
 @endphp
-<section id="{{ e($sectionId) }}" class="advocate-expert-lead expert-lead-mega relative mb-14 min-w-0 scroll-mt-24 sm:mb-20 lg:mb-28 @if($isContactsPage) advocate-expert-lead--contacts-page @endif">
+<section id="{{ e($sectionId) }}" class="advocate-expert-lead expert-lead-mega relative min-w-0 scroll-mt-24 @if($isContactsPage) advocate-expert-lead--contacts-page mb-8 sm:mb-10 lg:mb-12 @else mb-14 sm:mb-20 lg:mb-28 @endif">
     {{-- На /contacts — шире и спокойнее, в тон странице «Контакты». --}}
-    <div id="expert-inquiry-block" class="expert-lead-mega__shell relative mx-auto w-full min-w-0 overflow-hidden rounded-[1.5rem] border border-[rgba(28,31,38,0.1)] bg-gradient-to-br from-[#fdfcfa] via-[#faf6f0] to-[#f2ebe2] p-6 shadow-[0_24px_60px_-28px_rgba(28,31,38,0.18)] ring-1 ring-inset ring-[rgba(154,123,79,0.08)] sm:rounded-[2rem] sm:p-10 lg:p-12 @if($isContactsPage) max-w-[min(88rem,100%)] sm:p-9 lg:p-10 @else max-w-[min(72rem,100%)] @endif">
-        <div class="relative z-10">
-        @if($heading !== '')
-            <div class="px-1 @if(!$isContactsPage) text-center @else text-left @endif">
-                <h2 class="expert-section-title text-balance tracking-tight text-[rgb(24_27_32)] @if($isContactsPage) font-serif text-[clamp(1.85rem,3.6vw,2.75rem)] font-semibold leading-[1.12] @else text-[clamp(1.55rem,4.5vw,3.1rem)] font-extrabold leading-[1.12] sm:leading-[1.1] @endif">{{ $headingDisplay }}</h2>
-            </div>
-        @endif
-        @if($sub !== '')
-            <div class="mt-5 @if(!$isContactsPage) text-center @else text-left @endif">
-                <p class="@if($isContactsPage) max-w-3xl text-[17px] leading-[1.7] text-[rgb(52_58_68)] sm:text-[18px] @else mx-auto max-w-2xl text-[16px] leading-[1.65] text-[rgb(55_62_72)] sm:text-[17px] @endif text-pretty font-normal">{{ $subDisplay }}</p>
-            </div>
+    <div id="expert-inquiry-block" class="expert-lead-mega__shell relative mx-auto w-full min-w-0 overflow-hidden @if($isContactsPage) max-w-[40rem] rounded-2xl border border-[rgba(154,123,79,0.16)] bg-gradient-to-b from-[#fdfcfa] via-[#faf6f0] to-[#f0e8dc] p-6 shadow-[0_24px_56px_-28px_rgba(42,36,28,0.14)] sm:p-8 @else border border-[rgba(28,31,38,0.1)] bg-gradient-to-br from-[#fdfcfa] via-[#faf6f0] to-[#f2ebe2] ring-1 ring-inset ring-[rgba(154,123,79,0.08)] max-w-[min(72rem,100%)] rounded-[1.5rem] p-6 shadow-[0_24px_60px_-28px_rgba(28,31,38,0.18)] sm:rounded-[2rem] sm:p-10 lg:p-12 @endif">
+        <div class="relative z-10" data-rb-expert-inquiry-root>
+        @if($isContactsPage)
+            @if($heading !== '' || $sub !== '')
+                <header class="advocate-contact-form-intro text-left">
+                    @if($heading !== '')
+                        <h2 class="expert-section-title text-balance tracking-tight text-[rgb(24_27_32)] font-serif text-[clamp(1.25rem,2.2vw,1.65rem)] font-semibold leading-snug">{{ $headingDisplay }}</h2>
+                    @endif
+                    @if($sub !== '')
+                        {{-- Та же ширина, что и поля: без узкого max-w — иначе «столбик» текста над широкой формой --}}
+                        <p class="mt-2 text-[15px] leading-[1.55] text-[rgb(72_78_86)] sm:mt-2.5 sm:text-[16px] sm:leading-[1.5]">{{ $subDisplay }}</p>
+                    @endif
+                </header>
+            @endif
+        @else
+            @if($heading !== '')
+                <div class="px-1 text-center">
+                    <h2 class="expert-section-title text-balance tracking-tight text-[rgb(24_27_32)] text-[clamp(1.55rem,4.5vw,3.1rem)] font-extrabold leading-[1.12] sm:leading-[1.1]">{{ $headingDisplay }}</h2>
+                </div>
+            @endif
+            @if($sub !== '')
+                <div class="mt-5 text-center">
+                    <p class="mx-auto max-w-2xl text-[16px] leading-[1.65] text-[rgb(55_62_72)] sm:text-[17px] text-pretty font-normal">{{ $subDisplay }}</p>
+                </div>
+            @endif
         @endif
         @if(count($trustChips) > 0 && ! $isContactsPage)
             <ul class="mt-8 flex flex-wrap justify-center gap-2 sm:gap-3">
@@ -69,60 +86,85 @@
             </ul>
         @endif
 
-        <div id="expert-inquiry-alert" class="mt-4 hidden rounded-xl border border-[rgba(28,31,38,0.12)] bg-white px-4 py-3 text-[15px] leading-snug text-[rgb(40_44_52)]" role="status" aria-live="polite"></div>
+        <div id="expert-inquiry-alert" data-rb-expert-inquiry-alert class="mt-4 hidden rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[15px] leading-snug text-red-900" role="alert" aria-live="assertive"></div>
 
-        <script type="application/json" id="expert-inquiry-channel-meta">@json($contactChannelOptions)</script>
+        <div
+            data-rb-expert-inquiry-success
+            class="mt-4 hidden rounded-2xl border border-[rgba(154,123,79,0.4)] bg-[linear-gradient(168deg,#f6fffb_0%,#eefcf5_45%,#e2f5ea_100%)] px-6 py-10 text-center shadow-[0_20px_50px_-32px_rgba(22,101,52,0.25)] outline-none sm:px-10"
+            tabindex="-1"
+            role="status"
+            aria-live="polite"
+        >
+            <div class="mx-auto max-w-xl text-balance">
+                <div class="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full border border-emerald-200 bg-emerald-50 text-emerald-600" aria-hidden="true">
+                    <svg class="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                </div>
+                <p class="mb-3 text-2xl font-bold tracking-tight text-[rgb(22_25_30)] sm:text-[1.65rem]" data-rb-public-form-success-title>Спасибо!</p>
+                <p class="text-[17px] leading-relaxed text-[rgb(52_58_68)]" data-rb-public-form-success-lead></p>
+            </div>
+        </div>
 
-        <form id="expert-inquiry-form" class="expert-inquiry-form @if($isContactsPage) mt-6 space-y-5 sm:mt-8 sm:space-y-6 @else mt-8 space-y-6 sm:mt-10 sm:space-y-7 @endif" novalidate
+        <form id="expert-inquiry-form" class="expert-inquiry-form relative @if($isContactsPage) mt-5 space-y-0 @else mt-8 space-y-6 sm:mt-10 sm:space-y-7 @endif" novalidate
+              data-expert-inquiry-form
+              data-expert-inquiry-main="1"
               data-expert-inquiry-endpoint="{{ e($endpoint) }}"
               data-expert-inquiry-default-success="{{ e($successMessage) }}">
             @csrf
+            <script type="application/json" id="expert-inquiry-channel-meta" data-rb-expert-channel-meta>@json($contactChannelOptions)</script>
             <input type="hidden" name="expert_domain" value="legal_services">
             <input type="hidden" name="page_url" value="{{ url()->current() }}">
+            <div class="absolute -left-[9999px] h-px w-px overflow-hidden" aria-hidden="true">
+                <label for="expert-inquiry-hp-website-adv">Website</label>
+                <input id="expert-inquiry-hp-website-adv" type="text" name="website" tabindex="-1" autocomplete="off" value="">
+            </div>
 
             @if($isContactsPage)
-                <div class="advocate-contacts-form-panel">
-                <p class="advocate-contacts-form-group-label">Контакты</p>
+                <div class="advocate-contacts-expert-form-flow w-full space-y-5">
+                    <div class="space-y-2">
+                        <h3 class="advocate-contact-form-h3">Контакты</h3>
             @endif
-            <div class="grid min-w-0 gap-4 sm:gap-5 md:grid-cols-2">
+            <div class="grid min-w-0 gap-3 sm:gap-4 md:grid-cols-2">
                 <div data-rb-public-field="name" class="expert-public-field-wrap min-w-0">
-                    <label for="expert-name" class="mb-2 block text-sm font-semibold tracking-wide text-[rgb(28_31_32)]">Имя <span class="text-moto-amber">*</span></label>
+                    <label for="expert-name" class="@if($isContactsPage) mb-1 @else mb-2 @endif block text-sm font-semibold tracking-wide text-[rgb(28_31_32)]">Имя <span class="text-moto-amber">*</span></label>
                     <input id="expert-name" name="name" type="text" required autocomplete="name" maxlength="255"
-                           class="expert-form-input w-full min-h-[3.5rem] rounded-xl border border-[rgba(28,31,38,0.22)] bg-white px-4 py-3 text-[17px] text-[rgb(24_27_32)] outline-none transition-colors placeholder:text-[rgb(95_102_115)] focus:border-moto-amber/55 focus:ring-2 focus:ring-moto-amber/20">
+                           class="expert-form-input w-full rounded-lg border border-[rgba(28,31,38,0.22)] bg-white px-3 py-2 text-[15px] text-[rgb(24_27_32)] outline-none transition-colors placeholder:text-[rgb(95_102_115)] focus:border-moto-amber/55 focus:ring-1 focus:ring-moto-amber/25 @if($isContactsPage) min-h-[2.75rem] @else min-h-[3.5rem] px-4 py-3 text-[17px] rounded-xl focus:ring-2 @endif">
                 </div>
                 <div data-rb-public-field="phone" class="expert-public-field-wrap min-w-0">
-                    <label for="expert-phone" class="mb-2 block text-sm font-semibold tracking-wide text-[rgb(28_31_32)]">Телефон <span class="text-moto-amber expert-phone-required-star">*</span></label>
+                    <label for="expert-phone" class="@if($isContactsPage) mb-1 @else mb-2 @endif block text-sm font-semibold tracking-wide text-[rgb(28_31_32)]">Телефон <span class="text-moto-amber expert-phone-required-star">*</span></label>
                     {{-- data-rb-intl-phone: автоподключение маски из tenant-intl-phone.js (как booking-modal: handleInput + hint) --}}
                     <input id="expert-phone" name="phone" type="tel" required autocomplete="tel" inputmode="tel"
+                           data-rb-expert-phone
                            data-rb-intl-phone="1"
                            aria-describedby="expert-phone-hint"
                            maxlength="28"
                            placeholder="+7 (999) 123-45-67"
-                           class="expert-form-input w-full min-h-[3.5rem] rounded-xl border border-[rgba(28,31,38,0.22)] bg-white px-4 py-3 text-[17px] text-[rgb(24_27_32)] outline-none transition-colors placeholder:text-[rgb(95_102_115)] focus:border-moto-amber/55 focus:ring-2 focus:ring-moto-amber/20">
-                    <p id="expert-phone-hint" class="mt-2 text-[13px] leading-snug text-[rgb(65_72_82)] sm:text-[14px]"></p>
+                           class="expert-form-input w-full rounded-lg border border-[rgba(28,31,38,0.22)] bg-white px-3 py-2 text-[15px] text-[rgb(24_27_32)] outline-none transition-colors placeholder:text-[rgb(95_102_115)] focus:border-moto-amber/55 focus:ring-1 focus:ring-moto-amber/25 @if($isContactsPage) min-h-[2.75rem] @else min-h-[3.5rem] px-4 py-3 text-[17px] rounded-xl focus:ring-2 @endif">
+                    <p id="expert-phone-hint" data-rb-expert-phone-hint class="@if($isContactsPage) mt-1 @else mt-2 @endif text-[12px] leading-snug text-[rgb(65_72_82)] sm:text-[13px]"></p>
                 </div>
             </div>
             @if($isContactsPage)
-                </div>
-                <div class="advocate-contacts-form-panel">
-                <p class="advocate-contacts-form-group-label">Способ связи</p>
+                    </div>
+                    <div class="space-y-2">
+                        <h3 class="advocate-contact-form-h3">Как удобнее связаться</h3>
             @endif
             <div data-rb-public-field="preferred_contact_channel" class="expert-public-field-wrap min-w-0">
-                <span class="mb-2 block text-sm font-semibold tracking-wide text-[rgb(28_31_32)]">Как с вами связаться?</span>
+                @if(! $isContactsPage)
+                <span class="mb-2 block text-[13px] font-semibold tracking-wide text-[rgb(28_31_32)]">Как с вами связаться?</span>
+                @endif
                 @if ($contactChannelCount <= 1)
                     @php $onlyId = $contactChannelOptions[0]['id'] ?? 'phone'; @endphp
                     <input type="hidden" name="preferred_contact_channel" value="{{ e($onlyId) }}">
-                    <p class="text-[15px] leading-relaxed text-[rgb(65_72_82)]">Ответим по контактам, указанным в заявке (телефон обязателен).</p>
+                    <p class="text-[14px] leading-snug text-[rgb(65_72_82)]">Ответим по контактам, указанным в заявке (телефон обязателен).</p>
                 @else
-                    <div class="expert-channel-grid flex flex-col gap-2.5 sm:gap-3">
+                    <div class="expert-channel-grid @if($isContactsPage) flex flex-wrap gap-2 sm:gap-2.5 @else flex flex-col gap-2.5 sm:gap-3 @endif">
                         @foreach ($contactChannelOptions as $idx => $opt)
                             @php $cid = $opt['id'] ?? ''; @endphp
                             @if ($cid !== '')
-                                <label class="expert-channel-option flex cursor-pointer items-start gap-3 rounded-xl border border-[rgba(28,31,38,0.14)] bg-white p-3.5 shadow-sm transition-colors has-[:checked]:border-[rgba(154,123,79,0.55)] has-[:checked]:bg-[#fffefb] sm:p-4">
+                                <label class="expert-channel-option @if($isContactsPage) relative flex min-h-[2.875rem] min-w-0 flex-1 cursor-pointer items-center justify-center rounded-xl border border-[rgba(154,123,79,0.2)] bg-[rgba(255,250,242,0.95)] px-3 py-2.5 text-center text-[14px] font-semibold leading-snug text-[rgb(42_46_54)] shadow-[0_1px_2px_rgba(42,36,28,0.06)] transition-all hover:border-[rgba(154,123,79,0.35)] has-[:checked]:border-transparent has-[:checked]:bg-[rgb(154_123_79)] has-[:checked]:text-white has-[:checked]:shadow-[0_8px_20px_-8px_rgba(95,72,42,0.45)] focus-within:ring-2 focus-within:ring-[rgba(154,123,79,0.35)] @else flex cursor-pointer items-start gap-3 rounded-xl border border-[rgba(28,31,38,0.14)] bg-white p-3.5 shadow-sm transition-colors has-[:checked]:border-[rgba(154,123,79,0.55)] has-[:checked]:bg-[#fffefb] sm:p-4 @endif">
                                     <input type="radio" name="preferred_contact_channel" value="{{ e($cid) }}"
-                                           class="expert-channel-radio mt-0.5 h-4 w-4 shrink-0 border-[rgba(28,31,38,0.35)] text-moto-amber focus:ring-2 focus:ring-moto-amber/35"
+                                           class="expert-channel-radio @if($isContactsPage) sr-only @else mt-0.5 h-4 w-4 @endif shrink-0 border-[rgba(28,31,38,0.35)] text-moto-amber focus:ring-2 focus:ring-moto-amber/35"
                                            @checked($idx === 0)>
-                                    <span class="min-w-0 text-[15px] font-medium leading-snug text-[rgb(28_31_32)] sm:text-[16px]">{{ $opt['label'] ?? $cid }}</span>
+                                    <span class="pointer-events-none @if($isContactsPage) min-w-0 @else min-w-0 text-[15px] font-medium leading-snug text-[rgb(28_31_32)] sm:text-[16px] @endif">{{ $opt['label'] ?? $cid }}</span>
                                 </label>
                             @endif
                         @endforeach
@@ -130,27 +172,32 @@
                 @endif
             </div>
 
-            <div id="expert-pref-value-wrap" data-rb-public-field="preferred_contact_value" class="expert-public-field-wrap hidden min-w-0">
-                <label for="expert-pref-value" class="mb-2 block text-sm font-semibold tracking-wide text-[rgb(28_31_32)]">Контакт для связи</label>
-                <input id="expert-pref-value" name="preferred_contact_value" type="text" maxlength="500"
-                       class="expert-form-input w-full min-h-[3.5rem] rounded-xl border border-[rgba(28,31,38,0.22)] bg-white px-4 py-3 text-[17px] text-[rgb(24_27_32)] outline-none transition-colors placeholder:text-[rgb(95_102_115)] focus:border-moto-amber/55 focus:ring-2 focus:ring-moto-amber/20">
-                <p id="expert-pref-value-hint" class="mt-2 hidden text-[13px] leading-snug text-[rgb(65_72_82)] sm:text-[14px]"></p>
+            <div id="expert-pref-value-wrap" data-rb-expert-pref-wrap data-rb-public-field="preferred_contact_value" class="expert-public-field-wrap hidden min-w-0">
+                <label for="expert-pref-value" data-rb-expert-pref-label class="@if($isContactsPage) mb-1 @else mb-2 @endif block text-sm font-semibold tracking-wide text-[rgb(28_31_32)]">Контакт для связи</label>
+                <input id="expert-pref-value" data-rb-expert-pref-input name="preferred_contact_value" type="text" maxlength="500"
+                       class="expert-form-input w-full rounded-lg border border-[rgba(28,31,38,0.22)] bg-white px-3 py-2 text-[15px] text-[rgb(24_27_32)] outline-none transition-colors placeholder:text-[rgb(95_102_115)] focus:border-moto-amber/55 focus:ring-1 focus:ring-moto-amber/25 @if($isContactsPage) min-h-[2.75rem] @else min-h-[3.5rem] px-4 py-3 text-[17px] rounded-xl focus:ring-2 @endif">
+                <p id="expert-pref-value-hint" data-rb-expert-pref-hint class="@if($isContactsPage) mt-1 @else mt-2 @endif hidden text-[13px] leading-snug text-[rgb(65_72_82)] sm:text-[14px]"></p>
             </div>
             @if($isContactsPage)
-                </div>
-                <div class="advocate-contacts-form-panel">
-                <p class="advocate-contacts-form-group-label">Суть вопроса</p>
+                    </div>
+                    <div class="space-y-2">
+                        <h3 id="expert-goal-section-{{ $sectionId }}" class="advocate-contact-form-h3">Суть ситуации</h3>
             @endif
             <div data-rb-public-field="goal_text" class="expert-public-field-wrap min-w-0">
-                <label for="expert-goal" class="mb-2 block text-sm font-semibold tracking-wide text-[rgb(28_31_32)]">{{ $goalLabel }} <span class="text-moto-amber">*</span></label>
-                <textarea id="expert-goal" name="goal_text" required rows="{{ $isContactsPage ? '3' : '4' }}" maxlength="2000"
-                          class="expert-form-input w-full rounded-xl border border-[rgba(28,31,38,0.22)] bg-white px-4 py-3 text-[17px] leading-relaxed text-[rgb(24_27_32)] outline-none transition-colors placeholder:text-[rgb(95_102_115)] focus:border-moto-amber/55 focus:ring-2 focus:ring-moto-amber/20 @if($isContactsPage) min-h-[6.5rem] @else min-h-[8rem] @endif"></textarea>
+                <label for="expert-goal" class="@if($isContactsPage) sr-only @else mb-2 block text-sm font-semibold tracking-wide text-[rgb(28_31_32)] @endif">{{ $goalLabel }} <span class="text-moto-amber">*</span></label>
+                <textarea id="expert-goal" name="goal_text" required rows="{{ $isContactsPage ? '4' : '4' }}" maxlength="2000"
+                          @if($isContactsPage) aria-labelledby="expert-goal-section-{{ $sectionId }}" @endif
+                          @if($isContactsPage) placeholder="Кратко: обстоятельства, что уже сделано, какой результат нужен" @endif
+                          class="expert-form-input w-full rounded-lg border border-[rgba(28,31,38,0.22)] bg-white px-3 py-2 text-[15px] leading-relaxed text-[rgb(24_27_32)] outline-none transition-colors placeholder:text-[rgb(95_102_115)] focus:border-moto-amber/55 focus:ring-1 focus:ring-moto-amber/25 @if($isContactsPage) min-h-[7.5rem] resize-y @else min-h-[8rem] rounded-xl px-4 py-3 text-[17px] focus:ring-2 @endif"></textarea>
             </div>
+            @if($isContactsPage)
+                    </div>
+            @endif
 
-            @if($programs->isNotEmpty())
+            @if($programs->isNotEmpty() && ! $isContactsPage)
                 <div data-rb-public-field="program_slug" class="expert-public-field-wrap min-w-0">
                     <label for="expert-program" class="mb-2 block text-sm font-semibold tracking-wide text-[rgb(28_31_32)]">Программа (необязательно)</label>
-                    <select id="expert-program" name="program_slug"
+                    <select id="expert-program" data-rb-expert-program name="program_slug"
                             class="expert-form-input w-full min-h-[3.5rem] rounded-xl border border-[rgba(28,31,38,0.22)] bg-white px-4 py-3 text-[17px] text-[rgb(24_27_32)] outline-none transition-colors focus:border-moto-amber/55 focus:ring-2 focus:ring-moto-amber/20 appearance-none">
                         <option value="" class="bg-white text-[rgb(24_27_32)]">—</option>
                         @foreach($programs as $p)
@@ -160,10 +207,25 @@
                 </div>
             @endif
             @if($isContactsPage)
+                    <div class="space-y-2">
+                        <h3 class="advocate-contact-form-h3">Когда удобно ответить</h3>
+                        <div data-rb-public-field="preferred_schedule" class="expert-public-field-wrap min-w-0">
+                            <label for="expert-schedule-simple" class="sr-only">Удобное время для связи <span class="font-normal">(необязательно)</span></label>
+                            <input
+                                id="expert-schedule-simple"
+                                name="preferred_schedule"
+                                type="text"
+                                data-rb-expert-schedule-simple
+                                maxlength="120"
+                                autocomplete="off"
+                                placeholder="Например: будни после 18:00 или 18:00 – 21:00"
+                                class="expert-form-input w-full min-h-[2.75rem] rounded-lg border border-[rgba(28,31,38,0.22)] bg-white px-3 py-2 text-[15px] text-[rgb(24_27_32)] outline-none transition-colors placeholder:text-[rgb(140_145_155)] focus:border-moto-amber/55 focus:ring-1 focus:ring-moto-amber/25"
+                            >
+                            <p class="mt-1.5 text-[12px] leading-snug text-[rgb(90_96_106)] sm:text-[13px]">Одна строка: интервал или кратко, когда можно перезвонить или написать.</p>
+                        </div>
+                    </div>
                 </div>
-                <div class="advocate-contacts-form-panel">
-                <p class="advocate-contacts-form-group-label">Уточнение</p>
-            @endif
+            @else
             {{-- Сетка 3×2 на md+: заголовки в одной строке, подсказка только слева, поля в одной строке — без «пляски» колонок. --}}
             <div class="grid min-w-0 grid-cols-1 gap-4 sm:gap-5 md:grid-cols-2 md:grid-rows-[auto_auto_auto] md:items-start md:gap-x-5 md:gap-y-3">
                 <div data-rb-public-field="preferred_schedule" class="expert-public-field-wrap min-w-0 md:contents">
@@ -172,12 +234,12 @@
                     <div class="order-3 grid min-w-0 gap-3 rounded-xl border border-[rgba(28,31,38,0.14)] bg-white/70 p-2 shadow-sm transition focus-within:border-moto-amber/50 focus-within:bg-white focus-within:shadow-md focus-within:ring-2 focus-within:ring-moto-amber/25 sm:grid-cols-2 sm:gap-4 sm:p-3 md:order-none md:col-start-1 md:row-start-3" data-expert-schedule-time-group role="group" aria-labelledby="expert-schedule-legend" aria-describedby="expert-schedule-desc">
                         <div class="min-w-0">
                             <label for="expert-schedule-from" class="mb-1.5 block text-[14px] font-medium tracking-wide text-[rgb(28_31_32)]">С</label>
-                            <input id="expert-schedule-from" type="time" min="07:00" max="22:00" step="300" autocomplete="off"
+                            <input id="expert-schedule-from" data-rb-expert-schedule-from type="time" min="07:00" max="22:00" step="300" autocomplete="off"
                                    class="expert-form-input expert-schedule-time-input w-full min-h-[3.5rem] rounded-xl border border-[rgba(28,31,38,0.22)] bg-white px-4 py-3 text-[17px] text-[rgb(24_27_32)] outline-none transition-colors focus:border-moto-amber/60 focus:ring-2 focus:ring-moto-amber/30 [color-scheme:light]">
                         </div>
                         <div class="min-w-0">
                             <label for="expert-schedule-to" class="mb-1.5 block text-[14px] font-medium tracking-wide text-[rgb(28_31_32)]">До</label>
-                            <input id="expert-schedule-to" type="time" min="07:00" max="22:00" step="300" autocomplete="off"
+                            <input id="expert-schedule-to" data-rb-expert-schedule-to type="time" min="07:00" max="22:00" step="300" autocomplete="off"
                                    class="expert-form-input expert-schedule-time-input w-full min-h-[3.5rem] rounded-xl border border-[rgba(28,31,38,0.22)] bg-white px-4 py-3 text-[17px] text-[rgb(24_27_32)] outline-none transition-colors focus:border-moto-amber/60 focus:ring-2 focus:ring-moto-amber/30 [color-scheme:light]">
                         </div>
                     </div>
@@ -189,9 +251,7 @@
                            class="expert-form-input order-5 w-full min-h-[3.5rem] rounded-xl border border-[rgba(28,31,38,0.22)] bg-white px-4 py-3 text-[17px] text-[rgb(24_27_32)] outline-none transition-colors placeholder:text-[rgb(95_102_115)] focus:border-moto-amber/55 focus:ring-2 focus:ring-moto-amber/20 md:order-none md:col-start-2 md:row-start-3 md:self-stretch">
                 </div>
             </div>
-            <input type="hidden" name="preferred_schedule" id="expert-schedule-value" value="">
-            @if($isContactsPage)
-                </div>
+            <input type="hidden" name="preferred_schedule" id="expert-schedule-value" data-rb-expert-schedule-value value="">
             @endif
 
             @if($showDrivingFields)
@@ -225,21 +285,24 @@
             @endif
 
             @if($isContactsPage)
-                <div class="advocate-contacts-form-panel">
-                <p class="advocate-contacts-form-group-label">Дополнительно</p>
-            @endif
+                <p class="mt-6 w-full text-[13px] leading-relaxed text-[rgb(90_96_106)] sm:text-[14px]">
+                    После получения обращения я ознакомлюсь с описанием и свяжусь с вами удобным способом. Если вопрос срочный — лучше сразу позвонить.
+                </p>
+            @else
             <div data-rb-public-field="comment" class="expert-public-field-wrap min-w-0">
                 <label for="expert-comment" class="mb-2 block text-sm font-semibold tracking-wide text-[rgb(28_31_32)]">Комментарий</label>
                 <textarea id="expert-comment" name="comment" rows="3" maxlength="2000"
                           class="expert-form-input w-full min-h-[5.5rem] rounded-xl border border-[rgba(28,31,38,0.22)] bg-white px-4 py-3 text-[17px] leading-relaxed text-[rgb(24_27_32)] outline-none transition-colors placeholder:text-[rgb(95_102_115)] focus:border-moto-amber/55 focus:ring-2 focus:ring-moto-amber/20"></textarea>
             </div>
-            @if($isContactsPage)
-                </div>
             @endif
 
-            <div class="mt-8 @if($isContactsPage) text-left @else text-center @endif sm:mt-10">
-                <button type="submit" id="expert-inquiry-submit" class="tenant-btn-primary inline-flex min-h-[3.75rem] w-full items-center justify-center rounded-xl px-12 text-[18px] font-bold shadow-lg transition-transform hover:scale-[1.02] sm:min-h-[4rem] @if($isContactsPage) sm:max-w-md @endif sm:w-auto">
-                    Отправить заявку
+            <div class="@if($isContactsPage) mt-5 w-full text-left @else mt-8 sm:mt-10 text-center @endif">
+                <button type="submit" id="expert-inquiry-submit" data-rb-expert-inquiry-submit class="advocate-contact-form-submit tenant-btn-primary inline-flex w-full items-center justify-center rounded-full px-10 font-semibold shadow-[0_16px_36px_-14px_rgba(95,72,42,0.5)] transition hover:brightness-[1.03] @if($isContactsPage) min-h-[3.5rem] text-[16px] @else min-h-[3.75rem] text-[18px] sm:min-h-[4rem] @endif">
+                    @if($isContactsPage)
+                        Отправить обращение
+                    @else
+                        Отправить заявку
+                    @endif
                 </button>
             </div>
         </form>
@@ -263,7 +326,7 @@
                 bar.dataset.bound = '1';
                 const targetId = bar.getAttribute('data-target') || 'expert-inquiry';
                 const target = document.getElementById(targetId);
-                const form = document.getElementById('expert-inquiry-form');
+                const form = document.querySelector('form[data-expert-inquiry-main]');
                 let hiddenByFocus = false;
                 let hiddenByIntersect = false;
 

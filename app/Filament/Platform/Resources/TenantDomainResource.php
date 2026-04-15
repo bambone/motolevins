@@ -2,12 +2,15 @@
 
 namespace App\Filament\Platform\Resources;
 
+use App\Admin\Lifecycle\AdminDeleteExecutor;
 use App\Filament\Platform\Resources\Concerns\GrantsPlatformPanelAccess;
 use App\Filament\Platform\Resources\TenantDomainResource\Pages;
+use App\Filament\Shared\Lifecycle\AdminFilamentDelete;
 use App\Filament\Support\FilamentInlineMarkdown;
 use App\Filament\Support\TenantDomainStatusCopy;
 use App\Models\Tenant;
 use App\Models\TenantDomain;
+use App\Rules\TenantDomainHostRule;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
@@ -16,13 +19,13 @@ use Filament\Actions\EditAction;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Components\View as SchemaView;
 use Filament\Schemas\Schema;
-use Filament\Notifications\Notification;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
@@ -73,10 +76,10 @@ class TenantDomainResource extends Resource
                             ->label('Доменное имя')
                             ->required()
                             ->maxLength(255)
-                            ->unique(ignoreRecord: true)
-                            ->placeholder('Например: motolevins.rentbase.su')
+                            ->placeholder('example.com')
+                            ->rules([new TenantDomainHostRule])
                             ->helperText(FilamentInlineMarkdown::toHtml(
-                                'Без префикса `https://`. Поддомен: `slug.корень` платформы; кастомный — полное имя у регистратора.'
+                                'Укажите домен **без** `http://` или `https://`, **без** пути и пробелов. Пример: `tenant.example.com` или поддомен платформы `slug.корень`.'
                             )),
                         Select::make('type')
                             ->label('Тип подключения')
@@ -181,7 +184,7 @@ class TenantDomainResource extends Resource
                     ->label('Основной')
                     ->boolean(),
                 TextColumn::make('status')
-                    ->label('Health')
+                    ->label('Статус')
                     ->badge()
                     ->formatStateUsing(fn (?string $state): string => TenantDomainStatusCopy::statusLabel($state))
                     ->color(fn (?string $state): string => match ($state) {
@@ -196,7 +199,7 @@ class TenantDomainResource extends Resource
                         $record->host
                     ))->wrap(),
                 TextColumn::make('ssl_status')
-                    ->label('SSL')
+                    ->label('SSL-сертификат')
                     ->badge()
                     ->formatStateUsing(fn (?string $state): string => TenantDomainStatusCopy::sslLabel($state))
                     ->color(fn (?string $state): string => match ($state) {
@@ -236,7 +239,7 @@ class TenantDomainResource extends Resource
             ->recordUrl(null)
             ->actions([
                 Action::make('make_primary')
-                    ->label('Main')
+                    ->label('Сделать основным')
                     ->icon('heroicon-o-star')
                     ->color('warning')
                     ->action(function (TenantDomain $record) {
@@ -246,26 +249,29 @@ class TenantDomainResource extends Resource
                     ->hidden(fn (TenantDomain $record): bool => (bool) $record->is_primary),
                 Action::make('copy_host')
                     ->icon('heroicon-o-clipboard-document')
-                    ->label('Copy')
+                    ->label('Копировать домен')
                     ->color('gray')
                     ->action(fn () => null) // handled via js or just native copy action natively available in Filament
                     ->extraAttributes(fn (TenantDomain $record) => [
                         'x-on:click' => "window.navigator.clipboard.writeText('{$record->host}'); \$tooltip('Скопировано!')",
                     ]),
                 EditAction::make()->slideOver(),
-                DeleteAction::make()
-                    ->label('Удалить')
-                    ->modalHeading('Удалить домен?')
-                    ->modalDescription('Сайт может перестать открываться по этому адресу. У клиента должен остаться хотя бы один домен.')
-                    ->failureNotificationTitle('Нельзя удалить последний домен клиента')
-                    ->failureNotificationBody('Добавьте другой домен или отключите клиента иначе — без адреса сайт недоступен.'),
+                AdminFilamentDelete::configureTableDeleteAction(
+                    DeleteAction::make()
+                        ->label('Удалить')
+                        ->modalHeading('Удалить домен?')
+                        ->modalDescription('Сайт может перестать открываться по этому адресу. У клиента должен остаться хотя бы один домен.')
+                        ->failureNotificationTitle('Нельзя удалить последний домен клиента')
+                        ->failureNotificationBody('Добавьте другой домен или отключите клиента иначе — без адреса сайт недоступен.'),
+                    ['entry' => 'filament.platform.tenant_domain.table'],
+                ),
             ])
             ->bulkActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make()
                         ->modalHeading('Удалить домены?')
                         ->modalDescription('Сайт клиента может перестать открываться по этим адресам. Нельзя удалить все домены у одного клиента — у каждого должен остаться хотя бы один.')
-                        ->using(function (DeleteBulkAction $action, EloquentCollection | Collection | LazyCollection $records): void {
+                        ->using(function (DeleteBulkAction $action, EloquentCollection|Collection|LazyCollection $records): void {
                             $records = $records instanceof LazyCollection
                                 ? $records->collect()
                                 : Collection::wrap($records);
@@ -285,20 +291,20 @@ class TenantDomainResource extends Resource
                                 }
                             }
 
-                            $isFirstException = true;
+                            $mayNotifyUser = true;
 
-                            $records->each(static function (Model $record) use ($action, &$isFirstException): void {
-                                try {
-                                    $record->delete() || $action->reportBulkProcessingFailure();
-                                } catch (\Throwable $exception) {
-                                    $action->reportBulkProcessingFailure();
+                            $records->each(static function (Model $record) use ($action, &$mayNotifyUser): void {
+                                $ok = AdminDeleteExecutor::tryDeleteOneForBulk(
+                                    $record,
+                                    ['entry' => 'filament.platform.tenant_domain.bulk'],
+                                    $mayNotifyUser,
+                                );
 
-                                    if ($isFirstException) {
-                                        report($exception);
-
-                                        $isFirstException = false;
-                                    }
+                                if ($ok) {
+                                    return;
                                 }
+
+                                $action->reportBulkProcessingFailure();
                             });
                         }),
                 ]),

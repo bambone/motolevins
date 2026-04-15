@@ -45,7 +45,7 @@ final class TenantSeoJsonLdFactory
             $product = $this->productFromMotorcycle($tenant, $model, $canonicalUrl);
             $crumbs = $this->breadcrumbs->forMotorcycle($tenant, $model);
             $out = [$product];
-            $bc = $this->breadcrumbListFromCrumbs($crumbs);
+            $bc = $this->breadcrumbSchemaFromCrumbs($crumbs);
             if ($bc !== null) {
                 $out[] = $bc;
             }
@@ -123,7 +123,7 @@ final class TenantSeoJsonLdFactory
                 'name' => trim((string) $page->title) ?: (string) $page->slug,
             ],
         ];
-        $bc = $this->breadcrumbListFromCrumbs($this->breadcrumbs->forLocationLanding($tenant, $page));
+        $bc = $this->breadcrumbSchemaFromCrumbs($this->breadcrumbs->forLocationLanding($tenant, $page));
         if ($bc !== null) {
             $out[] = $bc;
         }
@@ -143,7 +143,7 @@ final class TenantSeoJsonLdFactory
                 'name' => trim((string) $page->title) ?: (string) $page->slug,
             ],
         ];
-        $bc = $this->breadcrumbListFromCrumbs($this->breadcrumbs->forSeoLanding($tenant, $page));
+        $bc = $this->breadcrumbSchemaFromCrumbs($this->breadcrumbs->forSeoLanding($tenant, $page));
         if ($bc !== null) {
             $out[] = $bc;
         }
@@ -154,7 +154,7 @@ final class TenantSeoJsonLdFactory
     /**
      * @param  list<array{name: string, url: string}>  $crumbs
      */
-    private function breadcrumbListFromCrumbs(array $crumbs): ?array
+    public function breadcrumbSchemaFromCrumbs(array $crumbs): ?array
     {
         if ($crumbs === []) {
             return null;

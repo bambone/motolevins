@@ -4,12 +4,12 @@ namespace App\Filament\Tenant\Resources;
 
 use App\Filament\Shared\CRM\CrmSharedFilters;
 use App\Filament\Shared\CRM\CrmSharedTable;
+use App\Filament\Support\AdminEmptyState;
 use App\Filament\Tenant\Concerns\ResolvesDomainTermLabels;
 use App\Filament\Tenant\Resources\CrmRequestResource\Pages;
 use App\Models\CrmRequest;
 use App\Models\User;
 use App\Terminology\DomainTermKeys;
-use App\Filament\Tenant\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
@@ -77,13 +77,19 @@ class CrmRequestResource extends Resource
 
     public static function table(Table $table): Table
     {
-        return $table
-            ->columns(CrmSharedTable::columns())
-            ->filters(CrmSharedFilters::tableFilters(static::getEloquentQuery()))
-            ->defaultSort('id', 'desc')
-            ->recordUrl(fn (CrmRequest $record): string => static::getUrl('view', ['record' => $record]))
-            ->recordClasses(CrmSharedTable::recordClasses())
-            ->paginated([25, 50, 100]);
+        return AdminEmptyState::applyInitial(
+            $table
+                ->columns(CrmSharedTable::columns())
+                ->filters(CrmSharedFilters::tableFilters(static::getEloquentQuery()))
+                ->defaultSort('id', 'desc')
+                ->recordUrl(fn (CrmRequest $record): string => static::getUrl('view', ['record' => $record]))
+                ->recordClasses(CrmSharedTable::recordClasses())
+                ->paginated([25, 50, 100]),
+            'Заявок не найдено',
+            'Обращения с сайта и других источников появляются здесь автоматически после отправки формы.'
+                .AdminEmptyState::hintFiltersAndSearch(),
+            'heroicon-o-inbox-arrow-down',
+        );
     }
 
     public static function canCreate(): bool

@@ -4,10 +4,12 @@ namespace App\Filament\Platform\Resources;
 
 use App\Filament\Platform\Resources\Concerns\GrantsPlatformPanelAccess;
 use App\Filament\Platform\Resources\PlatformBookableServiceResource\Pages;
+use App\Filament\Shared\Lifecycle\AdminFilamentDelete;
+use App\Filament\Support\AdminEmptyState;
 use App\Models\BookableService;
 use App\Scheduling\Enums\SchedulingScope;
 use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\CreateAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -157,18 +159,24 @@ class PlatformBookableServiceResource extends Resource
 
     public static function table(Table $table): Table
     {
-        return $table
-            ->columns([
-                TextColumn::make('title')->label('Название')->searchable(),
-                TextColumn::make('slug')->label('Slug'),
-                IconColumn::make('is_active')->label('Активна')->boolean(),
-            ])
-            ->actions([EditAction::make()])
-            ->bulkActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make(),
+        return AdminEmptyState::applyInitial(
+            $table
+                ->columns([
+                    TextColumn::make('title')->label('Название')->searchable(),
+                    TextColumn::make('slug')->label('URL-идентификатор'),
+                    IconColumn::make('is_active')->label('Активна')->boolean(),
+                ])
+                ->actions([EditAction::make()])
+                ->bulkActions([
+                    BulkActionGroup::make([
+                        AdminFilamentDelete::makeBulkDeleteAction(),
+                    ]),
                 ]),
-            ]);
+            'Шаблонов услуг записи пока нет',
+            'Создайте эталонную услугу для клиентов платформы — её можно использовать как основу при настройке сайтов.',
+            'heroicon-o-calendar-days',
+            [CreateAction::make()->label('Создать услугу')],
+        );
     }
 
     public static function getPages(): array

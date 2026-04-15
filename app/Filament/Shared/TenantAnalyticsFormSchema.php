@@ -2,6 +2,7 @@
 
 namespace App\Filament\Shared;
 
+use App\Support\Analytics\AnalyticsSettingsFormMapper;
 use Closure;
 use Filament\Actions\Action;
 use Filament\Forms\Components\TextInput;
@@ -12,7 +13,7 @@ use Illuminate\Support\Facades\View;
 
 /**
  * Shared «Аналитика» fields: кабинет клиента, карточка клиента в платформе, маркетинг платформы (PlatformMarketingSettingsPage).
- * Form keys must stay in sync with {@see \App\Support\Analytics\AnalyticsSettingsFormMapper}.
+ * Form keys must stay in sync with {@see AnalyticsSettingsFormMapper}.
  */
 final class TenantAnalyticsFormSchema
 {
@@ -121,8 +122,8 @@ final class TenantAnalyticsFormSchema
                         'filament.shared.analytics-hints.ga4-main',
                     )),
                 TextInput::make('analytics_ga4_measurement_id')
-                    ->label('Measurement ID (GA4)')
-                    ->helperText('Укажите только Measurement ID, например G-ABC123DEF4. Не вставляйте gtag-код целиком.')
+                    ->label('Идентификатор GA4')
+                    ->helperText('Только код вида G-ABC123DEF4 (как в интерфейсе Google Analytics). Не вставляйте целиком скрипт с сайта.')
                     ->maxLength(32),
             ])->columns(2);
     }

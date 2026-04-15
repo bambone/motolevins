@@ -23,6 +23,10 @@
 | Документ | Содержание |
 |----------|------------|
 | [ux-glossary.md](reference/ux-glossary.md) | Термины для подписей в UI («Клиент», «Кабинет клиента», роли) |
+| [af-017-admin-terminology-contract.md](reference/af-017-admin-terminology-contract.md) | Контракт терминологии админок (AF-017): уровни языка, label/helper, аббревиатуры |
+| [af-017-admin-copy-inventory.md](reference/af-017-admin-copy-inventory.md) | Журнал правок UI-copy по AF-017 (до/после по итерациям) |
+| [af-018-empty-state-contract.md](reference/af-018-empty-state-contract.md) | Контракт пустых состояний админок (AF-018) |
+| [af-018-empty-state-inventory.md](reference/af-018-empty-state-inventory.md) | Журнал внедрения empty states по AF-018 |
 | [product-roadmap.md](reference/product-roadmap.md) | Фазы развития продукта (что считается сделанным, что в бэклоге) |
 
 ## Карта репозитория

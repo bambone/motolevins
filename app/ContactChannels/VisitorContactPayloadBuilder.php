@@ -40,7 +40,7 @@ final class VisitorContactPayloadBuilder
         if (ContactChannelRegistry::requiresVisitorValue($preferred)) {
             if ($extraRaw === '') {
                 throw ValidationException::withMessages([
-                    'preferred_contact_value' => 'Укажите контакт для выбранного способа связи.',
+                    'preferred_contact_value' => PreferredContactValueMessages::requiredRu($preferred),
                 ]);
             }
         }
@@ -67,7 +67,7 @@ final class VisitorContactPayloadBuilder
             $u = VisitorContactNormalizer::normalizeTelegram($extraRaw);
             if ($u === null) {
                 throw ValidationException::withMessages([
-                    'preferred_contact_value' => 'Укажите корректный Telegram (username или ссылка t.me/…).',
+                    'preferred_contact_value' => PreferredContactValueMessages::invalidFormatRu($preferred),
                 ]);
             }
             $preferredValue = $u;
@@ -83,7 +83,7 @@ final class VisitorContactPayloadBuilder
             $url = VisitorContactNormalizer::normalizeVk($extraRaw);
             if ($url === null) {
                 throw ValidationException::withMessages([
-                    'preferred_contact_value' => 'Укажите ссылку на профиль VK или id/slug.',
+                    'preferred_contact_value' => PreferredContactValueMessages::invalidFormatRu($preferred),
                 ]);
             }
             $preferredValue = $url;
@@ -96,7 +96,7 @@ final class VisitorContactPayloadBuilder
             $v = VisitorContactNormalizer::normalizeMax($extraRaw);
             if ($v === null) {
                 throw ValidationException::withMessages([
-                    'preferred_contact_value' => 'Укажите контакт MAX (текст или ссылку).',
+                    'preferred_contact_value' => PreferredContactValueMessages::invalidFormatRu($preferred),
                 ]);
             }
             $preferredValue = $v;

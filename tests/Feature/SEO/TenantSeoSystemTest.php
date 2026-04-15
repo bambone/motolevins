@@ -171,6 +171,26 @@ class TenantSeoSystemTest extends TestCase
         $this->assertStringContainsString('<link rel="canonical" href="https://seocanon.apex.test/moto/canon-bike"', $html);
     }
 
+    public function test_reviews_page_has_meta_description_breadcrumbs_and_breadcrumb_json_ld(): void
+    {
+        $tenant = $this->seedTenantWithDomain('seorev.apex.test', 'seorev');
+
+        $html = $this->call('GET', 'http://seorev.apex.test/reviews?utm_source=newsletter')
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString('<meta name="description" content="', $html);
+        $this->assertStringContainsString('Отзывы', $html);
+        $this->assertStringContainsString('rb-public-breadcrumbs', $html);
+        $this->assertStringContainsString('BreadcrumbList', $html);
+        $this->assertStringContainsString('<link rel="canonical" href="https://seorev.apex.test/reviews"', $html);
+        if (preg_match('/<link rel="canonical" href="([^"]+)"/', $html, $cm)) {
+            $this->assertStringNotContainsString('utm_', $cm[1]);
+        } else {
+            $this->fail('canonical link not found');
+        }
+    }
+
     public function test_public_html_lang_uses_tenant_locale_bcp47(): void
     {
         $tenant = $this->seedTenantWithDomain('seolang.apex.test', 'seolang');

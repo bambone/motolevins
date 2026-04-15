@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AboutPageController;
 use App\Http\Controllers\BookingController;
+use App\Http\Controllers\ContactInquiryController;
 use App\Http\Controllers\ExpertInquiryController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\LeadController;
@@ -23,6 +24,7 @@ use App\Http\Controllers\TenantPublicBookingAvailabilityController;
 use App\Http\Controllers\TenantPublicFaqController;
 use App\Http\Controllers\TenantPublicMirrorFileController;
 use App\Http\Controllers\TenantPublicReviewsController;
+use App\Http\Controllers\TenantPublicReviewSubmitController;
 use App\Http\Controllers\TenantPublicStorageFileController;
 use App\Http\Controllers\ThemePlatformAssetController;
 use App\Http\Middleware\EnsureTenantContext;
@@ -39,7 +41,7 @@ foreach (config('tenancy.central_domains', []) as $h) {
     }
 }
 
-// РљРѕСЂРµРЅСЊ PLATFORM_HOST РѕР±СЂР°Р±Р°С‚С‹РІР°РµС‚ Filament (РіРѕСЃС‚СЊ в†’ /login, РїРѕСЃР»Рµ РІС…РѕРґР° вЂ” РґРѕРјР°С€РЅСЏСЏ СЃС‚СЂР°РЅРёС†Р° РїР°РЅРµР»Рё).
+// Корень PLATFORM_HOST обрабатывает Filament (гость → /login, после входа — домашняя страница панели).
 
 Route::middleware('web')->group(function () {
     Route::get('/scheduling/oauth/google', [GoogleCalendarOAuthController::class, 'redirect'])
@@ -121,6 +123,9 @@ Route::middleware([EnsureTenantContext::class, RememberTenantCatalogLocation::cl
     Route::get('/api/tenant/reviews', [TenantPublicReviewsController::class, 'apiIndex'])
         ->middleware('throttle:120,1')
         ->name('api.tenant.reviews');
+    Route::post('/api/tenant/reviews/submit', [TenantPublicReviewSubmitController::class, 'store'])
+        ->middleware('throttle:60,1')
+        ->name('api.tenant.reviews.submit');
     Route::get('/faq', TenantPublicFaqController::class)->name('faq');
     Route::get('/about', [AboutPageController::class, 'show'])->name('about');
     Route::view('/delivery/anapa', 'tenant.pages.delivery.anapa')->name('delivery.anapa');
@@ -146,6 +151,9 @@ Route::middleware([EnsureTenantContext::class, RememberTenantCatalogLocation::cl
     Route::post('/api/leads', [LeadController::class, 'store'])->name('api.leads.store');
     Route::post('/api/tenant/expert-inquiry', [ExpertInquiryController::class, 'store'])
         ->name('api.tenant.expert-inquiry.store');
+    Route::post('/api/tenant/contact-inquiry', [ContactInquiryController::class, 'store'])
+        ->middleware('throttle:30,1')
+        ->name('api.tenant.contact-inquiry.store');
     Route::get('/api/tenant/scheduling/bookable-services', [TenantPublicSchedulingController::class, 'bookableServices'])
         ->middleware('throttle:60,1')
         ->name('api.tenant.scheduling.bookable-services');

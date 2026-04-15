@@ -39,8 +39,13 @@ class StoreLeadRequest extends FormRequest
             ? app(TenantContactChannelsStore::class)->allowedPreferredChannelIds($tenant->id)
             : [ContactChannelType::Phone->value];
 
+        $tenantId = $tenant?->id ?? 0;
+
         return [
-            'motorcycle_id' => ['nullable', 'exists:motorcycles,id'],
+            'motorcycle_id' => [
+                'nullable',
+                Rule::exists('motorcycles', 'id')->where('tenant_id', $tenantId),
+            ],
             'rental_date_from' => ['nullable', 'date'],
             'rental_date_to' => ['nullable', 'date', 'after_or_equal:rental_date_from'],
             'name' => ['required', 'string', 'max:255'],

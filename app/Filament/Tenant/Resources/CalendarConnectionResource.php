@@ -2,6 +2,7 @@
 
 namespace App\Filament\Tenant\Resources;
 
+use App\Filament\Shared\Lifecycle\AdminFilamentDelete;
 use App\Filament\Tenant\Resources\CalendarConnectionResource\Pages;
 use App\Filament\Tenant\Resources\CalendarConnectionResource\RelationManagers\CalendarSubscriptionsRelationManager;
 use App\Filament\Tenant\Support\CalendarConnectionFormGuide;
@@ -12,7 +13,6 @@ use App\Scheduling\Enums\CalendarProviderType;
 use App\Scheduling\Enums\SchedulingScope;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
@@ -20,7 +20,6 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Notifications\Notification;
-use App\Filament\Tenant\Resources\Resource;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
@@ -314,7 +313,7 @@ class CalendarConnectionResource extends Resource
             ])
             ->bulkActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make(),
+                    AdminFilamentDelete::makeBulkDeleteAction(),
                 ]),
             ]);
     }

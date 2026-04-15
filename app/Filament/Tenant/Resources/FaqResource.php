@@ -2,14 +2,15 @@
 
 namespace App\Filament\Tenant\Resources;
 
+use App\Filament\Support\AdminEmptyState;
 use App\Filament\Tenant\Resources\FaqResource\Pages;
 use App\Models\Faq;
+use Filament\Actions\CreateAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
-use App\Filament\Tenant\Resources\Resource;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
@@ -103,20 +104,27 @@ class FaqResource extends Resource
 
     public static function table(Table $table): Table
     {
-        return $table
-            ->columns([
-                TextColumn::make('id')->sortable(),
-                TextColumn::make('question')->searchable()->limit(50),
-                TextColumn::make('category')->placeholder('—'),
-                TextColumn::make('status')->badge()->formatStateUsing(fn (?string $state): string => $state ? (Faq::statuses()[$state] ?? $state) : ''),
-                IconColumn::make('show_on_home')->boolean(),
-                TextColumn::make('sort_order')->sortable(),
-            ])
-            ->filters([
-                SelectFilter::make('status')->options(Faq::statuses()),
-            ])
-            ->defaultSort('sort_order')
-            ->actions([EditAction::make()]);
+        return AdminEmptyState::applyInitial(
+            $table
+                ->columns([
+                    TextColumn::make('id')->sortable(),
+                    TextColumn::make('question')->searchable()->limit(50),
+                    TextColumn::make('category')->placeholder('—'),
+                    TextColumn::make('status')->badge()->formatStateUsing(fn (?string $state): string => $state ? (Faq::statuses()[$state] ?? $state) : ''),
+                    IconColumn::make('show_on_home')->boolean(),
+                    TextColumn::make('sort_order')->sortable(),
+                ])
+                ->filters([
+                    SelectFilter::make('status')->options(Faq::statuses()),
+                ])
+                ->defaultSort('sort_order')
+                ->actions([EditAction::make()]),
+            'Вопросов в базе пока нет',
+            'Добавьте пункты FAQ — они появятся на странице /faq и в блоках конструктора.'
+                .AdminEmptyState::hintFiltersAndSearch(),
+            'heroicon-o-question-mark-circle',
+            [CreateAction::make()->label('Добавить вопрос')],
+        );
     }
 
     public static function getPages(): array

@@ -33,6 +33,28 @@ class StoreExpertInquiryRequest extends FormRequest
                 'preferred_schedule' => trim((string) $this->input('preferred_schedule')),
             ]);
         }
+
+        foreach (['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'] as $k) {
+            if (! $this->has($k)) {
+                continue;
+            }
+            $v = $this->input($k);
+            $this->merge([
+                $k => is_string($v) ? trim($v) : $v,
+            ]);
+        }
+
+        if ($this->has('source_page')) {
+            $this->merge([
+                'source_page' => trim((string) $this->input('source_page')),
+            ]);
+        }
+
+        if ($this->has('source_context')) {
+            $this->merge([
+                'source_context' => trim((string) $this->input('source_context')),
+            ]);
+        }
     }
 
     /**
@@ -44,6 +66,16 @@ class StoreExpertInquiryRequest extends FormRequest
         $allowed = $tenant !== null
             ? app(TenantContactChannelsStore::class)->allowedPreferredChannelIds($tenant->id)
             : [ContactChannelType::Phone->value];
+
+        $programIdRule = ['nullable', 'integer'];
+        if ($tenant !== null) {
+            $programIdRule[] = Rule::exists('tenant_service_programs', 'id')->where(
+                static fn ($q) => $q->where('tenant_id', $tenant->id),
+            );
+        }
+
+        $st = (string) ($this->input('source_type') ?? '');
+        $needsPrivacy = in_array($st, ['program_enrollment', 'enrollment_cta'], true);
 
         return [
             'name' => ['required', 'string', 'max:255'],
@@ -61,7 +93,7 @@ class StoreExpertInquiryRequest extends FormRequest
             'preferred_schedule' => [
                 'nullable',
                 'string',
-                'max:32',
+                'max:120',
                 function (string $attribute, mixed $value, \Closure $fail): void {
                     $this->assertValidPreferredScheduleInterval($value, $fail);
                 },
@@ -76,6 +108,16 @@ class StoreExpertInquiryRequest extends FormRequest
             'page_url' => ['nullable', 'string', 'max:500'],
             'preferred_contact_channel' => ['required', 'string', Rule::in($allowed)],
             'preferred_contact_value' => ['nullable', 'string', 'max:500'],
+            'source_type' => ['nullable', 'string', Rule::in(['program_enrollment', 'enrollment_cta'])],
+            'source_page' => ['nullable', 'string', 'max:500'],
+            'source_context' => ['nullable', 'string', 'max:128'],
+            'program_id' => $programIdRule,
+            'privacy_accepted' => $needsPrivacy ? ['required', 'accepted'] : ['nullable'],
+            'utm_source' => ['nullable', 'string', 'max:255'],
+            'utm_medium' => ['nullable', 'string', 'max:255'],
+            'utm_campaign' => ['nullable', 'string', 'max:255'],
+            'utm_content' => ['nullable', 'string', 'max:255'],
+            'utm_term' => ['nullable', 'string', 'max:255'],
         ];
     }
 
@@ -96,9 +138,18 @@ class StoreExpertInquiryRequest extends FormRequest
         if ($trim === '') {
             return;
         }
-        if (! preg_match('/^(\d{2}:\d{2})\s*[\x{2013}\x{2014}-]\s*(\d{2}:\d{2})$/u', $trim, $m)) {
-            $fail('Укажите интервал как ЧЧ:ММ – ЧЧ:ММ (например 18:00 – 21:00) или оставьте оба поля пустыми.');
+        if (str_contains($trim, "\n") || str_contains($trim, "\r")) {
+            $fail('Укажите удобное время одной строкой или оставьте поле пустым.');
 
+            return;
+        }
+        if (mb_strlen($trim) > 120) {
+            $fail('Удобное время для связи — не длиннее 120 символов.');
+
+            return;
+        }
+        if (! preg_match('/^(\d{2}:\d{2})\s*[\x{2013}\x{2014}-]\s*(\d{2}:\d{2})$/u', $trim, $m)) {
+            // Свободная формулировка (например «будни после 18:00», «вечером»).
             return;
         }
         foreach ([$m[1], $m[2]] as $hm) {

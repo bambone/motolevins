@@ -21,6 +21,7 @@ final class TenantSeoResolver
         private TenantCanonicalPublicBaseUrl $canonicalBase,
         private JsonLdGenerator $jsonLd,
         private TenantPublicOgImageResolver $ogImageResolver,
+        private TenantPublicPageBreadcrumbs $pageBreadcrumbs,
     ) {}
 
     /**
@@ -61,17 +62,22 @@ final class TenantSeoResolver
             $title = $siteName !== '' ? $siteName : 'Rent';
         }
 
-        $description = (string) TenantSeoMerge::firstFilled(
-            $seo?->meta_description,
-            isset($registryInterpolated['description']) ? (string) $registryInterpolated['description'] : null,
-            $fb['description'] !== '' ? $fb['description'] : null,
-        );
-
         $h1 = TenantSeoMerge::firstFilled(
             $seo?->h1,
             isset($registryInterpolated['h1']) ? (string) $registryInterpolated['h1'] : null,
             $fb['h1'] !== '' ? $fb['h1'] : null,
         );
+
+        $description = TenantSeoMerge::firstFilled(
+            $seo?->meta_description,
+            isset($registryInterpolated['description']) ? (string) $registryInterpolated['description'] : null,
+            $fb['description'] !== '' ? $fb['description'] : null,
+        );
+        if (! TenantSeoMerge::isFilled($description)) {
+            $description = $this->fallback->syntheticDescription($tenant, $routeName, $model, $title, $h1);
+        } else {
+            $description = trim((string) $description);
+        }
 
         $canonical = $this->resolveCanonical($request, $tenant, $seo, $registryInterpolated);
 
@@ -105,6 +111,8 @@ final class TenantSeoResolver
             ? $context['item_list_entries']
             : null;
 
+        $breadcrumbs = $this->pageBreadcrumbs->resolve($tenant, $routeName, $model, $canonical);
+
         $jsonLdGraph = $this->jsonLd->buildGraph(
             $tenant,
             $routeName,
@@ -112,6 +120,7 @@ final class TenantSeoResolver
             $seo,
             $canonical,
             $itemListEntries,
+            $breadcrumbs,
         );
 
         return new SeoResolvedData(
@@ -131,6 +140,7 @@ final class TenantSeoResolver
             twitterCard: $twitterCard,
             isIndexable: $isIndexable,
             isFollowable: $isFollowable,
+            breadcrumbs: $breadcrumbs,
         );
     }
 

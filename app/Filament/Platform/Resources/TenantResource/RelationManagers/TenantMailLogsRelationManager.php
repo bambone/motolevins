@@ -63,7 +63,8 @@ class TenantMailLogsRelationManager extends RelationManager
                     ->label('Попытки')
                     ->sortable(),
                 TextColumn::make('throttled_count')
-                    ->label('Throttled')
+                    ->label('Ограничено по лимиту')
+                    ->tooltip('Сколько раз отправка отложена из‑за лимита по клиенту')
                     ->sortable(),
             ])
             ->defaultSort('id', 'desc')

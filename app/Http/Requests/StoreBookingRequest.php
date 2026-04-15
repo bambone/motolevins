@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreBookingRequest extends FormRequest
 {
@@ -22,8 +23,10 @@ class StoreBookingRequest extends FormRequest
      */
     public function rules(): array
     {
+        $tenantId = currentTenant()?->id ?? 0;
+
         return [
-            'bike_id' => ['required', 'exists:bikes,id'],
+            'bike_id' => ['required', Rule::exists('bikes', 'id')->where('tenant_id', $tenantId)],
             'start_date' => ['required', 'date', 'after_or_equal:today'],
             'end_date' => ['required', 'date', 'after_or_equal:start_date'],
             'customer_name' => ['required', 'string', 'max:255'],

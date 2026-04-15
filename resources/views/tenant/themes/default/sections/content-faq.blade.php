@@ -15,7 +15,7 @@
                 @endphp
                 @if(filled($q))
                     <details class="group rounded-lg border border-white/10 bg-white/[0.03] px-4 py-3 open:bg-white/[0.05]" @if($idx === 0) open @endif>
-                        <summary class="cursor-pointer list-none text-sm font-medium text-white outline-none [&::-webkit-details-marker]:hidden">
+                        <summary class="cursor-pointer list-none text-sm font-medium text-white outline-none focus-visible:rounded-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moto-amber [&::-webkit-details-marker]:hidden">
                             <span class="flex items-center justify-between gap-2">
                                 <span>{{ $q }}</span>
                                 <span class="text-silver/60 transition group-open:rotate-180" aria-hidden="true">▼</span>

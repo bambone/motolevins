@@ -27,7 +27,7 @@
                 <div class="space-y-3 sm:space-y-4">
                     @foreach ($faqs as $faq)
                         <details class="tenant-page-faq__item group rounded-2xl border border-white/10 bg-carbon/90 px-4 py-3 shadow-sm sm:px-5 sm:py-4 open:border-moto-amber/25 open:bg-carbon">
-                            <summary class="cursor-pointer list-none text-base font-semibold leading-snug text-white marker:content-none sm:text-lg [&::-webkit-details-marker]:hidden">
+                            <summary class="cursor-pointer list-none text-base font-semibold leading-snug text-white marker:content-none focus-visible:rounded-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moto-amber sm:text-lg [&::-webkit-details-marker]:hidden">
                                 <span class="flex items-start justify-between gap-3">
                                     <span class="min-w-0">{{ $faq->question }}</span>
                                     <span class="mt-0.5 shrink-0 text-moto-amber transition-transform group-open:rotate-180" aria-hidden="true">

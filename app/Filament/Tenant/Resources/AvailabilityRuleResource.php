@@ -2,6 +2,7 @@
 
 namespace App\Filament\Tenant\Resources;
 
+use App\Filament\Shared\Lifecycle\AdminFilamentDelete;
 use App\Filament\Support\FilamentInlineMarkdown;
 use App\Filament\Tenant\Resources\AvailabilityRuleResource\Pages;
 use App\Models\AvailabilityRule;
@@ -9,13 +10,11 @@ use App\Models\SchedulingResource;
 use App\Scheduling\Enums\AvailabilityRuleType;
 use App\Scheduling\Enums\SchedulingScope;
 use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
-use App\Filament\Tenant\Resources\Resource;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
@@ -219,7 +218,7 @@ class AvailabilityRuleResource extends Resource
             ->actions([EditAction::make()])
             ->bulkActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make(),
+                    AdminFilamentDelete::makeBulkDeleteAction(),
                 ]),
             ]);
     }

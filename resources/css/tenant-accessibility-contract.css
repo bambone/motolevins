@@ -1,0 +1,79 @@
+/**
+ * Tenant public site — единый контракт доступности (контраст / фокус / ссылки в потоке текста).
+ * Роли (семантика): значения задаются токенами темы; здесь — базовые правила и светлый контур по умолчанию.
+ *
+ * --rb-text-on-light-primary основной текст на светлом фоне
+ * --rb-text-on-light-secondary  вторичный (всё ещё ≥4.5:1 на белом/slate-50 при использовании в Blade)
+ * --rb-focus-ring               цвет кольца :focus-visible для интерактива в main
+ */
+
+:root {
+    --rb-text-on-light-primary: rgb(15 23 42);
+    --rb-text-on-light-secondary: rgb(51 65 85);
+    --rb-focus-ring: var(--color-moto-amber);
+}
+
+/**
+ * Skip link (2.4.1): виден только при фокусе; поверх шапки.
+ */
+.rb-skip-link {
+    position: fixed;
+    top: -100px;
+    left: 0.75rem;
+    z-index: 10050;
+    padding: 0.625rem 1rem;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-decoration: none;
+    background: rgb(255 255 255);
+    color: rgb(15 23 42);
+    box-shadow:
+        0 0 0 2px var(--rb-focus-ring),
+        0 8px 24px rgba(0, 0, 0, 0.18);
+    transition: top 0.15s ease;
+}
+
+.rb-skip-link:focus,
+.rb-skip-link:focus-visible {
+    top: max(0.75rem, env(safe-area-inset-top, 0px));
+    outline: 2px solid var(--rb-focus-ring);
+    outline-offset: 3px;
+}
+
+/**
+ * Шапка tenant: единый видимый фокус на ссылках/кнопках (в т.ч. moto-тема без отдельных utility).
+ */
+.tenant-header :where(a, button):focus-visible {
+    outline: 2px solid var(--rb-focus-ring);
+    outline-offset: 3px;
+}
+
+/**
+ * Ссылки в типографике (prose): не полагаться только на цвет; подчёркивание + заметный фокус.
+ * Навигация в шапке обычно вне .prose — не затрагивается.
+ */
+main :where(.prose) a:not([class*='tenant-btn']):not([class*='btn']) {
+    text-decoration: underline;
+    text-decoration-thickness: from-font;
+    text-underline-offset: 0.2em;
+}
+
+main :where(.prose) a:not([class*='tenant-btn']):not([class*='btn']):hover {
+    text-decoration-thickness: max(2px, from-font);
+}
+
+main :where(.prose) a:not([class*='tenant-btn']):not([class*='btn']):focus-visible {
+    outline: 2px solid var(--rb-focus-ring);
+    outline-offset: 3px;
+    border-radius: 0.125rem;
+}
+
+/*
+ * Тёмные поверхности каталога / модалки: поднять «вторичный» zinc-500 до уровня zinc-400,
+ * чтобы мелкий текст оставался в зоне WCAG AA на carbon / #141417.
+ */
+:where(.bg-carbon, .bg-carbon\/90) :where(.text-zinc-500),
+.tenant-booking-modal-panel :where(.text-zinc-500) {
+    color: rgb(161 161 170);
+}

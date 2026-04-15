@@ -32,6 +32,7 @@ class PageSectionContentCatalogTest extends TestCase
         'list_block',
         'info_cards',
         'contacts_info',
+        'contact_inquiry',
         'data_table',
         'notice_box',
         'cta',
@@ -121,6 +122,36 @@ class PageSectionContentCatalogTest extends TestCase
         $page = $this->makePage($tenant, 'contact-like');
         $ids = array_map(fn ($b) => $b->id(), $reg->forPage($page, 'advocate_editorial'));
         $this->assertContains('expert_lead_form', $ids);
+    }
+
+    public function test_contact_inquiry_section_resolves_and_renders_on_default_theme(): void
+    {
+        $tenant = $this->createTenantWithActiveDomain('cat-ci-render', ['theme_key' => 'default']);
+        $this->bindTenantContext($tenant);
+        $page = $this->makePage($tenant, 'p-ci');
+        $reg = app(PageSectionTypeRegistry::class);
+        $resolver = app(SectionViewResolver::class);
+        $section = PageSection::query()->create([
+            'tenant_id' => $tenant->id,
+            'page_id' => $page->id,
+            'section_key' => 'contact_inquiry_t',
+            'section_type' => 'contact_inquiry',
+            'title' => 'Форма',
+            'data_json' => $reg->get('contact_inquiry')->defaultData(),
+            'sort_order' => 10,
+            'is_visible' => true,
+            'status' => 'published',
+        ]);
+        $viewName = $resolver->resolveViewName($section, $tenant);
+        $this->assertNotNull($viewName);
+        $html = View::make($viewName, [
+            'section' => $section,
+            'data' => $section->data_json ?? [],
+            'page' => $page,
+        ])->render();
+        $this->assertIsString($html);
+        $this->assertNotSame('', trim($html));
+        $this->assertStringContainsString('data-rb-contact-inquiry-form', $html);
     }
 
     public function test_expert_lead_form_section_resolves_and_renders_on_advocate_theme(): void
@@ -236,6 +267,7 @@ class PageSectionContentCatalogTest extends TestCase
     public function test_content_section_views_resolve_and_render(): void
     {
         $tenant = $this->createTenantWithActiveDomain('cat-render');
+        $this->bindTenantContext($tenant);
         $page = $this->makePage($tenant, 'render-p');
         $resolver = app(SectionViewResolver::class);
         $reg = app(PageSectionTypeRegistry::class);
@@ -257,6 +289,7 @@ class PageSectionContentCatalogTest extends TestCase
             $html = View::make($viewName, [
                 'section' => $section,
                 'data' => $section->data_json ?? [],
+                'page' => $page,
             ])->render();
             $this->assertIsString($html);
             $this->assertNotSame('', trim($html));

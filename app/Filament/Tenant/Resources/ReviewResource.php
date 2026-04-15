@@ -3,15 +3,19 @@
 namespace App\Filament\Tenant\Resources;
 
 use App\Filament\Forms\Components\TenantSpatieMediaLibraryFileUpload;
+use App\Filament\Support\AdminEmptyState;
 use App\Filament\Tenant\Resources\ReviewResource\Pages;
 use App\Models\Review;
+use Filament\Actions\Action;
+use Filament\Actions\CreateAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
-use App\Filament\Tenant\Resources\Resource;
+use Filament\Notifications\Notification;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
@@ -19,6 +23,7 @@ use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Support\Facades\Auth;
 use UnitEnum;
 
 class ReviewResource extends Resource
@@ -60,6 +65,11 @@ class ReviewResource extends Resource
                             ->placeholder('Например, Челябинск')
                             ->hintIcon('heroicon-o-information-circle')
                             ->hintIconTooltip('Необязательно. Показывается рядом с именем, если тема выводит город.'),
+                        TextInput::make('contact_email')
+                            ->label('Email отправителя')
+                            ->email()
+                            ->maxLength(255)
+                            ->helperText('Если отзыв пришёл с сайта и вы запросили email — не публикуется на витрине.'),
                         TextInput::make('headline')
                             ->label('Заголовок / лид')
                             ->maxLength(255)
@@ -168,28 +178,95 @@ class ReviewResource extends Resource
                             ->hintIcon('heroicon-o-information-circle')
                             ->hintIconTooltip('Включите для 1–3 главных отзывов: крупный блок и бейдж на лендинге. Остальные — без этой отметки.'),
                     ])->columns(2),
+
+                Section::make('Модерация')
+                    ->description('Для отзывов с сайта: дата отправки и заметки. Статус меняйте в блоке «Статус публикации» или кнопками в списке.')
+                    ->schema([
+                        DateTimePicker::make('submitted_at')
+                            ->label('Отправлено (с сайта)')
+                            ->disabled()
+                            ->dehydrated(false)
+                            ->seconds(false)
+                            ->visible(fn (?Review $record): bool => $record !== null && $record->submitted_at !== null),
+                        DateTimePicker::make('moderated_at')
+                            ->label('Решение модерации')
+                            ->disabled()
+                            ->dehydrated(false)
+                            ->seconds(false)
+                            ->visible(fn (?Review $record): bool => $record !== null && $record->moderated_at !== null),
+                        Textarea::make('moderation_note')
+                            ->label('Комментарий модератора')
+                            ->rows(2)
+                            ->maxLength(2000),
+                    ])
+                    ->columns(2)
+                    ->collapsed(),
             ]);
     }
 
     public static function table(Table $table): Table
     {
-        return $table
-            ->columns([
-                TextColumn::make('id')->sortable(),
-                TextColumn::make('name')->searchable()->sortable(),
-                TextColumn::make('city')->placeholder('—'),
-                TextColumn::make('text')->limit(40)->placeholder('—'),
-                TextColumn::make('rating'),
-                TextColumn::make('motorcycle.name')->placeholder('—'),
-                TextColumn::make('status')->badge()->formatStateUsing(fn (?string $state): string => $state ? (Review::statuses()[$state] ?? $state) : ''),
-                IconColumn::make('is_featured')->boolean(),
-                TextColumn::make('created_at')->date('d.m.Y')->sortable(),
-            ])
-            ->filters([
-                SelectFilter::make('status')->options(Review::statuses()),
-            ])
-            ->defaultSort('sort_order')
-            ->actions([EditAction::make()]);
+        return AdminEmptyState::applyInitial(
+            $table
+                ->columns([
+                    TextColumn::make('id')->sortable(),
+                    TextColumn::make('name')->searchable()->sortable(),
+                    TextColumn::make('city')->placeholder('—'),
+                    TextColumn::make('text')->limit(40)->placeholder('—'),
+                    TextColumn::make('rating'),
+                    TextColumn::make('motorcycle.name')->placeholder('—'),
+                    TextColumn::make('status')->badge()->formatStateUsing(fn (?string $state): string => $state ? (Review::statuses()[$state] ?? $state) : ''),
+                    TextColumn::make('submitted_at')->label('Отправлено')->dateTime('d.m.Y H:i')->placeholder('—')->toggleable(isToggledHiddenByDefault: true),
+                    IconColumn::make('is_featured')->boolean(),
+                    TextColumn::make('created_at')->date('d.m.Y')->sortable(),
+                ])
+                ->filters([
+                    SelectFilter::make('status')->options(Review::statuses()),
+                ])
+                ->defaultSort('sort_order')
+                ->actions([
+                    Action::make('approve')
+                        ->label('Опубликовать')
+                        ->icon('heroicon-o-check-badge')
+                        ->color('success')
+                        ->visible(fn (Review $record): bool => $record->status === 'pending')
+                        ->requiresConfirmation()
+                        ->modalHeading('Опубликовать отзыв на сайте?')
+                        ->action(function (Review $record): void {
+                            $record->update([
+                                'status' => 'published',
+                                'moderated_at' => now(),
+                                'moderated_by' => Auth::id(),
+                            ]);
+                            Notification::make()->title('Отзыв опубликован')->success()->send();
+                        }),
+                    Action::make('reject')
+                        ->label('Отклонить')
+                        ->icon('heroicon-o-x-circle')
+                        ->color('danger')
+                        ->visible(fn (Review $record): bool => $record->status === 'pending')
+                        ->form([
+                            Textarea::make('moderation_note')->label('Комментарий (необязательно)')->rows(2),
+                        ])
+                        ->action(function (Review $record, array $data): void {
+                            $note = isset($data['moderation_note']) ? trim((string) $data['moderation_note']) : '';
+                            $record->update([
+                                'status' => 'hidden',
+                                'moderated_at' => now(),
+                                'moderated_by' => Auth::id(),
+                                'moderation_note' => $note !== '' ? $note : null,
+                            ]);
+                            Notification::make()->title('Отзыв отклонён')->success()->send();
+                        }),
+                    EditAction::make(),
+                ]),
+            'Пока нет отзывов',
+            'Добавьте отзыв вручную или дождитесь отправки с сайта — новые сначала в статусе «На модерации». '
+                .'Чтобы отзывы появились в блоке на сайте, опубликуйте их.'
+                .AdminEmptyState::hintFiltersAndSearch(),
+            'heroicon-o-star',
+            [CreateAction::make()->label('Добавить отзыв')],
+        );
     }
 
     public static function getPages(): array

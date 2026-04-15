@@ -4,7 +4,8 @@
         return;
     }
     $reviews = \App\Models\Review::forReviewFeed((int) $tenant->id, $data);
-    if ($reviews->isEmpty()) {
+    $reviewCfg = \App\Tenant\Reviews\TenantReviewSubmitConfig::forTenant((int) $tenant->id);
+    if ($reviews->isEmpty() && ! $reviewCfg->publicSubmitEnabled) {
         return;
     }
     $h = trim((string) ($data['heading'] ?? ''));
@@ -42,6 +43,10 @@
             <p class="mt-5 text-[15px] font-normal leading-[1.6] text-silver/85 sm:text-lg">{{ $sub }}</p>
         @endif
     </div>
+
+    @if($reviews->isEmpty())
+        <p class="mb-8 max-w-2xl text-[15px] leading-relaxed text-silver/80 sm:mb-10 lg:mb-14">Пока нет опубликованных отзывов.</p>
+    @endif
 
     @php
         $featOrdered = $reviews->where('is_featured', true)->sortBy('sort_order')->values();
@@ -272,6 +277,14 @@
             </div>
         @endif
     </div>
+
+    @if($reviewCfg->publicSubmitEnabled)
+        @include('tenant.components.review-submit-block', [
+            'pageUrl' => request()->getRequestUri(),
+            'sectionSuffix' => 'feed-'.$sid,
+            'blockId' => 'rb-review-feed-'.$sid,
+        ])
+    @endif
 </section>
 
 @once('expert-video-dialog-script')

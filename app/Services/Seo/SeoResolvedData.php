@@ -4,11 +4,13 @@ namespace App\Services\Seo;
 
 /**
  * @phpstan-type JsonLdGraph list<array<string, mixed>>
+ * @phpstan-type BreadcrumbCrumb array{name: string, url: string}
  */
 final class SeoResolvedData
 {
     /**
      * @param  JsonLdGraph  $jsonLd
+     * @param  list<BreadcrumbCrumb>  $breadcrumbs
      */
     public function __construct(
         public string $title,
@@ -27,5 +29,6 @@ final class SeoResolvedData
         public string $twitterCard = 'summary_large_image',
         public bool $isIndexable = true,
         public bool $isFollowable = true,
+        public array $breadcrumbs = [],
     ) {}
 }

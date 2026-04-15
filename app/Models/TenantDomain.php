@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\Tenancy\TenantDomainHostRules;
 use App\Tenant\TenantResolver;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -54,7 +55,13 @@ class TenantDomain extends Model
     protected static function booted(): void
     {
         static::saving(function (TenantDomain $domain) {
-            $domain->host = self::normalizeHost($domain->host);
+            $ignoreId = $domain->exists ? (int) $domain->getKey() : null;
+            $domain->host = app(TenantDomainHostRules::class)->validateAndCanonicalize(
+                (string) $domain->host,
+                (int) $domain->tenant_id,
+                $ignoreId,
+                (string) $domain->type,
+            );
         });
 
         static::saved(function (TenantDomain $domain) {

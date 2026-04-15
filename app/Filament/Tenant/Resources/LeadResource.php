@@ -28,7 +28,6 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
-use App\Filament\Tenant\Resources\Resource;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\View;
@@ -40,11 +39,13 @@ use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\HtmlString;
 use Illuminate\Validation\ValidationException;
+use Throwable;
 use UnitEnum;
 
 class LeadResource extends Resource
@@ -214,7 +215,7 @@ class LeadResource extends Resource
             $message = collect($e->errors())->flatten()->first() ?? $e->getMessage();
             Notification::make()->title('Не удалось сохранить')->body($message)->danger()->send();
             $component->state($old);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             report($e);
             Notification::make()->title('Не удалось сохранить')->body('Повторите попытку.')->danger()->send();
             $component->state($old);
@@ -591,9 +592,16 @@ class LeadResource extends Resource
                     ->visible(fn (): bool => Gate::allows('create', Booking::class))
                     ->form(ManualOperatorBookingForm::bookingFromLeadComponents())
                     ->fillForm(fn (Lead $record): array => ManualOperatorBookingForm::bookingFromLeadFormDefaults($record))
+                    ->modalSubmitActionLabel('Создать')
                     ->action(function (Lead $record, array $data): void {
                         $tenant = currentTenant();
                         if ($tenant === null) {
+                            Notification::make()
+                                ->title('Контекст клиента недоступен')
+                                ->body('Обновите страницу или войдите в кабинет снова.')
+                                ->danger()
+                                ->send();
+
                             return;
                         }
 
@@ -605,23 +613,49 @@ class LeadResource extends Resource
                             ]);
                         }
 
-                        app(ManualLeadBookingService::class)->createManualBooking(new ManualBookingCreateData(
-                            tenantId: $tenant->id,
-                            name: (string) ($record->name ?? ''),
-                            motorcycleId: (int) $data['motorcycle_id'],
-                            rentalUnitId: (int) $data['rental_unit_id'],
-                            startDateYmd: $start,
-                            endDateYmd: $end,
-                            phone: $record->phone,
-                            email: $record->email,
-                            comment: $record->comment,
-                            existingLeadId: $record->id,
-                            createLead: false,
-                            createCrm: false,
-                        ));
+                        try {
+                            $result = app(ManualLeadBookingService::class)->createManualBooking(new ManualBookingCreateData(
+                                tenantId: $tenant->id,
+                                name: (string) ($record->name ?? ''),
+                                motorcycleId: (int) $data['motorcycle_id'],
+                                rentalUnitId: (int) $data['rental_unit_id'],
+                                startDateYmd: $start,
+                                endDateYmd: $end,
+                                phone: $record->phone,
+                                email: $record->email,
+                                comment: $record->comment,
+                                existingLeadId: $record->id,
+                                createLead: false,
+                                createCrm: false,
+                            ));
+                        } catch (ValidationException $e) {
+                            throw $e;
+                        } catch (AuthorizationException $e) {
+                            Notification::make()
+                                ->title('Действие недоступно')
+                                ->body($e->getMessage())
+                                ->danger()
+                                ->send();
+
+                            return;
+                        } catch (Throwable $e) {
+                            report($e);
+                            Notification::make()
+                                ->title('Не удалось создать бронирование')
+                                ->body('Попробуйте ещё раз. Если ошибка повторяется — сообщите в поддержку.')
+                                ->danger()
+                                ->send();
+
+                            return;
+                        }
 
                         Notification::make()
                             ->title('Бронирование создано')
+                            ->body(
+                                $result->booking !== null
+                                    ? 'Бронь №'.$result->booking->id.' · Лид №'.$result->lead->id
+                                    : 'Лид №'.$result->lead->id
+                            )
                             ->success()
                             ->send();
                     }),

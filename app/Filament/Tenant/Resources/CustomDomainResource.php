@@ -2,12 +2,14 @@
 
 namespace App\Filament\Tenant\Resources;
 
+use App\Filament\Support\AdminEmptyState;
 use App\Filament\Support\TenantDomainStatusCopy;
 use App\Filament\Tenant\Resources\CustomDomainResource\Pages;
 use App\Models\TenantDomain;
+use App\Rules\TenantDomainHostRule;
+use Filament\Actions\CreateAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\TextInput;
-use App\Filament\Tenant\Resources\Resource;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
@@ -75,52 +77,58 @@ class CustomDomainResource extends Resource
                             ->required()
                             ->maxLength(255)
                             ->placeholder('example.com')
-                            ->helperText('Без https://. После сохранения настройте DNS по инструкции ниже.'),
+                            ->rules([new TenantDomainHostRule])
+                            ->helperText('Укажите домен без протокола и пути. Пример: tenant.example.com. После сохранения настройте DNS по инструкции ниже.'),
                     ]),
             ]);
     }
 
     public static function table(Table $table): Table
     {
-        return $table
-            ->columns([
-                TextColumn::make('host')
-                    ->label('Домен')
-                    ->searchable(),
-                TextColumn::make('status')
-                    ->label('Статус')
-                    ->badge()
-                    ->formatStateUsing(fn (?string $state): string => TenantDomainStatusCopy::statusLabel($state))
-                    ->color(fn (?string $state): string => match ($state) {
-                        TenantDomain::STATUS_ACTIVE => 'success',
-                        TenantDomain::STATUS_FAILED => 'danger',
-                        TenantDomain::STATUS_VERIFYING, TenantDomain::STATUS_PENDING => 'warning',
-                        default => 'gray',
-                    }),
-                TextColumn::make('ssl_status')
-                    ->label('SSL')
-                    ->badge()
-                    ->formatStateUsing(fn (?string $state): string => TenantDomainStatusCopy::sslLabel($state))
-                    ->color(fn (?string $state): string => match ($state) {
-                        TenantDomain::SSL_ISSUED, TenantDomain::SSL_NOT_REQUIRED => 'success',
-                        TenantDomain::SSL_FAILED => 'danger',
-                        TenantDomain::SSL_PENDING => 'warning',
-                        default => 'gray',
-                    }),
-                TextColumn::make('last_checked_at')
-                    ->label('Проверка DNS')
-                    ->dateTime()
-                    ->placeholder('—'),
-                TextColumn::make('activated_at')
-                    ->label('Активирован')
-                    ->dateTime()
-                    ->placeholder('—'),
-            ])
-            ->actions([
-                EditAction::make(),
-            ])
-            ->emptyStateHeading('Свой домен не подключён')
-            ->emptyStateDescription('Добавьте домен и выполните проверку DNS, затем нажмите «Проверить и подключить».');
+        return AdminEmptyState::applyInitial(
+            $table
+                ->columns([
+                    TextColumn::make('host')
+                        ->label('Домен')
+                        ->searchable(),
+                    TextColumn::make('status')
+                        ->label('Статус')
+                        ->badge()
+                        ->formatStateUsing(fn (?string $state): string => TenantDomainStatusCopy::statusLabel($state))
+                        ->color(fn (?string $state): string => match ($state) {
+                            TenantDomain::STATUS_ACTIVE => 'success',
+                            TenantDomain::STATUS_FAILED => 'danger',
+                            TenantDomain::STATUS_VERIFYING, TenantDomain::STATUS_PENDING => 'warning',
+                            default => 'gray',
+                        }),
+                    TextColumn::make('ssl_status')
+                        ->label('SSL-сертификат')
+                        ->badge()
+                        ->formatStateUsing(fn (?string $state): string => TenantDomainStatusCopy::sslLabel($state))
+                        ->color(fn (?string $state): string => match ($state) {
+                            TenantDomain::SSL_ISSUED, TenantDomain::SSL_NOT_REQUIRED => 'success',
+                            TenantDomain::SSL_FAILED => 'danger',
+                            TenantDomain::SSL_PENDING => 'warning',
+                            default => 'gray',
+                        }),
+                    TextColumn::make('last_checked_at')
+                        ->label('Проверка DNS')
+                        ->dateTime()
+                        ->placeholder('—'),
+                    TextColumn::make('activated_at')
+                        ->label('Активирован')
+                        ->dateTime()
+                        ->placeholder('—'),
+                ])
+                ->actions([
+                    EditAction::make(),
+                ]),
+            'Свой домен не подключён',
+            'Добавьте домен, настройте DNS по инструкции и выполните проверку — после этого сайт откроется по вашему адресу.'
+                .AdminEmptyState::hintFiltersAndSearch(),
+            'heroicon-o-globe-alt',
+            [CreateAction::make()->label('Добавить домен')],
+        );
     }
 
     public static function getPages(): array

@@ -571,14 +571,36 @@
 ])>
     @include('partials.analytics-yandex-noscript-body')
 
+    {{-- WCAG 2.4.1: первый таб — переход к основному содержимому (G1 skip link). --}}
+    <a
+        href="#tenant-main-content"
+        class="rb-skip-link"
+        onclick="event.preventDefault(); const m=document.getElementById('tenant-main-content'); if(!m){return;} m.scrollIntoView({behavior:'smooth',block:'start'}); try { m.focus({preventScroll:true}); } catch (e) { m.focus(); }"
+    >Перейти к основному содержимому</a>
+
+    @if($__tenantExpertFamilyBody)
+        {{-- Sticky footer: при коротком контенте футер у нижнего края viewport, без «полосы» под блоком футера. --}}
+        <div class="flex min-h-dvh flex-col">
+    @endif
     <x-header />
 
     {{-- Корневой x-data: без него Alpine не обрабатывает @click/$dispatch на страницах вне обёртки (например карточка мотоцикла). --}}
-    <main class="w-full min-w-0 pb-32 sm:pb-0" x-data="{}">
+    <main id="tenant-main-content" tabindex="-1" @class([
+        'w-full min-w-0 scroll-mt-[5.5rem] pb-32 outline-none sm:pb-0 md:scroll-mt-[6rem]',
+        'flex-1' => $__tenantExpertFamilyBody,
+    ]) x-data="{}">
+        @include('tenant.components.public-breadcrumbs')
         @yield('content')
     </main>
 
     @include('tenant.components.footer')
+    @if($__tenantExpertFamilyBody)
+        </div>
+    @endif
+
+    @if($__tenantExpertFamilyBody)
+        @include('tenant.partials.program-enrollment-modal')
+    @endif
 
     @php
         $__fabEnabled = $floating_messenger_buttons_enabled ?? true;

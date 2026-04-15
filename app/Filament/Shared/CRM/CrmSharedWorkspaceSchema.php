@@ -209,8 +209,8 @@ final class CrmSharedWorkspaceSchema
                                                 }),
 
                                             DateTimePicker::make('next_follow_up_at')
-                                                ->label('Follow-up')
-                                                ->helperText('Сохраняется после выбора даты (короткая пауза).')
+                                                ->label('Следующий контакт')
+                                                ->helperText('Когда менеджеру напомнить о заявке. Сохраняется после выбора даты (короткая пауза).')
                                                 ->native(false)
                                                 ->nullable()
                                                 ->live(debounce: 500)
@@ -225,7 +225,7 @@ final class CrmSharedWorkspaceSchema
                                                             $r,
                                                             self::parseFollowUpFormState($state),
                                                         ),
-                                                        'Follow-up сохранён',
+                                                        'Следующий контакт сохранён',
                                                     );
                                                 }),
 

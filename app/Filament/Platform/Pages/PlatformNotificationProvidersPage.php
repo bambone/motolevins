@@ -48,20 +48,21 @@ class PlatformNotificationProvidersPage extends Page
         return $schema
             ->statePath('data')
             ->components([
-                Section::make('Каналы (kill switch)')
+                Section::make('Каналы доставки')
+                    ->description('Быстрое отключение канала на всей платформе. Выключенный канал не используется для новых уведомлений.')
                     ->schema([
-                        Toggle::make('channel_email_enabled')->label('Email включён'),
-                        Toggle::make('channel_telegram_enabled')->label('Telegram включён'),
-                        Toggle::make('channel_webhook_enabled')->label('Webhook включён'),
-                        Toggle::make('channel_web_push_enabled')->label('Web Push включён'),
+                        Toggle::make('channel_email_enabled')->label('Электронная почта'),
+                        Toggle::make('channel_telegram_enabled')->label('Telegram'),
+                        Toggle::make('channel_webhook_enabled')->label('Входящий webhook (HTTP)'),
+                        Toggle::make('channel_web_push_enabled')->label('Push в браузере (Web Push)'),
                     ])->columns(2),
                 Section::make('Telegram')
                     ->schema([
                         TextInput::make('telegram_bot_token')
-                            ->label('Bot token')
+                            ->label('Токен бота Telegram')
                             ->password()
                             ->revealable()
-                            ->helperText('Оставьте пустым, чтобы не менять сохранённый токен.'),
+                            ->helperText('Выдаётся в @BotFather. Оставьте пустым, чтобы не менять сохранённый токен.'),
                     ]),
                 Section::make('Web Push (VAPID)')
                     ->schema([

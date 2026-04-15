@@ -40,6 +40,11 @@ class Review extends Model implements HasMedia
         'media_type',
         'video_url',
         'meta_json',
+        'contact_email',
+        'submitted_at',
+        'moderated_at',
+        'moderated_by',
+        'moderation_note',
     ];
 
     protected $casts = [
@@ -47,6 +52,8 @@ class Review extends Model implements HasMedia
         'meta_json' => 'array',
         'date' => 'date',
         'is_featured' => 'boolean',
+        'submitted_at' => 'datetime',
+        'moderated_at' => 'datetime',
     ];
 
     protected static function booted(): void
@@ -79,6 +86,11 @@ class Review extends Model implements HasMedia
     public function motorcycle(): BelongsTo
     {
         return $this->belongsTo(Motorcycle::class);
+    }
+
+    public function moderatedByUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'moderated_by');
     }
 
     public function registerMediaCollections(): void
@@ -138,6 +150,7 @@ class Review extends Model implements HasMedia
     {
         return [
             'draft' => 'Черновик',
+            'pending' => 'На модерации',
             'published' => 'Опубликован',
             'hidden' => 'Скрыт',
         ];

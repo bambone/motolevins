@@ -4,6 +4,7 @@ namespace App\PageBuilder;
 
 use App\Models\Page;
 use App\PageBuilder\Blueprints\CardsTeaserBlueprint;
+use App\PageBuilder\Blueprints\ContactInquirySectionBlueprint;
 use App\PageBuilder\Blueprints\ContactsBlueprint;
 use App\PageBuilder\Blueprints\ContactsInfoSectionBlueprint;
 use App\PageBuilder\Blueprints\ContentFaqSectionBlueprint;
@@ -11,6 +12,7 @@ use App\PageBuilder\Blueprints\CtaBlueprint;
 use App\PageBuilder\Blueprints\DataTableSectionBlueprint;
 use App\PageBuilder\Blueprints\Expert\CredentialsGridBlueprint;
 use App\PageBuilder\Blueprints\Expert\EditorialGalleryBlueprint;
+use App\PageBuilder\Blueprints\Expert\EnrollmentCtaStripBlueprint;
 use App\PageBuilder\Blueprints\Expert\ExpertHeroBlueprint;
 use App\PageBuilder\Blueprints\Expert\ExpertLeadFormBlueprint;
 use App\PageBuilder\Blueprints\Expert\FounderExpertBioBlueprint;
@@ -73,6 +75,7 @@ final class PageSectionTypeRegistry
             new ReviewFeedBlueprint,
             new EditorialGalleryBlueprint,
             new FounderExpertBioBlueprint,
+            new EnrollmentCtaStripBlueprint,
             new ExpertLeadFormBlueprint,
         ];
     }
@@ -92,10 +95,12 @@ final class PageSectionTypeRegistry
             new ListBlockSectionBlueprint,
             new InfoCardsSectionBlueprint,
             new ContactsInfoSectionBlueprint,
+            new ContactInquirySectionBlueprint,
             new DataTableSectionBlueprint,
             new NoticeBoxSectionBlueprint,
             new ProblemCardsBlueprint,
             new ExpertLeadFormBlueprint,
+            new EnrollmentCtaStripBlueprint,
             new CtaBlueprint,
         ];
     }

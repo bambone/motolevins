@@ -4,9 +4,11 @@ namespace App\Filament\Platform\Resources;
 
 use App\Filament\Platform\Resources\Concerns\GrantsPlatformPanelAccess;
 use App\Filament\Platform\Resources\DomainTermResource\Pages;
+use App\Filament\Shared\Lifecycle\AdminFilamentDelete;
+use App\Filament\Support\AdminEmptyState;
 use App\Models\DomainTerm;
 use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\CreateAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -47,7 +49,7 @@ class DomainTermResource extends Resource
         return $schema
             ->components([
                 Section::make('Ключ и группа')
-                    ->description('term_key — стабильный идентификатор в коде; tenant не может его менять.')
+                    ->description('term_key — стабильный идентификатор в коде; клиенты не могут менять ключ, только подпись в пресете (если разрешено).')
                     ->schema([
                         TextInput::make('term_key')
                             ->label('Системный ключ (term_key)')
@@ -77,7 +79,8 @@ class DomainTermResource extends Resource
                             ->label('Активен')
                             ->default(true),
                         Toggle::make('is_editable_by_tenant')
-                            ->label('Tenant может переименовать')
+                            ->label('Клиент может менять подпись')
+                            ->helperText('Если выключено — в кабинете клиента подпись фиксирована.')
                             ->default(true),
                         Toggle::make('is_required')
                             ->label('Обязателен в словаре')
@@ -93,34 +96,40 @@ class DomainTermResource extends Resource
 
     public static function table(Table $table): Table
     {
-        return $table
-            ->columns([
-                TextColumn::make('term_key')
-                    ->label('Ключ')
-                    ->searchable()
-                    ->sortable(),
-                TextColumn::make('group')
-                    ->label('Группа')
-                    ->sortable(),
-                TextColumn::make('default_label')
-                    ->label('Подпись по умолчанию')
-                    ->wrap(),
-                IconColumn::make('is_active')
-                    ->label('Акт.')
-                    ->boolean(),
-                IconColumn::make('is_editable_by_tenant')
-                    ->label('Tenant')
-                    ->boolean(),
-            ])
-            ->actions([EditAction::make()])
-            ->bulkActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make()
-                        ->modalHeading('Удалить выбранные термины?')
-                        ->modalDescription('Удаление сломает пресеты и overrides, ссылающиеся на эти term_id. Обычно термины не удаляют, а отключают.'),
-                ]),
-            ])
-            ->defaultSort('term_key');
+        return AdminEmptyState::applyInitial(
+            $table
+                ->columns([
+                    TextColumn::make('term_key')
+                        ->label('Ключ')
+                        ->searchable()
+                        ->sortable(),
+                    TextColumn::make('group')
+                        ->label('Группа')
+                        ->sortable(),
+                    TextColumn::make('default_label')
+                        ->label('Подпись по умолчанию')
+                        ->wrap(),
+                    IconColumn::make('is_active')
+                        ->label('Акт.')
+                        ->boolean(),
+                    IconColumn::make('is_editable_by_tenant')
+                        ->label('Клиент правит')
+                        ->boolean(),
+                ])
+                ->actions([EditAction::make()])
+                ->bulkActions([
+                    BulkActionGroup::make([
+                        AdminFilamentDelete::makeBulkDeleteAction()
+                            ->modalHeading('Удалить выбранные термины?')
+                            ->modalDescription('Удаление сломает пресеты и overrides, ссылающиеся на эти term_id. Обычно термины не удаляют, а отключают.'),
+                    ]),
+                ])
+                ->defaultSort('term_key'),
+            'Системных терминов пока нет',
+            'Добавьте термины словаря — по ним строятся подписи в пресетах и в кабинете клиента.',
+            'heroicon-o-book-open',
+            [CreateAction::make()->label('Добавить термин')],
+        );
     }
 
     public static function getPages(): array

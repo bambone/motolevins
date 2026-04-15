@@ -39,53 +39,59 @@
 @extends('tenant.layouts.app')
 
 @section('content')
-    <div class="advocate-contacts-page mx-auto w-full max-w-[min(88rem,calc(100vw-1.5rem))] px-3 pb-14 pt-24 sm:px-5 sm:pb-24 sm:pt-28 lg:px-10">
+    <div class="advocate-contacts-page mx-auto w-full max-w-[min(88rem,calc(100vw-1.5rem))] px-3 pb-10 pt-16 sm:px-5 sm:pb-16 sm:pt-20 lg:px-10">
         @if (empty($introHtml))
             <div class="rounded-2xl border border-orange-200 bg-orange-50 px-5 py-4 text-sm text-orange-900">
                 Нет текстового вступления: добавьте секцию <span class="font-mono">main</span> (текстовый блок) на странице в кабинете.
             </div>
         @else
             {{-- Hero: светлая editorial-плоскость, без «чёрной ямы» --}}
-            <section class="advocate-contacts-hero mb-12 sm:mb-16 lg:mb-[4.5rem]" aria-labelledby="advocate-contacts-hero-title">
-                <div class="advocate-contacts-hero__surface relative overflow-hidden rounded-[2rem] border border-[rgba(154,123,79,0.28)] bg-[linear-gradient(168deg,#fdfcfa_0%,#f3ebe0_48%,#ebe1d4_100%)] px-5 py-12 shadow-[0_28px_80px_-36px_rgba(42,36,28,0.22)] sm:px-10 sm:py-14 lg:px-16 lg:py-16">
+            <section class="advocate-contacts-hero mb-8 sm:mb-10 lg:mb-12" aria-labelledby="advocate-contacts-hero-title">
+                <div class="advocate-contacts-hero__surface relative overflow-hidden rounded-[1.5rem] border border-[rgba(154,123,79,0.28)] bg-[linear-gradient(168deg,#fdfcfa_0%,#f3ebe0_48%,#ebe1d4_100%)] px-5 py-8 shadow-[0_16px_44px_-24px_rgba(42,36,28,0.18)] sm:rounded-[1.75rem] sm:px-8 sm:py-10 lg:px-12 lg:py-11">
                     <div class="pointer-events-none absolute -right-20 -top-16 h-56 w-56 rounded-full bg-[rgba(154,123,79,0.12)] blur-3xl" aria-hidden="true"></div>
                     <div class="pointer-events-none absolute -bottom-20 -left-12 h-48 w-48 rounded-full bg-[rgba(255,255,255,0.65)] blur-3xl" aria-hidden="true"></div>
                     <div class="relative z-10 mx-auto max-w-3xl text-center">
                         <p class="text-[0.68rem] font-bold uppercase tracking-[0.32em] text-[rgb(122_95_58)]">
                             Контакты
                         </p>
-                        <h1 id="advocate-contacts-hero-title" class="mt-4 text-balance font-serif text-[clamp(2.1rem,5vw,3.25rem)] font-semibold leading-[1.08] tracking-tight text-[rgb(22_25_30)]">
+                        <h1 id="advocate-contacts-hero-title" class="mt-3 text-balance font-serif text-[clamp(1.85rem,4.2vw,2.85rem)] font-semibold leading-[1.08] tracking-tight text-[rgb(22_25_30)]">
                             Связаться с адвокатом
                         </h1>
                     </div>
-                    <div class="advocate-contacts-hero-prose rich-prose rb-rich-prose relative z-10 mx-auto mt-8 max-w-3xl text-center">
+                    <div class="advocate-contacts-hero-prose rich-prose rb-rich-prose relative z-10 mx-auto mt-5 max-w-3xl text-center">
                         {!! $introHtml !!}
                     </div>
-                    <div class="relative z-10 mt-11 flex flex-wrap items-center justify-center gap-3 sm:gap-4">
+                    @php
+                        $heroWriteHref = $emailPlain !== '' ? 'mailto:'.$emailPlain : ($vkUrl !== '' ? $vkUrl : '');
+                        $heroWriteLabel = ($emailPlain !== '' || $vkUrl !== '') ? 'Написать' : '';
+                        $heroWriteNewTab = $emailPlain === '' && $vkUrl !== '';
+                    @endphp
+                    <div class="relative z-10 mt-7 flex flex-wrap items-center justify-center gap-2.5 sm:gap-3">
                         @if ($phoneDigits !== '')
                             <a
                                 href="tel:+{{ $phoneDigits }}"
-                                class="advocate-contacts-hero__action advocate-contacts-hero__action--primary inline-flex min-h-[3rem] items-center justify-center rounded-full px-7 text-[15px] font-semibold shadow-[0_14px_32px_-12px_rgba(95,72,42,0.55)] transition hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[rgba(154,123,79,0.65)]"
+                                class="advocate-contacts-hero__action advocate-contacts-hero__action--primary inline-flex min-h-[2.75rem] items-center justify-center rounded-full px-6 text-[14px] font-semibold shadow-[0_10px_24px_-10px_rgba(95,72,42,0.5)] transition hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[rgba(154,123,79,0.65)]"
                             >
                                 Позвонить
                             </a>
                         @endif
-                        @if ($emailPlain !== '')
+                        @if ($heroWriteHref !== '')
                             <a
-                                href="mailto:{{ e($emailPlain) }}"
-                                class="advocate-contacts-hero__action inline-flex min-h-[3rem] items-center justify-center rounded-full px-7 text-[15px] font-semibold transition hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[rgba(154,123,79,0.5)]"
+                                href="{{ e($heroWriteHref) }}"
+                                @if($heroWriteNewTab) target="_blank" rel="noopener noreferrer" @endif
+                                class="advocate-contacts-hero__action inline-flex min-h-[2.75rem] items-center justify-center rounded-full px-6 text-[14px] font-semibold transition hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[rgba(154,123,79,0.5)]"
                             >
-                                Написать на почту
+                                {{ $heroWriteLabel }}
                             </a>
                         @endif
-                        @if ($vkUrl !== '')
+                        @if ($emailPlain !== '' && $vkUrl !== '')
                             <a
                                 href="{{ e($vkUrl) }}"
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                class="advocate-contacts-hero__action inline-flex min-h-[3rem] items-center justify-center rounded-full px-7 text-[15px] font-semibold transition hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[rgba(154,123,79,0.5)]"
+                                class="advocate-contacts-hero__action inline-flex min-h-[2.75rem] items-center justify-center rounded-full px-6 text-[14px] font-semibold transition hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[rgba(154,123,79,0.5)]"
                             >
-                                Написать во ВКонтакте
+                                ВКонтакте
                             </a>
                         @endif
                         @if ($mapRouteHref !== '')
@@ -93,39 +99,45 @@
                                 href="{{ e($mapRouteHref) }}"
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                class="advocate-contacts-hero__action inline-flex min-h-[3rem] items-center justify-center rounded-full px-7 text-[15px] font-semibold transition hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[rgba(154,123,79,0.5)]"
+                                class="advocate-contacts-hero__action inline-flex min-h-[2.75rem] items-center justify-center rounded-full px-6 text-[14px] font-semibold transition hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[rgba(154,123,79,0.5)]"
                             >
                                 Построить маршрут
                             </a>
                         @endif
+                        <a
+                            href="#contact-inquiry"
+                            class="advocate-contacts-hero__action inline-flex min-h-[2.75rem] items-center justify-center rounded-full px-6 text-[14px] font-semibold transition hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[rgba(154,123,79,0.5)]"
+                        >
+                            Оставить обращение
+                        </a>
                     </div>
                 </div>
             </section>
 
             @if ($contactPresentation->shouldRenderShell() || filled($rightHtml) || $contactPresentation->hasMap())
-                <section class="advocate-contacts-core mb-14 sm:mb-20" aria-labelledby="advocate-contacts-core-title">
-                    <div class="advocate-contacts-core__shell rounded-[2rem] border border-[rgba(28,31,38,0.07)] bg-[linear-gradient(180deg,rgba(255,252,247,0.98)_0%,rgba(248,244,237,0.96)_100%)] p-6 shadow-[0_24px_70px_-34px_rgba(28,31,38,0.16)] sm:p-9 lg:p-11">
-                        <div class="grid gap-12 lg:grid-cols-[minmax(0,1.08fr)_minmax(0,1fr)] lg:gap-14 xl:gap-[4rem]">
+                <section class="advocate-contacts-core mb-9 sm:mb-12" aria-labelledby="advocate-contacts-core-title">
+                    <div class="advocate-contacts-core__shell rounded-[1.5rem] border border-[rgba(28,31,38,0.07)] bg-[linear-gradient(180deg,rgba(255,252,247,0.98)_0%,rgba(248,244,237,0.96)_100%)] p-5 shadow-[0_16px_44px_-24px_rgba(28,31,38,0.12)] sm:rounded-[1.75rem] sm:p-7 lg:p-8">
+                        <div class="grid gap-8 lg:grid-cols-[minmax(0,1.08fr)_minmax(0,1fr)] lg:gap-10 xl:gap-12">
                             {{-- Левая колонка: крупные блоки вместо «таблицы» --}}
                             <div class="min-w-0">
                                 @if ($contactPresentation->hasSectionHeading())
-                                    <h2 id="advocate-contacts-core-title" class="font-serif text-[clamp(1.45rem,2.4vw,1.85rem)] font-semibold leading-snug tracking-tight text-[rgb(22_25_30)]">
+                                    <h2 id="advocate-contacts-core-title" class="font-serif text-[clamp(1.25rem,2vw,1.55rem)] font-semibold leading-snug tracking-tight text-[rgb(22_25_30)]">
                                         {{ $contactPresentation->title }}
                                     </h2>
                                 @endif
                                 @if ($contactPresentation->hasDescription())
-                                    <p class="mt-3 text-[17px] leading-relaxed text-[rgb(68_74_84)]">
+                                    <p class="mt-2 text-[16px] leading-relaxed text-[rgb(68_74_84)]">
                                         {{ $contactPresentation->description }}
                                     </p>
                                 @endif
 
-                                <div class="mt-9 flex flex-col gap-4">
+                                <div class="mt-6 flex flex-col gap-3">
                                     @foreach ($contactPresentation->allUsableChannels() as $ch)
-                                        <div class="advocate-contacts-channel rounded-[1.35rem] border border-[rgba(154,123,79,0.15)] bg-[linear-gradient(145deg,rgba(255,255,255,0.92)_0%,rgba(250,246,239,0.88)_100%)] p-5 shadow-[0_8px_28px_-16px_rgba(28,31,38,0.12)] sm:p-6">
-                                            <div class="text-[13px] font-semibold uppercase tracking-[0.08em] text-[rgb(122_95_58)]">
+                                        <div class="advocate-contacts-channel rounded-xl border border-[rgba(154,123,79,0.15)] bg-[linear-gradient(145deg,rgba(255,255,255,0.92)_0%,rgba(250,246,239,0.88)_100%)] p-4 shadow-[0_6px_20px_-12px_rgba(28,31,38,0.1)] sm:rounded-[1.15rem] sm:p-5">
+                                            <div class="text-[12px] font-semibold uppercase tracking-[0.08em] text-[rgb(122_95_58)]">
                                                 {{ $ch->ctaLabel }}
                                             </div>
-                                            <div class="mt-2 min-w-0 text-[18px] font-medium leading-snug text-[rgb(28_31_38)] sm:text-[19px]">
+                                            <div class="mt-1.5 min-w-0 text-[17px] font-medium leading-snug text-[rgb(28_31_38)] sm:text-[18px]">
                                                 <a
                                                     href="{{ $ch->href }}"
                                                     class="break-words text-[rgb(22_25_30)] decoration-[rgba(154,123,79,0.45)] underline-offset-[5px] transition hover:text-[rgb(95_72_42)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[rgba(154,123,79,0.45)]"
@@ -139,11 +151,11 @@
                                     @endforeach
 
                                     @if ($contactPresentation->hasAddress())
-                                        <div class="advocate-contacts-channel rounded-[1.35rem] border border-[rgba(154,123,79,0.15)] bg-[linear-gradient(145deg,rgba(255,255,255,0.92)_0%,rgba(250,246,239,0.88)_100%)] p-5 shadow-[0_8px_28px_-16px_rgba(28,31,38,0.12)] sm:p-6">
-                                            <div class="text-[13px] font-semibold uppercase tracking-[0.08em] text-[rgb(122_95_58)]">
+                                        <div class="advocate-contacts-channel rounded-xl border border-[rgba(154,123,79,0.15)] bg-[linear-gradient(145deg,rgba(255,255,255,0.92)_0%,rgba(250,246,239,0.88)_100%)] p-4 shadow-[0_6px_20px_-12px_rgba(28,31,38,0.1)] sm:rounded-[1.15rem] sm:p-5">
+                                            <div class="text-[12px] font-semibold uppercase tracking-[0.08em] text-[rgb(122_95_58)]">
                                                 Адрес
                                             </div>
-                                            <p class="mt-2 whitespace-pre-line text-[17px] leading-relaxed text-[rgb(28_31_38)] sm:text-[18px]">
+                                            <p class="mt-1.5 whitespace-pre-line text-[16px] leading-relaxed text-[rgb(28_31_38)] sm:text-[17px]">
                                                 {{ $contactPresentation->address }}
                                             </p>
                                         </div>
@@ -151,7 +163,7 @@
                                 </div>
 
                                 @if ($contactPresentation->hasAdditionalNote())
-                                    <div class="advocate-contacts-core-footnote mt-9 rounded-[1.25rem] border border-[rgba(154,123,79,0.12)] bg-[rgba(255,252,247,0.75)] px-5 py-5 text-[15px] leading-relaxed text-[rgb(68_74_84)] sm:px-6 sm:text-[16px] sm:leading-[1.65]">
+                                    <div class="advocate-contacts-core-footnote mt-6 rounded-xl border border-[rgba(154,123,79,0.12)] bg-[rgba(255,252,247,0.75)] px-4 py-3.5 text-[14px] leading-relaxed text-[rgb(68_74_84)] sm:px-5 sm:text-[15px] sm:leading-[1.6]">
                                         {!! nl2br(e($contactPresentation->additionalNote)) !!}
                                     </div>
                                 @endif
@@ -165,12 +177,12 @@
                                     </div>
                                 @endif
 
-                                <div class="advocate-contacts-map-block mt-10">
-                                    <p class="mt-2 max-w-md text-[15px] leading-relaxed text-[rgb(82_88_99)] sm:text-[16px]">
-                                        Офис находится в Челябинске. Открыть адрес в Яндекс Картах можно по кнопке ниже. Приём проводится по предварительной договорённости.
+                                <div class="advocate-contacts-map-block mt-6 sm:mt-7">
+                                    <p class="mt-1 max-w-md text-[14px] leading-relaxed text-[rgb(82_88_99)] sm:text-[15px]">
+                                        Очный приём — по предварительной договорённости. Ниже — карта и маршрут к офису.
                                     </p>
 
-                                    <div class="mt-6 [&_a]:rounded-2xl [&_a]:bg-[rgb(154_123_79)] [&_a]:font-semibold [&_a]:text-white [&_a]:shadow-[0_18px_36px_-16px_rgba(95,72,42,0.42)] [&_a]:hover:bg-[rgb(130_103_68)] [&_h3]:font-serif [&_h3]:text-[rgb(22_25_30)]">
+                                    <div class="mt-4 [&_a]:rounded-xl [&_a]:bg-[rgb(154_123_79)] [&_a]:font-semibold [&_a]:text-white [&_a]:shadow-[0_12px_28px_-14px_rgba(95,72,42,0.38)] [&_a]:hover:bg-[rgb(130_103_68)] [&_h3]:font-serif [&_h3]:text-[rgb(22_25_30)]">
                                         @if ($contactPresentation->hasMap())
                                             <x-custom-pages.contacts.map-block :view="$contactPresentation->mapBlock" />
                                         @elseif ($contactPresentation->hasAddress() && $mapRouteHref !== '')
@@ -178,7 +190,7 @@
                                                 href="{{ e($mapRouteHref) }}"
                                                 target="_blank"
                                                 rel="noopener noreferrer"
-                                                class="inline-flex min-h-[3.25rem] w-full items-center justify-center rounded-2xl bg-[rgb(154_123_79)] px-5 text-[15px] font-semibold text-white shadow-[0_18px_36px_-16px_rgba(95,72,42,0.42)] transition hover:bg-[rgb(130_103_68)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[rgba(154,123,79,0.55)]"
+                                                class="inline-flex min-h-[2.75rem] w-full items-center justify-center rounded-xl bg-[rgb(154_123_79)] px-4 text-[14px] font-semibold text-white shadow-[0_12px_28px_-14px_rgba(95,72,42,0.38)] transition hover:bg-[rgb(130_103_68)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[rgba(154,123,79,0.55)]"
                                             >
                                                 Открыть в Яндекс Картах
                                             </a>
@@ -213,9 +225,17 @@
                 @include('tenant.themes.advocate_editorial.partials.contacts-outro-light', [
                     'section' => $section,
                     'data' => $secData,
+                    'advocateOnContactsPage' => true,
+                ])
+            @elseif ($section->section_type === 'contact_inquiry')
+                @include('tenant.partials.contact-inquiry-form', [
+                    'section' => $section,
+                    'data' => $secData,
+                    'variant' => 'advocate',
+                    'compact' => true,
                 ])
             @else
-                @include('tenant.themes.' . tenant()->site_theme_key . '.sections.' . $section->section_type_key, [
+                @include('tenant.themes.' . tenant()->themeKey() . '.sections.' . $section->section_type_key, [
                     'section' => $section,
                     'data' => $secData,
                     'page' => $page,

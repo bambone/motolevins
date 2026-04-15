@@ -1,5 +1,12 @@
 import { initPublicFormValidationErrorsFromJson } from './shared/publicFormValidation.js';
-import { preferredChannelNeedsAsciiValue, stripToAsciiContactTyping } from './shared/visitorContactNormalize.js';
+import {
+    normalizeTelegramVisitorInput,
+    normalizeVkVisitorInput,
+    preferredChannelNeedsAsciiValue,
+    preferredContactValueEmptyMessageRu,
+    preferredContactValueInvalidMessageRu,
+    stripToAsciiContactTyping,
+} from './shared/visitorContactNormalize.js';
 
 const pmIsLowPerfDevice = () =>
     window.innerWidth < 768 || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -243,6 +250,7 @@ const initPmContactPreferredChannels = () => {
     const valueBlock = document.getElementById('pm-contact-pref-value-block');
     const valueInput = document.getElementById('pm-contact-pref-value');
     const valueHint = document.getElementById('pm-contact-pref-value-dynamic-hint');
+    const prefClientErr = document.getElementById('pm-contact-pref-value-client-err');
 
     const selectedId = () => {
         const el = form.querySelector('input[name="preferred_contact_channel"]:checked');
@@ -315,6 +323,16 @@ const initPmContactPreferredChannels = () => {
             valueHint.textContent = hintText;
             valueHint.classList.toggle('hidden', hintText === '');
         }
+        const valueLabelText = valueBlock?.querySelector('[data-pm-pref-value-label-text]');
+        if (valueLabelText) {
+            const lb = String(row.value_label ?? '').trim();
+            valueLabelText.textContent = lb || 'Контакт в выбранном канале';
+        }
+        if (prefClientErr) {
+            prefClientErr.textContent = '';
+            prefClientErr.classList.add('hidden');
+        }
+        valueInput?.classList.remove('border-red-400');
         if (needValue && preferredChannelNeedsAsciiValue(id) && valueInput.value) {
             const stripped = stripToAsciiContactTyping(valueInput.value);
             if (stripped !== valueInput.value) {
@@ -383,6 +401,61 @@ const initPmContactPreferredChannels = () => {
             sync();
         }
     });
+
+    form.addEventListener(
+        'submit',
+        (e) => {
+            if (prefClientErr) {
+                prefClientErr.textContent = '';
+                prefClientErr.classList.add('hidden');
+            }
+            valueInput?.classList.remove('border-red-400');
+            const id = selectedId();
+            const row = byId.get(id);
+            if (!row?.needs_value || !valueInput) {
+                return;
+            }
+            const raw = valueInput.value.trim();
+            if (raw === '') {
+                e.preventDefault();
+                e.stopPropagation();
+                const msg = preferredContactValueEmptyMessageRu(id);
+                if (prefClientErr) {
+                    prefClientErr.textContent = msg;
+                    prefClientErr.classList.remove('hidden');
+                }
+                valueInput.classList.add('border-red-400');
+                valueInput.focus();
+
+                return;
+            }
+            if (id === 'telegram' && normalizeTelegramVisitorInput(raw) === null) {
+                e.preventDefault();
+                e.stopPropagation();
+                const msg = preferredContactValueInvalidMessageRu('telegram');
+                if (prefClientErr) {
+                    prefClientErr.textContent = msg;
+                    prefClientErr.classList.remove('hidden');
+                }
+                valueInput.classList.add('border-red-400');
+                valueInput.focus();
+
+                return;
+            }
+            if (id === 'vk' && normalizeVkVisitorInput(raw) === null) {
+                e.preventDefault();
+                e.stopPropagation();
+                const msg = preferredContactValueInvalidMessageRu('vk');
+                if (prefClientErr) {
+                    prefClientErr.textContent = msg;
+                    prefClientErr.classList.remove('hidden');
+                }
+                valueInput.classList.add('border-red-400');
+                valueInput.focus();
+            }
+        },
+        { capture: true },
+    );
 
     sync();
 };

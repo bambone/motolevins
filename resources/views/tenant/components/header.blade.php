@@ -13,7 +13,7 @@
     /** advocate_editorial: длинные ФИО + полное меню + телефон — с xl (1280px), иначе бургер; при переполнении Alpine включает бургер (см. tenantHeader). */
     $expertDesktopNavMinPx = $isAdvocateEditorial ? 1280 : 768;
     $expertHeaderShellHeight = $isAdvocateEditorial
-        ? 'min-h-[3.75rem] md:min-h-[5rem] lg:min-h-[5.5rem]'
+        ? 'min-h-[4rem] md:min-h-[5.25rem] lg:min-h-[5.75rem]'
         : ($isExpertStyleNav ? 'h-[3.75rem] md:h-[5rem] lg:h-[5.5rem]' : 'h-[4.5rem] md:h-[5rem] lg:h-[5.5rem]');
     $expertHeaderRowHeight = $isAdvocateEditorial
         ? 'relative flex w-full shrink-0 items-center py-2 md:py-2.5 lg:py-3'
@@ -61,15 +61,15 @@
                          width="96" height="96"
                          loading="eager"
                          decoding="async"
-                         class="relative shrink-0 object-contain {{ $isAdvocateEditorial ? 'h-11 w-11 rounded-xl bg-[#faf8f5]/95 p-[3px] shadow-[0_1px_4px_rgba(28,31,38,0.09)] ring-1 ring-stone-300/90 md:h-12 md:w-12' : 'h-9 w-9 md:h-11 md:w-11' }}" />
+                         class="relative shrink-0 object-contain {{ $isAdvocateEditorial ? 'h-12 w-12 rounded-xl bg-[#faf8f5]/95 p-[3px] shadow-[0_1px_4px_rgba(28,31,38,0.09)] ring-1 ring-stone-300/90 md:h-[3.35rem] md:w-[3.35rem]' : 'h-9 w-9 md:h-11 md:w-11' }}" />
                 @else
                     @include('tenant.components.expert-brand-mark', ['compact' => true])
                 @endif
-                <span class="min-w-0 truncate text-[15px] font-bold tracking-wide md:text-[17px] lg:text-[19px] {{ $isAdvocateEditorial ? 'text-stone-900' : 'text-white/95' }}">{{ $headerBrandTitle }}</span>
+                <span class="min-w-0 truncate text-[16px] font-bold tracking-wide md:text-[18px] lg:text-[20px] {{ $isAdvocateEditorial ? 'text-stone-900' : 'text-white/95' }}">{{ $headerBrandTitle }}</span>
             </a>
 
             @if($isAdvocateEditorial)
-            <nav class="expert-header-bar__nav relative z-20 flex-1 min-w-0 items-center justify-center gap-x-3 gap-y-1 text-[14px] font-semibold tracking-wide xl:flex-wrap xl:gap-x-5 xl:gap-y-1.5 xl:text-[15px]"
+            <nav class="expert-header-bar__nav relative z-20 flex-1 min-w-0 items-center justify-center gap-x-3 gap-y-1 text-[15px] font-semibold tracking-wide xl:flex-wrap xl:gap-x-5 xl:gap-y-1.5 xl:text-[15px]"
                  :class="advocateNavInline() ? 'hidden xl:flex' : 'hidden'"
                  aria-label="Основное меню">
                 <a href="{{ route('home') }}" class="shrink-0 rounded-sm px-0.5 py-1 transition-colors hover:text-moto-amber text-stone-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moto-amber">Главная</a>
@@ -91,7 +91,7 @@
                     @php $telDigits = preg_replace('/\D/', '', $contacts['phone']); @endphp
                     <a href="tel:{{ $telDigits }}"
                        @if($isAdvocateEditorial)
-                       class="relative z-20 whitespace-nowrap rounded-sm text-[15px] font-semibold tracking-wide transition-colors hover:text-moto-amber text-stone-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moto-amber"
+                       class="relative z-20 whitespace-nowrap rounded-sm text-[16px] font-semibold tracking-wide transition-colors hover:text-moto-amber text-stone-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moto-amber"
                        :class="advocateNavInline() ? 'hidden xl:block' : 'hidden'"
                        @else
                        class="hidden whitespace-nowrap text-[15px] font-semibold tracking-wide transition-colors hover:text-moto-amber md:block text-white/90"
@@ -105,7 +105,7 @@
                         class="relative z-20 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-colors text-stone-800 hover:bg-stone-900/[0.06] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moto-amber"
                         :class="advocateNavInline() ? 'xl:hidden' : 'xl:inline-flex'"
                         @else
-                        class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-colors md:hidden text-white/90 hover:bg-white/[0.05]"
+                        class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-colors md:hidden text-white/90 hover:bg-white/[0.05] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moto-amber"
                         @endif
                         @click.stop="mobileNavOpen = !mobileNavOpen"
                         :aria-expanded="mobileNavOpen"
@@ -276,8 +276,51 @@
                 };
                 update();
                 window.addEventListener('scroll', update, { passive: true });
+                this._navTrapHandler = null;
+                this._navFocusBefore = null;
                 this.$watch('mobileNavOpen', (open) => {
                     document.body.classList.toggle('overflow-hidden', open);
+                    const A11y = window.RentBaseTenantA11y;
+                    const panel = document.getElementById('tenant-mobile-nav');
+                    if (open) {
+                        this._navFocusBefore = document.activeElement;
+                        this._navTrapHandler = (e) => {
+                            if (!this.mobileNavOpen || e.key !== 'Tab' || !panel) {
+                                return;
+                            }
+                            if (!A11y) {
+                                return;
+                            }
+                            A11y.trapTabWithin(panel, e);
+                        };
+                        document.addEventListener('keydown', this._navTrapHandler, true);
+                        this.$nextTick(() => {
+                            const el = A11y && panel ? A11y.firstFocusable(panel) : null;
+                            if (el && typeof el.focus === 'function') {
+                                try {
+                                    el.focus({ preventScroll: true });
+                                } catch (err) {
+                                    el.focus();
+                                }
+                            }
+                        });
+                    } else {
+                        if (this._navTrapHandler) {
+                            document.removeEventListener('keydown', this._navTrapHandler, true);
+                            this._navTrapHandler = null;
+                        }
+                        const prev = this._navFocusBefore;
+                        this._navFocusBefore = null;
+                        requestAnimationFrame(() => {
+                            if (prev && typeof prev.focus === 'function' && document.body.contains(prev)) {
+                                try {
+                                    prev.focus({ preventScroll: true });
+                                } catch (err) {
+                                    prev.focus();
+                                }
+                            }
+                        });
+                    }
                 });
                 const navMin = parseInt(this.$el.dataset.navDesktopMin || '768', 10) || 768;
                 this.advocateNavCheck = this.$el.dataset.advocateNavOverflow === '1';

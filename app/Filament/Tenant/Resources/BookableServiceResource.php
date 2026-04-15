@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Filament\Tenant\Resources;
 
+use App\Filament\Shared\Lifecycle\AdminFilamentDelete;
+use App\Filament\Support\AdminEmptyState;
 use App\Filament\Tenant\Resources\BookableServiceResource\Pages;
 use App\Models\BookableService;
 use App\Models\BookingSettingsPreset;
@@ -12,7 +14,7 @@ use App\Scheduling\Enums\BookableServiceSettingsApplyMode;
 use App\Scheduling\Enums\SchedulingScope;
 use Filament\Actions\BulkAction;
 use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\CreateAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
@@ -20,7 +22,6 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Notifications\Notification;
-use App\Filament\Tenant\Resources\Resource;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
@@ -213,124 +214,131 @@ class BookableServiceResource extends Resource
 
     public static function table(Table $table): Table
     {
-        return $table
-            ->columns([
-                TextColumn::make('title')->label('Название')->searchable(),
-                TextColumn::make('link_type_display')
-                    ->label('Связь')
-                    ->badge()
-                    ->getStateUsing(function (BookableService $record): string {
-                        return match ($record->linkType()->value) {
-                            'standalone' => 'Отдельная',
-                            'motorcycle' => 'Модель',
-                            'rental_unit' => 'Ед. парка',
-                            default => $record->linkType()->value,
-                        };
-                    })
-                    ->color(function (BookableService $record): string {
-                        return match ($record->linkType()->value) {
-                            'standalone' => 'gray',
-                            'motorcycle' => 'info',
-                            'rental_unit' => 'warning',
-                            default => 'gray',
-                        };
-                    }),
-                TextColumn::make('binding_label_display')
-                    ->label('Привязка')
-                    ->getStateUsing(fn (BookableService $record): string => $record->bindingLabel()),
-                TextColumn::make('slug')->label('Slug'),
-                IconColumn::make('is_active')->label('Активна')->boolean(),
-                TextColumn::make('duration_minutes')->label('Длит., мин'),
-            ])
-            ->defaultSort('sort_weight')
-            ->actions([EditAction::make()])
-            ->bulkActions([
-                BulkActionGroup::make([
-                    BulkAction::make('apply_booking_preset')
-                        ->label('Применить группу настроек')
-                        ->icon('heroicon-o-clipboard-document-list')
-                        ->form([
-                            Select::make('preset_id')
-                                ->label('Группа настроек')
-                                ->options(fn (): array => BookingSettingsPreset::query()
-                                    ->where('tenant_id', currentTenant()?->id)
-                                    ->orderBy('name')
-                                    ->pluck('name', 'id')
-                                    ->all())
-                                ->searchable()
-                                ->preload()
-                                ->required(),
-                            Toggle::make('also_enable_online_booking')
-                                ->label('Также включить онлайн-запись')
-                                ->default(false),
-                        ])
-                        ->action(function (BulkAction $action, array $data): void {
-                            $preset = BookingSettingsPreset::query()->find((int) ($data['preset_id'] ?? 0));
-                            if ($preset === null) {
-                                Notification::make()->title('Группа не найдена')->danger()->send();
-
-                                return;
-                            }
-                            $also = (bool) ($data['also_enable_online_booking'] ?? false);
-                            $bulk = app(BookableServiceBulkService::class);
-                            foreach ($action->getSelectedRecords() as $record) {
-                                if (! $record instanceof BookableService) {
-                                    continue;
-                                }
-                                try {
-                                    $bulk->applyPresetToService(
-                                        $record,
-                                        $preset,
-                                        $also,
-                                        BookableServiceSettingsApplyMode::Replace,
-                                    );
-                                } catch (\InvalidArgumentException) {
-                                    Notification::make()->title('Ошибка: проверьте, что все выбранные услуги принадлежат вашему клиенту.')->danger()->send();
+        return AdminEmptyState::applyInitial(
+            $table
+                ->columns([
+                    TextColumn::make('title')->label('Название')->searchable(),
+                    TextColumn::make('link_type_display')
+                        ->label('Связь')
+                        ->badge()
+                        ->getStateUsing(function (BookableService $record): string {
+                            return match ($record->linkType()->value) {
+                                'standalone' => 'Отдельная',
+                                'motorcycle' => 'Модель',
+                                'rental_unit' => 'Ед. парка',
+                                default => $record->linkType()->value,
+                            };
+                        })
+                        ->color(function (BookableService $record): string {
+                            return match ($record->linkType()->value) {
+                                'standalone' => 'gray',
+                                'motorcycle' => 'info',
+                                'rental_unit' => 'warning',
+                                default => 'gray',
+                            };
+                        }),
+                    TextColumn::make('binding_label_display')
+                        ->label('Привязка')
+                        ->getStateUsing(fn (BookableService $record): string => $record->bindingLabel()),
+                    TextColumn::make('slug')->label('URL-идентификатор'),
+                    IconColumn::make('is_active')->label('Активна')->boolean(),
+                    TextColumn::make('duration_minutes')->label('Длит., мин'),
+                ])
+                ->defaultSort('sort_weight')
+                ->actions([EditAction::make()])
+                ->bulkActions([
+                    BulkActionGroup::make([
+                        BulkAction::make('apply_booking_preset')
+                            ->label('Применить группу настроек')
+                            ->icon('heroicon-o-clipboard-document-list')
+                            ->form([
+                                Select::make('preset_id')
+                                    ->label('Группа настроек')
+                                    ->options(fn (): array => BookingSettingsPreset::query()
+                                        ->where('tenant_id', currentTenant()?->id)
+                                        ->orderBy('name')
+                                        ->pluck('name', 'id')
+                                        ->all())
+                                    ->searchable()
+                                    ->preload()
+                                    ->required(),
+                                Toggle::make('also_enable_online_booking')
+                                    ->label('Также включить онлайн-запись')
+                                    ->default(false),
+                            ])
+                            ->action(function (BulkAction $action, array $data): void {
+                                $preset = BookingSettingsPreset::query()->find((int) ($data['preset_id'] ?? 0));
+                                if ($preset === null) {
+                                    Notification::make()->title('Группа не найдена')->danger()->send();
 
                                     return;
                                 }
-                            }
-                            Notification::make()->title('Настройки применены')->success()->send();
-                        }),
-                    BulkAction::make('enable_online_booking')
-                        ->label('Включить онлайн-запись')
-                        ->icon('heroicon-o-check-circle')
-                        ->color('success')
-                        ->requiresConfirmation()
-                        ->modalHeading('Включить онлайн-запись для выбранных услуг?')
-                        ->modalDescription(self::ONLINE_BOOKING_BULK_HINT)
-                        ->action(function (BulkAction $action): void {
-                            $bulk = app(BookableServiceBulkService::class);
-                            try {
-                                $bulk->enableOnlineBookingForServices($action->getSelectedRecords());
-                            } catch (\InvalidArgumentException) {
-                                Notification::make()->title('Ошибка доступа к данным клиента.')->danger()->send();
+                                $also = (bool) ($data['also_enable_online_booking'] ?? false);
+                                $bulk = app(BookableServiceBulkService::class);
+                                foreach ($action->getSelectedRecords() as $record) {
+                                    if (! $record instanceof BookableService) {
+                                        continue;
+                                    }
+                                    try {
+                                        $bulk->applyPresetToService(
+                                            $record,
+                                            $preset,
+                                            $also,
+                                            BookableServiceSettingsApplyMode::Replace,
+                                        );
+                                    } catch (\InvalidArgumentException) {
+                                        Notification::make()->title('Ошибка: проверьте, что все выбранные услуги принадлежат вашему клиенту.')->danger()->send();
 
-                                return;
-                            }
-                            Notification::make()->title('Онлайн-запись включена')->success()->send();
-                        }),
-                    BulkAction::make('disable_online_booking')
-                        ->label('Выключить онлайн-запись')
-                        ->icon('heroicon-o-x-circle')
-                        ->color('danger')
-                        ->requiresConfirmation()
-                        ->modalHeading('Выключить онлайн-запись для выбранных услуг?')
-                        ->modalDescription('Клиенты не смогут записаться на эти услуги, пока запись снова не включат.')
-                        ->action(function (BulkAction $action): void {
-                            $bulk = app(BookableServiceBulkService::class);
-                            try {
-                                $bulk->disableOnlineBookingForServices($action->getSelectedRecords());
-                            } catch (\InvalidArgumentException) {
-                                Notification::make()->title('Ошибка доступа к данным клиента.')->danger()->send();
+                                        return;
+                                    }
+                                }
+                                Notification::make()->title('Настройки применены')->success()->send();
+                            }),
+                        BulkAction::make('enable_online_booking')
+                            ->label('Включить онлайн-запись')
+                            ->icon('heroicon-o-check-circle')
+                            ->color('success')
+                            ->requiresConfirmation()
+                            ->modalHeading('Включить онлайн-запись для выбранных услуг?')
+                            ->modalDescription(self::ONLINE_BOOKING_BULK_HINT)
+                            ->action(function (BulkAction $action): void {
+                                $bulk = app(BookableServiceBulkService::class);
+                                try {
+                                    $bulk->enableOnlineBookingForServices($action->getSelectedRecords());
+                                } catch (\InvalidArgumentException) {
+                                    Notification::make()->title('Ошибка доступа к данным клиента.')->danger()->send();
 
-                                return;
-                            }
-                            Notification::make()->title('Онлайн-запись выключена')->success()->send();
-                        }),
-                    DeleteBulkAction::make(),
+                                    return;
+                                }
+                                Notification::make()->title('Онлайн-запись включена')->success()->send();
+                            }),
+                        BulkAction::make('disable_online_booking')
+                            ->label('Выключить онлайн-запись')
+                            ->icon('heroicon-o-x-circle')
+                            ->color('danger')
+                            ->requiresConfirmation()
+                            ->modalHeading('Выключить онлайн-запись для выбранных услуг?')
+                            ->modalDescription('Клиенты не смогут записаться на эти услуги, пока запись снова не включат.')
+                            ->action(function (BulkAction $action): void {
+                                $bulk = app(BookableServiceBulkService::class);
+                                try {
+                                    $bulk->disableOnlineBookingForServices($action->getSelectedRecords());
+                                } catch (\InvalidArgumentException) {
+                                    Notification::make()->title('Ошибка доступа к данным клиента.')->danger()->send();
+
+                                    return;
+                                }
+                                Notification::make()->title('Онлайн-запись выключена')->success()->send();
+                            }),
+                        AdminFilamentDelete::makeBulkDeleteAction(),
+                    ]),
                 ]),
-            ]);
+            'Услуг для записи пока нет',
+            'Создайте услугу или привяжите её к модели в каталоге и единицам парка — тогда настроятся длительность и онлайн-запись.'
+                .AdminEmptyState::hintFiltersAndSearch(),
+            'heroicon-o-calendar-days',
+            [CreateAction::make()->label('Создать услугу')],
+        );
     }
 
     public static function getPages(): array

@@ -6,11 +6,20 @@ import {
     normalizeTelegramVisitorInput,
     normalizeVkVisitorInput,
     preferredChannelNeedsAsciiValue,
+    preferredContactValueEmptyMessageRu,
+    preferredContactValueInvalidMessageRu,
     stripToAsciiContactTyping,
 } from './shared/visitorContactNormalize.js';
+import {
+    RB_PUBLIC_FORM_SUCCESS_TITLE,
+    rbDispatchPublicFormSuccess,
+    rbFocusPublicSuccessRoot,
+    rbResolvePublicFormSuccessLead,
+} from './shared/publicFormSuccessUi.js';
 
 const EXPERT_PROGRAM_PREFILL_SLUG_KEY = 'rentbase:expert-inquiry-program-slug';
 const EXPERT_PROGRAM_PREFILL_TITLE_KEY = 'rentbase:expert-inquiry-program-title';
+const EXPERT_GOAL_PREFILL_KEY = 'rentbase:expert-inquiry-goal-text';
 
 function getStickyOffset() {
     return 72;
@@ -28,7 +37,7 @@ function applyExpertProgramPrefill(form, slug, title) {
     if (!s && !t) {
         return;
     }
-    const sel = form.querySelector('#expert-program');
+    const sel = form.querySelector('[data-rb-expert-program]');
     if (sel && sel.tagName === 'SELECT' && s) {
         const match = Array.from(sel.options).some((o) => o.value === s);
         if (match) {
@@ -39,6 +48,30 @@ function applyExpertProgramPrefill(form, slug, title) {
     const goal = form.querySelector('[name="goal_text"]');
     if (goal && t && goal.value.trim() === '') {
         goal.value = `Запись на программу: «${t}»`;
+    }
+}
+
+function tryApplyExpertGoalPrefillFromStorage(form) {
+    if (!form) {
+        return;
+    }
+    let g = '';
+    try {
+        g = (sessionStorage.getItem(EXPERT_GOAL_PREFILL_KEY) || '').trim();
+    } catch {
+        return;
+    }
+    if (!g) {
+        return;
+    }
+    try {
+        sessionStorage.removeItem(EXPERT_GOAL_PREFILL_KEY);
+    } catch {
+        /* ignore */
+    }
+    const goal = form.querySelector('[name="goal_text"]');
+    if (goal && goal.value.trim() === '') {
+        goal.value = g;
     }
 }
 
@@ -66,52 +99,6 @@ function tryApplyExpertProgramPrefillFromStorage(form) {
     applyExpertProgramPrefill(form, slug, title);
 }
 
-function bindExpertProgramCardPrefill() {
-    if (document.documentElement.dataset.rbExpertProgramPrefillBound === '1') {
-        return;
-    }
-    document.documentElement.dataset.rbExpertProgramPrefillBound = '1';
-    document.addEventListener(
-        'click',
-        (e) => {
-            const t = e.target;
-            if (!t || typeof t.closest !== 'function') {
-                return;
-            }
-            const a = t.closest('a[data-expert-prefill-program], a[data-expert-prefill-program-title]');
-            if (!a) {
-                return;
-            }
-            const slug = (a.getAttribute('data-expert-prefill-program') || '').trim();
-            const title = (a.getAttribute('data-expert-prefill-program-title') || '').trim();
-            if (!slug && !title) {
-                return;
-            }
-            try {
-                if (slug) {
-                    sessionStorage.setItem(EXPERT_PROGRAM_PREFILL_SLUG_KEY, slug);
-                } else {
-                    sessionStorage.removeItem(EXPERT_PROGRAM_PREFILL_SLUG_KEY);
-                }
-                if (title) {
-                    sessionStorage.setItem(EXPERT_PROGRAM_PREFILL_TITLE_KEY, title);
-                } else {
-                    sessionStorage.removeItem(EXPERT_PROGRAM_PREFILL_TITLE_KEY);
-                }
-            } catch {
-                /* ignore */
-            }
-            queueMicrotask(() => {
-                const form = document.getElementById('expert-inquiry-form');
-                if (form && form.dataset.expertInquiryBound === '1') {
-                    tryApplyExpertProgramPrefillFromStorage(form);
-                }
-            });
-        },
-        true,
-    );
-}
-
 function expertErrorKeyPriority(keys) {
     const first = pickFirstPublicFormErrorKey(keys);
     if (first) {
@@ -125,6 +112,7 @@ function expertErrorKeyPriority(keys) {
         'has_own_car',
         'transmission',
         'has_license',
+        'privacy_accepted',
     ];
     const set = new Set(keys);
     for (const k of order) {
@@ -205,8 +193,8 @@ function setFieldError(form, fieldName, message) {
 
 function initPhoneUi(form) {
     const T = window.TenantIntlPhone;
-    const phoneInput = form?.querySelector('#expert-phone');
-    const hintEl = form?.querySelector('#expert-phone-hint');
+    const phoneInput = form?.querySelector('[data-rb-expert-phone]');
+    const hintEl = form?.querySelector('[data-rb-expert-phone-hint]');
     if (!form || !phoneInput || !T || typeof T.attachPublicTelField !== 'function') {
         return;
     }
@@ -225,9 +213,10 @@ function getSelectedPreferredChannel(form) {
 
 function initPreferredChannelSync(form, meta) {
     const byId = new Map(meta.map((row) => [row.id, row]));
-    const valueWrap = form.querySelector('#expert-pref-value-wrap');
-    const valueInput = form.querySelector('#expert-pref-value');
-    const valueHint = form.querySelector('#expert-pref-value-hint');
+    const valueWrap = form.querySelector('[data-rb-expert-pref-wrap]');
+    const valueInput = form.querySelector('[data-rb-expert-pref-input]');
+    const valueHint = form.querySelector('[data-rb-expert-pref-hint]');
+    const valueLabel = form.querySelector('[data-rb-expert-pref-label]');
     let prev = null;
 
     const sync = () => {
@@ -243,6 +232,10 @@ function initPreferredChannelSync(form, meta) {
         const needValue = Boolean(row.needs_value);
         valueWrap.classList.toggle('hidden', !needValue);
         valueInput.toggleAttribute('required', needValue);
+        if (valueLabel) {
+            const lb = String(row.value_label ?? '').trim();
+            valueLabel.textContent = lb || 'Контакт для связи';
+        }
         const ph = String(row.value_placeholder ?? '').trim();
         if (ph) {
             valueInput.setAttribute('placeholder', ph);
@@ -334,9 +327,9 @@ function clampAndSnapScheduleTime(value) {
 }
 
 function syncPreferredScheduleHidden(form) {
-    const from = form.querySelector('#expert-schedule-from');
-    const to = form.querySelector('#expert-schedule-to');
-    const hidden = form.querySelector('#expert-schedule-value');
+    const from = form.querySelector('[data-rb-expert-schedule-from]');
+    const to = form.querySelector('[data-rb-expert-schedule-to]');
+    const hidden = form.querySelector('[data-rb-expert-schedule-value]');
     if (!from || !to || !hidden) {
         return;
     }
@@ -354,9 +347,9 @@ function syncPreferredScheduleHidden(form) {
 }
 
 function initPreferredScheduleInterval(form) {
-    const from = form.querySelector('#expert-schedule-from');
-    const to = form.querySelector('#expert-schedule-to');
-    const hidden = form.querySelector('#expert-schedule-value');
+    const from = form.querySelector('[data-rb-expert-schedule-from]');
+    const to = form.querySelector('[data-rb-expert-schedule-to]');
+    const hidden = form.querySelector('[data-rb-expert-schedule-value]');
     if (!from || !to || !hidden || form.dataset.rbPreferredScheduleBound === '1') {
         return;
     }
@@ -400,8 +393,8 @@ function initExpertScheduleFocusUx(form) {
     if (form.dataset.rbExpertScheduleUx === '1') {
         return;
     }
-    const from = form.querySelector('#expert-schedule-from');
-    const to = form.querySelector('#expert-schedule-to');
+    const from = form.querySelector('[data-rb-expert-schedule-from]');
+    const to = form.querySelector('[data-rb-expert-schedule-to]');
     if (!from || !to) {
         return;
     }
@@ -483,7 +476,7 @@ function initExpertScheduleFocusUx(form) {
 }
 
 function initPreferredValueAsciiGuard(form) {
-    const el = form.querySelector('#expert-pref-value');
+    const el = form.querySelector('[data-rb-expert-pref-input]');
     if (!el || el.dataset.rbAsciiPrefGuard === '1') {
         return;
     }
@@ -550,10 +543,10 @@ function validateClientSide(form, meta) {
 
     const name = form.querySelector('[name="name"]');
     const goal = form.querySelector('[name="goal_text"]');
-    const phoneInput = form.querySelector('#expert-phone');
+    const phoneInput = form.querySelector('[data-rb-expert-phone]');
     const prefId = getSelectedPreferredChannel(form);
     const row = byId.get(prefId);
-    const valueInput = form.querySelector('#expert-pref-value');
+    const valueInput = form.querySelector('[data-rb-expert-pref-input]');
 
     let ok = true;
     if (name && name.value.trim() === '') {
@@ -561,7 +554,7 @@ function validateClientSide(form, meta) {
         ok = false;
     }
     if (goal && goal.value.trim() === '') {
-        setFieldError(form, 'goal_text', 'Опишите, что хотите улучшить.');
+        setFieldError(form, 'goal_text', 'Опишите суть вопроса.');
         ok = false;
     }
     if (phoneInput) {
@@ -576,9 +569,16 @@ function validateClientSide(form, meta) {
             ok = false;
         }
     }
-    const scheduleFrom = form.querySelector('#expert-schedule-from');
-    const scheduleTo = form.querySelector('#expert-schedule-to');
-    if (scheduleFrom && scheduleTo) {
+    const scheduleSimple = form.querySelector('[data-rb-expert-schedule-simple]');
+    const scheduleFrom = form.querySelector('[data-rb-expert-schedule-from]');
+    const scheduleTo = form.querySelector('[data-rb-expert-schedule-to]');
+    if (scheduleSimple) {
+        const sv = scheduleSimple.value.trim();
+        if (sv.length > 120) {
+            setFieldError(form, 'preferred_schedule', 'Удобное время для связи — не длиннее 120 символов.');
+            ok = false;
+        }
+    } else if (scheduleFrom && scheduleTo) {
         const sf = scheduleFrom.value;
         const st = scheduleTo.value;
         if ((sf !== '' && st === '') || (sf === '' && st !== '')) {
@@ -616,23 +616,21 @@ function validateClientSide(form, meta) {
     if (row?.needs_value && valueInput) {
         const pv = valueInput.value.trim();
         if (pv === '') {
-            setFieldError(form, 'preferred_contact_value', 'Заполните контакт для выбранного способа связи.');
+            setFieldError(form, 'preferred_contact_value', preferredContactValueEmptyMessageRu(prefId));
             ok = false;
         } else if (prefId === 'telegram' && normalizeTelegramVisitorInput(pv) === null) {
-            setFieldError(
-                form,
-                'preferred_contact_value',
-                'Telegram: латинский username (5–32 символа: буквы, цифры, _) или ссылка https://t.me/…',
-            );
+            setFieldError(form, 'preferred_contact_value', preferredContactValueInvalidMessageRu('telegram'));
             ok = false;
         } else if (prefId === 'vk' && normalizeVkVisitorInput(pv) === null) {
-            setFieldError(
-                form,
-                'preferred_contact_value',
-                'ВКонтакте: ссылка на профиль (https://vk.com/…) или латинский id/ник после vk.com/',
-            );
+            setFieldError(form, 'preferred_contact_value', preferredContactValueInvalidMessageRu('vk'));
             ok = false;
         }
+    }
+
+    const consent = form.querySelector('input[name="privacy_accepted"][type="checkbox"]');
+    if (consent && !consent.checked) {
+        setFieldError(form, 'privacy_accepted', 'Нужно согласие на обработку персональных данных.');
+        ok = false;
     }
 
     if (!ok) {
@@ -697,12 +695,290 @@ function applyServerErrors(form, errors) {
     }
 }
 
-function bootExpertInquiryForm() {
-    const form = document.getElementById('expert-inquiry-form');
-    const metaEl = document.getElementById('expert-inquiry-channel-meta');
+function fillEnrollmentModalContext(form) {
+    const sp = form.querySelector('[data-rb-enrollment-source-page]');
+    if (sp) {
+        sp.value = window.location.pathname || '';
+    }
+    try {
+        const params = new URLSearchParams(window.location.search);
+        form.querySelectorAll('[data-rb-enrollment-utm]').forEach((el) => {
+            const k = el.getAttribute('data-rb-enrollment-utm');
+            if (k) {
+                el.value = params.get(k) || '';
+            }
+        });
+    } catch {
+        /* ignore */
+    }
+}
+
+function syncEnrollmentProgramIdFromSelect(form) {
+    const sel = form.querySelector('[data-rb-expert-program]');
+    const hid = form.querySelector('[data-rb-enrollment-program-id]');
+    if (!sel || !hid) {
+        return;
+    }
+    const opt = sel.selectedOptions[0];
+    const pid = opt?.getAttribute('data-rb-program-db-id') || '';
+    hid.value = pid;
+}
+
+/**
+ * Закрытие модалки с лёгкой анимацией (без мгновенного снятия top layer).
+ *
+ * @param {HTMLDialogElement} dialog
+ */
+function scheduleCloseEnrollmentDialog(dialog) {
+    if (!dialog || !dialog.open) {
+        return;
+    }
+    /**
+     * Повторный запрос закрытия (Escape, клик по фону) во время анимации или при «зависшем» флаге —
+     * принудительно снимаем состояние и закрываем, иначе cancel+preventDefault оставляет модалку открытой.
+     */
+    if (dialog.dataset.rbEnrollmentClosing === '1') {
+        dialog.classList.remove('rb-enrollment-dialog--closing');
+        dialog.dataset.rbEnrollmentClosing = '';
+        try {
+            dialog.close();
+        } catch {
+            /* ignore */
+        }
+
+        return;
+    }
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        dialog.classList.remove('rb-enrollment-dialog--closing');
+        dialog.dataset.rbEnrollmentClosing = '';
+        dialog.close();
+
+        return;
+    }
+    dialog.dataset.rbEnrollmentClosing = '1';
+    const panel = dialog.querySelector('.rb-program-enrollment-dialog__panel');
+    const finish = () => {
+        dialog.classList.remove('rb-enrollment-dialog--closing');
+        dialog.dataset.rbEnrollmentClosing = '';
+        try {
+            dialog.close();
+        } catch {
+            /* ignore */
+        }
+    };
+    dialog.classList.add('rb-enrollment-dialog--closing');
+    if (!panel) {
+        finish();
+
+        return;
+    }
+    let done = false;
+    const onEnd = (e) => {
+        if (e.target !== panel) {
+            return;
+        }
+        if (done) {
+            return;
+        }
+        done = true;
+        panel.removeEventListener('animationend', onEnd);
+        finish();
+    };
+    panel.addEventListener('animationend', onEnd);
+    window.setTimeout(() => {
+        if (done) {
+            return;
+        }
+        if (!dialog.open) {
+            dialog.classList.remove('rb-enrollment-dialog--closing');
+            dialog.dataset.rbEnrollmentClosing = '';
+
+            return;
+        }
+        done = true;
+        panel.removeEventListener('animationend', onEnd);
+        finish();
+    }, 450);
+}
+
+/**
+ * @param {{ sourceType?: string, sourceContext?: string, programSlug?: string, programTitle?: string, goalPrefill?: string }} opts
+ */
+function openEnrollmentModal(opts = {}) {
+    const sourceType = opts.sourceType || 'program_enrollment';
+    const sourceContext = String(opts.sourceContext || '').trim();
+    const programSlug = String(opts.programSlug || '').trim();
+    const programTitle = String(opts.programTitle || '').trim();
+    const goalPrefill = String(opts.goalPrefill || '').trim();
+
+    const dialog = document.getElementById('rb-program-enrollment-dialog');
+    if (!dialog || typeof dialog.showModal !== 'function') {
+        return;
+    }
+    const form = dialog.querySelector('form[data-expert-inquiry-form]');
+    if (!form || form.dataset.expertInquiryBound !== '1') {
+        return;
+    }
+    fillEnrollmentModalContext(form);
+    const stEl = form.querySelector('input[name="source_type"]');
+    if (stEl) {
+        stEl.value = sourceType;
+    }
+    const scEl = form.querySelector('input[name="source_context"]');
+    if (scEl) {
+        scEl.value = sourceContext;
+    }
+
+    if (sourceType === 'enrollment_cta') {
+        const sel = form.querySelector('[data-rb-expert-program]');
+        if (sel) {
+            sel.value = '';
+        }
+        const pidEl = form.querySelector('[data-rb-enrollment-program-id]');
+        if (pidEl) {
+            pidEl.value = '';
+        }
+        applyExpertProgramPrefill(form, '', '');
+        const goal = form.querySelector('[name="goal_text"]');
+        if (goal) {
+            goal.value = goalPrefill;
+        }
+    } else {
+        applyExpertProgramPrefill(form, programSlug, programTitle);
+        syncEnrollmentProgramIdFromSelect(form);
+    }
+
+    dialog._rbOpenerEl = document.activeElement;
+    dialog.classList.remove('rb-enrollment-dialog--closing');
+    dialog.dataset.rbEnrollmentClosing = '';
+    dialog.showModal();
+    requestAnimationFrame(() => {
+        const A11y = window.RentBaseTenantA11y;
+        const nameInput = form.querySelector('input[name="name"]');
+        if (nameInput && typeof nameInput.focus === 'function') {
+            try {
+                nameInput.focus({ preventScroll: true });
+            } catch {
+                nameInput.focus();
+            }
+
+            return;
+        }
+        const el = A11y ? A11y.firstFocusable(dialog) : null;
+        if (el && typeof el.focus === 'function') {
+            try {
+                el.focus({ preventScroll: true });
+            } catch {
+                el.focus();
+            }
+        }
+    });
+}
+
+function bindProgramEnrollmentDialogUi() {
+    const dialog = document.getElementById('rb-program-enrollment-dialog');
+    if (!dialog || dialog.dataset.rbEnrollmentDialogUiBound === '1') {
+        return;
+    }
+    dialog.dataset.rbEnrollmentDialogUiBound = '1';
+    dialog.addEventListener('keydown', (e) => {
+        if (e.key !== 'Tab') {
+            return;
+        }
+        const A11y = window.RentBaseTenantA11y;
+        if (!A11y || !dialog.open) {
+            return;
+        }
+        A11y.trapTabWithin(dialog, e);
+    }, true);
+    dialog.addEventListener('cancel', (e) => {
+        e.preventDefault();
+        scheduleCloseEnrollmentDialog(dialog);
+    });
+    dialog.addEventListener('close', () => {
+        dialog.classList.remove('rb-enrollment-dialog--closing');
+        dialog.dataset.rbEnrollmentClosing = '';
+        const opener = dialog._rbOpenerEl;
+        dialog._rbOpenerEl = null;
+        requestAnimationFrame(() => {
+            if (opener && typeof opener.focus === 'function' && document.body.contains(opener)) {
+                try {
+                    opener.focus({ preventScroll: true });
+                } catch {
+                    opener.focus();
+                }
+            }
+        });
+        const root = dialog.querySelector('[data-rb-expert-inquiry-root]');
+        const form = root?.querySelector('form[data-expert-inquiry-form]');
+        if (!form || form.dataset.expertInquiryBound !== '1') {
+            return;
+        }
+        const success = root.querySelector('[data-rb-expert-inquiry-success]');
+        const alertBox = root.querySelector('[data-rb-expert-inquiry-alert]');
+        if (success) {
+            success.classList.add('hidden');
+        }
+        if (alertBox) {
+            alertBox.classList.add('hidden');
+            alertBox.textContent = '';
+        }
+        form.classList.remove('hidden');
+        clearInlineErrors(form);
+        const btn = form.querySelector('[data-rb-expert-inquiry-submit]');
+        if (btn) {
+            btn.disabled = false;
+            btn.removeAttribute('aria-busy');
+            btn.innerHTML = form.dataset.rbExpertSubmitHtmlSnapshot || btn.innerHTML;
+        }
+        if (typeof form._rbExpertSyncChannel === 'function') {
+            form._rbExpertSyncChannel();
+        }
+    });
+    dialog.querySelectorAll('[data-rb-enrollment-dialog-close]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            scheduleCloseEnrollmentDialog(dialog);
+        });
+    });
+    dialog.addEventListener('click', (e) => {
+        const t = e.target;
+        if (t && typeof t.closest === 'function' && t.closest('[data-rb-expert-inquiry-success-close]')) {
+            e.preventDefault();
+            scheduleCloseEnrollmentDialog(dialog);
+
+            return;
+        }
+        if (t && typeof t.closest === 'function' && t.closest('.rb-program-enrollment-dialog__panel')) {
+            return;
+        }
+        if (t && typeof t.closest === 'function' && t.closest('[data-rb-enrollment-dialog-backdrop-hit]')) {
+            scheduleCloseEnrollmentDialog(dialog);
+        }
+    });
+}
+
+function tryApplyProgramQueryParamToMainForm() {
+    let slug = '';
+    try {
+        slug = (new URLSearchParams(window.location.search).get('program') || '').trim();
+    } catch {
+        return;
+    }
+    if (!slug) {
+        return;
+    }
+    const mainForm = document.querySelector('form[data-expert-inquiry-main]');
+    if (!mainForm || mainForm.dataset.expertInquiryBound !== '1') {
+        return;
+    }
+    applyExpertProgramPrefill(mainForm, slug, '');
+}
+
+function initExpertInquiryForm(form) {
     if (!form || form.dataset.expertInquiryBound === '1') {
         return;
     }
+    const metaEl = form.querySelector('[data-rb-expert-channel-meta]');
     form.dataset.expertInquiryBound = '1';
 
     let meta = [];
@@ -720,14 +996,26 @@ function bootExpertInquiryForm() {
     if (meta.length > 0) {
         syncChannel = initPreferredChannelSync(form, meta);
     }
+    form._rbExpertSyncChannel = syncChannel;
     initPreferredValueAsciiGuard(form);
     initPreferredScheduleInterval(form);
     initExpertScheduleFocusUx(form);
 
+    const progSel = form.querySelector('[data-rb-expert-program]');
+    if (progSel && form.querySelector('[data-rb-enrollment-program-id]')) {
+        progSel.addEventListener('change', () => syncEnrollmentProgramIdFromSelect(form));
+        syncEnrollmentProgramIdFromSelect(form);
+    }
+
     const endpoint = form.getAttribute('data-expert-inquiry-endpoint') || '';
     const defaultSuccessMessage = form.getAttribute('data-expert-inquiry-default-success') || '';
-    const alertEl = document.getElementById('expert-inquiry-alert');
-    const submitBtn = document.getElementById('expert-inquiry-submit');
+    const root = form.closest('[data-rb-expert-inquiry-root]');
+    const alertEl = root?.querySelector('[data-rb-expert-inquiry-alert]') ?? null;
+    const successPanel = root?.querySelector('[data-rb-expert-inquiry-success]') ?? null;
+    const submitBtn = form.querySelector('[data-rb-expert-inquiry-submit]');
+    if (submitBtn && !form.dataset.rbExpertSubmitHtmlSnapshot) {
+        form.dataset.rbExpertSubmitHtmlSnapshot = submitBtn.innerHTML;
+    }
 
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -735,6 +1023,10 @@ function bootExpertInquiryForm() {
             alertEl.classList.add('hidden');
             alertEl.textContent = '';
         }
+        if (successPanel) {
+            successPanel.classList.add('hidden');
+        }
+        form.classList.remove('hidden');
         clearInlineErrors(form);
         syncPreferredScheduleHidden(form);
 
@@ -745,9 +1037,13 @@ function bootExpertInquiryForm() {
         syncPreferredScheduleHidden(form);
         const fd = new FormData(form);
         const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+        const submitBtnDefaultHtml = submitBtn?.innerHTML ?? '';
         if (submitBtn) {
             submitBtn.disabled = true;
+            submitBtn.setAttribute('aria-busy', 'true');
+            submitBtn.innerHTML = 'Отправка…';
         }
+        let submissionOk = false;
         try {
             const res = await fetch(endpoint, {
                 method: 'POST',
@@ -775,20 +1071,34 @@ function bootExpertInquiryForm() {
                 }
                 return;
             }
-            if (alertEl) {
-                alertEl.textContent =
-                    typeof body.message === 'string' && body.message !== ''
-                        ? body.message
-                        : defaultSuccessMessage;
+            submissionOk = true;
+            const lead = rbResolvePublicFormSuccessLead(body.message, defaultSuccessMessage);
+            const titleEl = successPanel?.querySelector('[data-rb-public-form-success-title]');
+            const leadEl = successPanel?.querySelector('[data-rb-public-form-success-lead]');
+            if (successPanel && titleEl && leadEl) {
+                titleEl.textContent = RB_PUBLIC_FORM_SUCCESS_TITLE;
+                leadEl.textContent = lead;
+                successPanel.classList.remove('hidden');
+                form.classList.add('hidden');
+                if (alertEl) {
+                    alertEl.classList.add('hidden');
+                }
+                rbFocusPublicSuccessRoot(successPanel);
+                rbDispatchPublicFormSuccess({
+                    kind: form.closest('#rb-program-enrollment-dialog') ? 'expert_enrollment_modal' : 'expert_inquiry',
+                    endpoint,
+                });
+            } else if (alertEl) {
+                alertEl.textContent = `${RB_PUBLIC_FORM_SUCCESS_TITLE} ${lead}`;
                 alertEl.classList.remove('hidden');
             }
             form.reset();
             syncChannel();
-            const phoneInput = form.querySelector('#expert-phone');
+            const phoneInput = form.querySelector('[data-rb-expert-phone]');
             if (window.TenantIntlPhone && phoneInput) {
                 window.TenantIntlPhone.syncInputDisplay(phoneInput, '');
             }
-            const hintEl = form.querySelector('#expert-phone-hint');
+            const hintEl = form.querySelector('[data-rb-expert-phone-hint]');
             if (hintEl && window.TenantIntlPhone) {
                 hintEl.textContent = window.TenantIntlPhone.phoneHelperHint('');
             }
@@ -798,13 +1108,111 @@ function bootExpertInquiryForm() {
                 alertEl.classList.remove('hidden');
             }
         } finally {
-            if (submitBtn) {
+            if (submitBtn && !submissionOk) {
                 submitBtn.disabled = false;
+                submitBtn.removeAttribute('aria-busy');
+                submitBtn.innerHTML = submitBtnDefaultHtml;
             }
         }
     });
 
     tryApplyExpertProgramPrefillFromStorage(form);
+    tryApplyExpertGoalPrefillFromStorage(form);
+}
+
+function bootExpertInquiryForm() {
+    document.querySelectorAll('form[data-expert-inquiry-form]').forEach((form) => {
+        initExpertInquiryForm(form);
+    });
+    bindProgramEnrollmentDialogUi();
+    tryApplyProgramQueryParamToMainForm();
+}
+
+function bindExpertProgramCardPrefill() {
+    if (document.documentElement.dataset.rbExpertProgramPrefillBound === '1') {
+        return;
+    }
+    document.documentElement.dataset.rbExpertProgramPrefillBound = '1';
+    document.addEventListener(
+        'click',
+        (e) => {
+            const t = e.target;
+            if (!t || typeof t.closest !== 'function') {
+                return;
+            }
+            const genericBtn = t.closest('[data-rb-enrollment-generic-cta]');
+            if (genericBtn) {
+                e.preventDefault();
+                openEnrollmentModal({
+                    sourceType: 'enrollment_cta',
+                    sourceContext: (genericBtn.getAttribute('data-rb-enrollment-source-context') || '').trim(),
+                    goalPrefill: (genericBtn.getAttribute('data-rb-enrollment-goal-prefill') || '').trim(),
+                });
+                return;
+            }
+            const modalBtn = t.closest('[data-rb-program-enrollment-cta]');
+            if (modalBtn) {
+                e.preventDefault();
+                const slug = (modalBtn.getAttribute('data-expert-prefill-program') || '').trim();
+                const title = (modalBtn.getAttribute('data-expert-prefill-program-title') || '').trim();
+                openEnrollmentModal({
+                    sourceType: 'program_enrollment',
+                    sourceContext: 'programs_program_card_cta',
+                    programSlug: slug,
+                    programTitle: title,
+                });
+                return;
+            }
+            const scrollGoalA = t.closest('a[data-rb-enrollment-scroll-goal]');
+            if (scrollGoalA) {
+                const g = (scrollGoalA.getAttribute('data-rb-enrollment-scroll-goal') || '').trim();
+                if (g) {
+                    try {
+                        sessionStorage.setItem(EXPERT_GOAL_PREFILL_KEY, g);
+                    } catch {
+                        /* ignore */
+                    }
+                    queueMicrotask(() => {
+                        const mainForm = document.querySelector('form[data-expert-inquiry-main]');
+                        if (mainForm && mainForm.dataset.expertInquiryBound === '1') {
+                            tryApplyExpertGoalPrefillFromStorage(mainForm);
+                        }
+                    });
+                }
+            }
+            const a = t.closest('a[data-expert-prefill-program], a[data-expert-prefill-program-title]');
+            if (!a) {
+                return;
+            }
+            const slug = (a.getAttribute('data-expert-prefill-program') || '').trim();
+            const title = (a.getAttribute('data-expert-prefill-program-title') || '').trim();
+            if (!slug && !title) {
+                return;
+            }
+            try {
+                if (slug) {
+                    sessionStorage.setItem(EXPERT_PROGRAM_PREFILL_SLUG_KEY, slug);
+                } else {
+                    sessionStorage.removeItem(EXPERT_PROGRAM_PREFILL_SLUG_KEY);
+                }
+                if (title) {
+                    sessionStorage.setItem(EXPERT_PROGRAM_PREFILL_TITLE_KEY, title);
+                } else {
+                    sessionStorage.removeItem(EXPERT_PROGRAM_PREFILL_TITLE_KEY);
+                }
+            } catch {
+                /* ignore */
+            }
+            queueMicrotask(() => {
+                const mainForm = document.querySelector('form[data-expert-inquiry-main]');
+                if (mainForm && mainForm.dataset.expertInquiryBound === '1') {
+                    tryApplyExpertProgramPrefillFromStorage(mainForm);
+                    tryApplyExpertGoalPrefillFromStorage(mainForm);
+                }
+            });
+        },
+        true,
+    );
 }
 
 bindExpertProgramCardPrefill();

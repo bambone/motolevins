@@ -29,6 +29,10 @@ class PagePolicy
 
     public function delete(User $user, Page $page): bool
     {
+        if (($page->slug ?? '') === 'home') {
+            return false;
+        }
+
         return $user->can('manage_pages') || $user->can('manage_homepage');
     }
 
@@ -39,6 +43,10 @@ class PagePolicy
 
     public function forceDelete(User $user, Page $page): bool
     {
+        if (($page->slug ?? '') === 'home') {
+            return false;
+        }
+
         return $user->can('manage_pages') || $user->can('manage_homepage');
     }
 }

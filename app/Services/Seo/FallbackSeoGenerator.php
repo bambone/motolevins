@@ -10,6 +10,7 @@ use App\Models\SeoLandingPage;
 use App\Models\Tenant;
 use App\Models\TenantSetting;
 use App\Money\MoneyBindingRegistry;
+use Illuminate\Database\Eloquent\Model;
 
 final class FallbackSeoGenerator
 {
@@ -30,12 +31,91 @@ final class FallbackSeoGenerator
     public function forRouteOnly(Tenant $tenant, string $routeName): array
     {
         $site = $this->siteName($tenant);
+        $label = $this->defaultHumanLabelForRoute($routeName);
+        $title = $site;
+        $h1 = $site;
+        if ($label !== null) {
+            $title = $site === '' ? $label : $label.' — '.$site;
+            $h1 = $label;
+        }
+        $description = $this->syntheticDescriptionFromParts($site, $label);
 
         return [
-            'title' => $site,
-            'description' => '',
-            'h1' => $site,
+            'title' => $title,
+            'description' => $description,
+            'h1' => $h1,
         ];
+    }
+
+    /**
+     * Финальный fallback, если после merge (SeoMeta / registry / forPage) description всё ещё пустой.
+     */
+    public function syntheticDescription(Tenant $tenant, string $routeName, ?Model $model, string $title, ?string $h1): string
+    {
+        $site = $this->siteName($tenant);
+        if ($model instanceof Page) {
+            $name = trim((string) $model->name) ?: (string) $model->slug;
+
+            return $this->syntheticDescriptionFromParts($site, $name !== '' ? $name : null);
+        }
+        if ($model instanceof Motorcycle) {
+            $name = trim((string) $model->name) ?: (string) $model->slug;
+
+            return $this->syntheticDescriptionFromParts($site, $name !== '' ? $name : null);
+        }
+        $focus = TenantSeoMerge::isFilled($h1) ? trim((string) $h1) : null;
+        if ($focus === null) {
+            $focus = $this->defaultHumanLabelForRoute($routeName);
+        }
+        if ($focus === null && TenantSeoMerge::isFilled($title)) {
+            $focus = trim((string) preg_replace('/\s+—\s+.*$/u', '', $title) ?? '');
+        }
+        if ($focus === null || $focus === '') {
+            $focus = $site !== '' ? $site : 'Сайт';
+        }
+
+        return $this->syntheticDescriptionFromParts($site, $focus);
+    }
+
+    private function syntheticDescriptionFromParts(string $site, ?string $pageOrTopic): string
+    {
+        $site = trim($site);
+        $topic = trim((string) $pageOrTopic);
+        if ($topic === '') {
+            $line = $site !== ''
+                ? $site.' — условия, контакты и актуальная информация на официальном сайте.'
+                : 'Актуальная информация и условия на официальном сайте.';
+        } else {
+            $line = $site !== ''
+                ? $topic.' на сайте '.$site.' — условия, контакты и подробности.'
+                : $topic.' — условия и подробности на официальном сайте.';
+        }
+
+        return $this->excerptFromPlain($line, 165);
+    }
+
+    /**
+     * Подписи для маршрутов без модели (совпадают с h1 из seo_routes, где есть).
+     */
+    private function defaultHumanLabelForRoute(string $routeName): ?string
+    {
+        return match ($routeName) {
+            'reviews' => 'Отзывы клиентов',
+            'faq' => 'Часто задаваемые вопросы',
+            'contacts' => 'Контакты',
+            'terms' => 'Условия аренды',
+            'prices' => 'Цены на мотоциклы',
+            'order' => 'Заявка на аренду',
+            'about' => 'О компании',
+            'offline' => 'Офлайн',
+            'delivery.anapa' => 'Доставка в Анапу',
+            'delivery.gelendzhik' => 'Доставка в Геленджик',
+            'booking.index' => 'Онлайн-бронирование',
+            'booking.checkout' => 'Оформление бронирования',
+            'booking.thank-you' => 'Заявка принята',
+            'articles.index' => 'Статьи',
+            default => null,
+        };
     }
 
     /**

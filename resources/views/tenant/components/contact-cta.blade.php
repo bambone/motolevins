@@ -1,10 +1,13 @@
+@php
+    $isAdvocateEditorial = tenant()?->themeKey() === 'advocate_editorial';
+@endphp
 {{-- Родитель скрывает блок целиком, если выключены плавающие кнопки или нет ссылок в $contacts. --}}
 <!-- Floating CTAs: приглушаются во время hero-video -->
 <div x-data="{ videoPlaying: false }"
      @hero-video-playing.window="videoPlaying = true"
      @hero-video-stopped.window="videoPlaying = false"
      :class="videoPlaying ? 'opacity-50 translate-y-4' : 'opacity-100 translate-y-0'"
-     class="fixed z-50 flex flex-col gap-3 transition-all duration-500 ease-out bottom-[max(1rem,env(safe-area-inset-bottom))] right-4 sm:bottom-6 sm:right-6">
+     class="fixed z-50 flex flex-col gap-3 transition-all duration-500 ease-out bottom-[max(1rem,env(safe-area-inset-bottom))] right-4 sm:bottom-6 sm:right-6 {{ $isAdvocateEditorial ? 'advocate-floating-contact-cta' : '' }}">
     <!-- WhatsApp -->
     @if($contacts['whatsapp'] ?? null)
     <a href="https://wa.me/{{ $contacts['whatsapp'] }}" target="_blank"

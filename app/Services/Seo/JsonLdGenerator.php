@@ -16,6 +16,7 @@ final class JsonLdGenerator
 
     /**
      * @param  list<array{url: string, name: string}>|null  $itemListEntries
+     * @param  list<array{name: string, url: string}>  $breadcrumbs
      * @return list<array<string, mixed>>
      */
     public function buildGraph(
@@ -25,6 +26,7 @@ final class JsonLdGenerator
         ?SeoMeta $seo,
         string $canonicalUrl,
         ?array $itemListEntries = null,
+        array $breadcrumbs = [],
     ): array {
         $graph = $this->jsonLdFactory->buildBaseGraph(
             $tenant,
@@ -34,7 +36,34 @@ final class JsonLdGenerator
             $itemListEntries,
         );
 
+        $graph = $this->mergeBreadcrumbListIfMissing($graph, $breadcrumbs);
+
         return $this->overrideMerger->merge($graph, $seo);
+    }
+
+    /**
+     * @param  list<array{name: string, url: string}>  $breadcrumbs
+     * @param  list<array<string, mixed>>  $graph
+     * @return list<array<string, mixed>>
+     */
+    private function mergeBreadcrumbListIfMissing(array $graph, array $breadcrumbs): array
+    {
+        if ($breadcrumbs === []) {
+            return $graph;
+        }
+        foreach ($graph as $node) {
+            if (isset($node['@type']) && $node['@type'] === 'BreadcrumbList') {
+                return $graph;
+            }
+        }
+
+        $bc = $this->jsonLdFactory->breadcrumbSchemaFromCrumbs($breadcrumbs);
+        if ($bc === null) {
+            return $graph;
+        }
+        $graph[] = $bc;
+
+        return $graph;
     }
 
     /**

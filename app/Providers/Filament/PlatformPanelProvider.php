@@ -8,6 +8,7 @@ use App\Filament\Platform\Widgets\PlatformActivityWidget;
 use App\Filament\Platform\Widgets\PlatformDashboardIntroWidget;
 use App\Filament\Platform\Widgets\PlatformStatsWidget;
 use App\Http\Middleware\EnsurePlatformAccess;
+use App\Http\Middleware\SetFilamentLocale;
 use Filament\Actions\Action;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -101,6 +102,7 @@ class PlatformPanelProvider extends PanelProvider
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,
                 StartSession::class,
+                SetFilamentLocale::class,
                 ShareErrorsFromSession::class,
                 AuthenticateSession::class,
                 SubstituteBindings::class,

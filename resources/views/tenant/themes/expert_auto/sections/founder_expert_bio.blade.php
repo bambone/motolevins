@@ -41,6 +41,13 @@
     $sectionId = trim((string) ($data['section_id'] ?? ''));
     $ctaLabel = trim((string) ($data['cta_label'] ?? ''));
     $ctaAnchor = trim((string) ($data['cta_anchor'] ?? ''));
+    $ctaGoalPrefill = trim((string) ($data['cta_goal_prefill'] ?? ''));
+    $ctaRepeatAfterTrust = ! array_key_exists('cta_repeat_after_trust', $data)
+        || filter_var($data['cta_repeat_after_trust'], FILTER_VALIDATE_BOOLEAN);
+    $useUnifiedEnrollmentCta = $ctaLabel !== ''
+        && in_array((string) (tenant()?->theme_key ?? ''), ['expert_auto', 'advocate_editorial'], true)
+        && \App\Tenant\Expert\TenantEnrollmentCtaConfig::forCurrent() !== null;
+    $scrollTarget = $ctaAnchor !== '' && str_starts_with($ctaAnchor, '#') ? $ctaAnchor : '#expert-inquiry';
 @endphp
 <section @if($sectionId !== '') id="{{ e($sectionId) }}" @endif class="expert-bio-mega relative mb-14 min-w-0 scroll-mt-24 sm:mb-20 sm:scroll-mt-28 lg:mb-28">
     <div class="relative overflow-hidden rounded-[1.5rem] border border-white/[0.08] bg-gradient-to-br from-[#0c0f17] to-[#050608] shadow-[0_28px_64px_-20px_rgba(0,0,0,0.72)] ring-1 ring-inset ring-white/[0.04] sm:rounded-[2rem]">
@@ -63,6 +70,18 @@
                 @if($lead !== '')
                     <p class="mt-6 text-[17px] font-semibold leading-relaxed text-moto-amber/90 sm:text-[19px] max-w-2xl">{{ $lead }}</p>
                 @endif
+
+                @if($useUnifiedEnrollmentCta)
+                    <div class="mt-8 flex flex-wrap gap-4">
+                        @include('tenant.partials.enrollment-cta-control', [
+                            'label' => $ctaLabel,
+                            'sourceContext' => 'trainer_bio_primary_cta',
+                            'goalPrefill' => $ctaGoalPrefill,
+                            'variant' => 'primary',
+                            'scrollAnchor' => $scrollTarget,
+                        ])
+                    </div>
+                @endif
                 
                 <div class="mt-8 space-y-6">
                     @foreach($texts as $t)
@@ -82,7 +101,18 @@
                         @endforeach
                     </ul>
                 @endif
-                @if($ctaLabel !== '' && $ctaAnchor !== '')
+                @if($useUnifiedEnrollmentCta && $ctaRepeatAfterTrust && count($trustPoints) > 0)
+                    <div class="mt-10 flex flex-wrap gap-4 border-t border-white/[0.08] pt-10">
+                        @include('tenant.partials.enrollment-cta-control', [
+                            'label' => $ctaLabel,
+                            'sourceContext' => 'trainer_bio_after_trust_cta',
+                            'goalPrefill' => $ctaGoalPrefill,
+                            'variant' => 'secondary',
+                            'scrollAnchor' => $scrollTarget,
+                        ])
+                    </div>
+                @endif
+                @if(! $useUnifiedEnrollmentCta && $ctaLabel !== '' && $ctaAnchor !== '')
                     <div class="mt-12 flex flex-wrap gap-4">
                         <a href="{{ $ctaAnchor }}" class="tenant-btn-primary group relative inline-flex min-h-14 w-full items-center justify-center gap-3 overflow-hidden rounded-xl px-8 text-[15px] font-bold shadow-xl transition-all hover:scale-[1.02] hover:shadow-moto-amber/20 sm:w-auto sm:px-10">
                             <span class="relative z-10">{{ $ctaLabel }}</span>

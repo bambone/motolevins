@@ -4,6 +4,7 @@
 <div
     x-data="bookingModal({ preferredOptions: @js($preferredChannelFormOptions) })"
     @open-booking-modal.window="openModal($event.detail)"
+    @keydown.escape.window="isOpen && closeModal()"
     x-show="isOpen"
     style="display: none;"
     class="relative z-[100]"
@@ -30,13 +31,14 @@
                  x-transition:leave="ease-in duration-200"
                  x-transition:leave-start="translate-y-0 opacity-100 sm:scale-100"
                  x-transition:leave-end="translate-y-4 opacity-0 sm:translate-y-0 sm:scale-95"
+                 x-ref="bookingModalPanel"
                  class="tenant-booking-modal-panel relative flex min-h-0 w-full flex-col overflow-hidden rounded-t-2xl border border-white/10 bg-[#141417]/95 text-left shadow-2xl shadow-black/60 ring-1 ring-white/[0.06] backdrop-blur-xl sm:rounded-2xl">
 
                 <div class="flex shrink-0 items-center justify-between border-b border-white/10 bg-gradient-to-r from-white/[0.06] to-transparent px-5 py-4 sm:px-8 sm:py-5">
                     <h3 class="min-w-0 pr-2 text-xl font-bold leading-tight text-white sm:text-2xl" id="modal-title">
                         Бронирование <span class="text-moto-amber" x-text="bike.name"></span>
                     </h3>
-                    <button type="button" @click="closeModal()" class="inline-flex min-h-10 min-w-10 shrink-0 touch-manipulation items-center justify-center rounded-xl text-zinc-400 transition-colors hover:bg-white/10 hover:text-white" aria-label="Закрыть">
+                    <button type="button" @click="closeModal()" class="inline-flex min-h-10 min-w-10 shrink-0 touch-manipulation items-center justify-center rounded-xl text-zinc-300 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moto-amber" aria-label="Закрыть">
                         <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
                         </svg>
@@ -59,7 +61,7 @@
                                 <p class="mb-3 text-sm font-semibold uppercase tracking-wider text-zinc-500">Период аренды</p>
                                 <div class="grid grid-cols-2 gap-4 sm:gap-5">
                                     <div>
-                                        <label for="booking-modal-start-date" class="mb-1.5 block text-sm font-medium text-zinc-400">Дата начала</label>
+                                        <label for="booking-modal-start-date" class="mb-1.5 block text-sm font-medium text-zinc-300">Дата начала</label>
                                         <input id="booking-modal-start-date"
                                                x-ref="bookingStartDateInput"
                                                data-fp-anchor="tenant-modal-start"
@@ -73,7 +75,7 @@
                                                class="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-3 text-base text-white outline-none transition-colors [color-scheme:dark] focus:border-moto-amber/50 focus:ring-1 focus:ring-moto-amber">
                                     </div>
                                     <div>
-                                        <label for="booking-modal-end-date" class="mb-1.5 block text-sm font-medium text-zinc-400">Дата возврата</label>
+                                        <label for="booking-modal-end-date" class="mb-1.5 block text-sm font-medium text-zinc-300">Дата возврата</label>
                                         <input id="booking-modal-end-date"
                                                x-ref="bookingEndDateInput"
                                                data-fp-anchor="tenant-modal-end"
@@ -102,16 +104,16 @@
                                 <p x-show="hintSelfOverlap" class="text-sm leading-relaxed text-amber-200/95">По вашему номеру уже есть бронирование <span class="font-semibold text-moto-amber" x-text="bike.name"></span> на выбранные даты. Повторная заявка возможна.</p>
                                 <p x-show="hintBusyRange && !hintSelfOverlap" class="text-sm leading-relaxed text-zinc-300">На выбранные даты эта техника занята. Серые дни в календаре — визуальная подсказка; итог по периоду — по тексту ниже.</p>
                                 <p x-show="hintRangeOk === false && form.start_date && form.end_date" class="text-sm font-medium text-red-200/90">Выбранный период сейчас недоступен.</p>
-                                <p x-show="hintRangesText" class="text-sm text-zinc-400">Возможные окна: <span class="text-zinc-200" x-text="hintRangesText"></span></p>
+                                <p x-show="hintRangesText" class="text-sm text-zinc-300">Возможные окна: <span class="text-zinc-200" x-text="hintRangesText"></span></p>
                             </div>
 
                             <div x-show="calculatedDays > 0" x-collapse class="mt-6 rounded-xl border border-moto-amber/20 bg-gradient-to-br from-moto-amber/[0.08] to-white/[0.03] p-5 sm:p-6">
                                 <div class="mb-2 flex items-center justify-between text-base">
-                                    <span class="text-zinc-400">Стоимость 1 суток:</span>
+                                    <span class="text-zinc-300">Стоимость 1 суток:</span>
                                     <span class="font-medium text-white" x-text="formatMoney(bike.price, 'motorcycle.price_per_day')"></span>
                                 </div>
                                 <div class="mb-4 flex items-center justify-between border-b border-white/10 pb-4 text-base">
-                                    <span class="text-zinc-400">Количество дней:</span>
+                                    <span class="text-zinc-300">Количество дней:</span>
                                     <span class="font-medium text-white" x-text="calculatedDays"></span>
                                 </div>
                                 <div class="flex items-end justify-between gap-3">
@@ -122,13 +124,13 @@
 
                             <div class="mt-6 space-y-5">
                                 <div>
-                                    <label for="booking-modal-customer-name" class="mb-1.5 block text-sm font-medium text-zinc-400">Ваше имя</label>
+                                    <label for="booking-modal-customer-name" class="mb-1.5 block text-sm font-medium text-zinc-300">Ваше имя</label>
                                     <input id="booking-modal-customer-name" name="customer_name" type="text" x-model="form.customer_name" required placeholder="Иван Иванов" autocomplete="name"
                                            x-ref="bookingCustomerNameInput"
-                                           class="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-base text-white outline-none transition-colors placeholder:text-zinc-500 focus:border-moto-amber/50 focus:ring-1 focus:ring-moto-amber">
+                                           class="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-base text-white outline-none transition-colors placeholder:text-zinc-400 focus:border-moto-amber/50 focus:ring-1 focus:ring-moto-amber">
                                 </div>
                                 <div>
-                                    <label for="booking-modal-phone" class="mb-1.5 block text-sm font-medium text-zinc-400">Номер телефона</label>
+                                    <label for="booking-modal-phone" class="mb-1.5 block text-sm font-medium text-zinc-300">Номер телефона</label>
                                     <input id="booking-modal-phone"
                                            x-ref="bookingPhoneInput"
                                            name="phone"
@@ -141,8 +143,8 @@
                                            required
                                            autocomplete="tel"
                                            placeholder="+7 (999) 123-45-67"
-                                           class="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-base text-white outline-none transition-colors placeholder:text-zinc-500 focus:border-moto-amber/50 focus:ring-1 focus:ring-moto-amber">
-                                    <p class="mt-2 text-xs leading-snug text-zinc-400 sm:text-sm" x-text="phoneFieldHint()"></p>
+                                           class="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-base text-white outline-none transition-colors placeholder:text-zinc-400 focus:border-moto-amber/50 focus:ring-1 focus:ring-moto-amber">
+                                    <p class="mt-2 text-xs leading-snug text-zinc-300 sm:text-sm" x-text="phoneFieldHint()"></p>
                                 </div>
 
                                 <fieldset x-show="showPreferredBlock()" x-cloak
@@ -166,7 +168,7 @@
                                         </template>
                                     </div>
                                     <div x-show="selectedNeedsExtraValue()" x-collapse class="mt-4 border-t border-white/[0.08] pt-4">
-                                        <label for="booking-modal-pref-value" class="mb-1.5 block text-sm font-medium text-zinc-400">Контакт в мессенджере *</label>
+                                        <label for="booking-modal-pref-value" class="mb-1.5 block text-sm font-medium text-zinc-300" x-text="preferredValueFieldLabel()"></label>
                                         <input id="booking-modal-pref-value" type="text" x-model="form.preferred_contact_value" autocomplete="off"
                                                x-ref="bookingPrefValueInput"
                                                :lang="(['telegram','vk'].includes(form.preferred_contact_channel) ? 'en' : null)"
@@ -174,15 +176,15 @@
                                                @beforeinput="onBookingPrefValueBeforeInput($event)"
                                                @paste="onBookingPrefValuePaste($event)"
                                                @compositionend="stripPrefContactValueToAscii()"
-                                               class="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-base text-white outline-none transition-colors placeholder:text-zinc-500 focus:border-moto-amber/50 focus:ring-1 focus:ring-moto-amber">
+                                               class="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-base text-white outline-none transition-colors placeholder:text-zinc-400 focus:border-moto-amber/50 focus:ring-1 focus:ring-moto-amber">
                                         <p class="mt-2 text-xs leading-relaxed text-zinc-500" x-show="preferredValueHint()" x-text="preferredValueHint()"></p>
                                     </div>
                                 </fieldset>
 
                                 <div>
-                                    <label for="booking-modal-comment" class="mb-1.5 block text-sm font-medium text-zinc-400">Комментарий (необязательно)</label>
+                                    <label for="booking-modal-comment" class="mb-1.5 block text-sm font-medium text-zinc-300">Комментарий (необязательно)</label>
                                     <textarea id="booking-modal-comment" name="customer_comment" x-model="form.customer_comment" placeholder="Например: нужна доставка в Анапу" rows="2" autocomplete="off"
-                                              class="w-full resize-none rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-base text-white outline-none transition-colors placeholder:text-zinc-500 focus:border-moto-amber/50 focus:ring-1 focus:ring-moto-amber"></textarea>
+                                              class="w-full resize-none rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-base text-white outline-none transition-colors placeholder:text-zinc-400 focus:border-moto-amber/50 focus:ring-1 focus:ring-moto-amber"></textarea>
                                 </div>
                             </div>
                         </div>
@@ -202,16 +204,19 @@
                     </form>
                 </div>
 
-                <div class="flex flex-col items-center px-4 py-10 text-center sm:px-6 sm:py-12" x-show="isSuccess" x-cloak>
-                    <div class="mb-6 flex h-16 w-16 items-center justify-center rounded-full border border-green-500/30 bg-green-500/20 text-green-400 shadow-lg shadow-green-500/10">
+                <div class="flex flex-col items-center px-4 py-10 text-center sm:px-6 sm:py-12" x-show="isSuccess" x-cloak role="status" aria-live="polite">
+                    <div class="mb-6 flex h-16 w-16 items-center justify-center rounded-full border border-green-500/30 bg-green-500/20 text-green-400 shadow-lg shadow-green-500/10" aria-hidden="true">
                         <svg class="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
                     </div>
-                    <h3 class="mb-2 text-2xl font-bold text-white">Заявка принята!</h3>
-                    <p class="mx-auto mb-8 max-w-sm text-zinc-400">
-                        Наш менеджер свяжется с вами в ближайшее время для подтверждения бронирования.
+                    <h3 class="mb-2 text-2xl font-bold text-white" x-ref="bookingSuccessHeading" tabindex="-1">Спасибо!</h3>
+                    <p class="mx-auto mb-2 max-w-sm text-base font-medium leading-relaxed text-zinc-200">
+                        Заявка отправлена.
+                    </p>
+                    <p class="mx-auto mb-8 max-w-sm text-sm leading-relaxed text-zinc-300">
+                        Мы свяжемся с вами в ближайшее время, чтобы подтвердить бронирование и уточнить детали.
                     </p>
                     <button type="button" @click="closeModal()" class="tenant-btn-secondary min-h-11 touch-manipulation px-8">
-                        Отлично, спасибо
+                        Закрыть
                     </button>
                 </div>
             </div>
@@ -223,18 +228,64 @@
 document.addEventListener('alpine:init', () => {
     Alpine.data('bookingModal', (cfg = {}) => ({
         init() {
+            this._prefChannelPrev = this.form.preferred_contact_channel;
+            this._a11yTrapHandler = null;
+            this._a11yFocusBefore = null;
             this.$watch('isOpen', (open) => {
                 const root = document.documentElement;
                 const body = document.body;
+                const A11y = window.RentBaseTenantA11y;
                 if (open) {
+                    this._a11yFocusBefore = document.activeElement;
                     root.classList.add('overflow-hidden');
                     body.classList.add('overflow-hidden');
+                    this._a11yTrapHandler = (e) => {
+                        if (!this.isOpen || e.key !== 'Tab') {
+                            return;
+                        }
+                        const panel = this.$refs.bookingModalPanel;
+                        if (!panel || !A11y) {
+                            return;
+                        }
+                        A11y.trapTabWithin(panel, e);
+                    };
+                    document.addEventListener('keydown', this._a11yTrapHandler, true);
+                    this.$nextTick(() => {
+                        const panel = this.$refs.bookingModalPanel;
+                        const el = A11y && panel ? A11y.firstFocusable(panel) : null;
+                        if (el && typeof el.focus === 'function') {
+                            try {
+                                el.focus({ preventScroll: true });
+                            } catch (err) {
+                                el.focus();
+                            }
+                        }
+                    });
                 } else {
                     root.classList.remove('overflow-hidden');
                     body.classList.remove('overflow-hidden');
+                    if (this._a11yTrapHandler) {
+                        document.removeEventListener('keydown', this._a11yTrapHandler, true);
+                        this._a11yTrapHandler = null;
+                    }
+                    const prev = this._a11yFocusBefore;
+                    this._a11yFocusBefore = null;
+                    requestAnimationFrame(() => {
+                        if (prev && typeof prev.focus === 'function' && document.body.contains(prev)) {
+                            try {
+                                prev.focus({ preventScroll: true });
+                            } catch (err) {
+                                prev.focus();
+                            }
+                        }
+                    });
                 }
             });
             this.$watch('form.preferred_contact_channel', () => {
+                if (this.form.preferred_contact_channel !== this._prefChannelPrev) {
+                    this.form.preferred_contact_value = '';
+                    this._prefChannelPrev = this.form.preferred_contact_channel;
+                }
                 this.stripPrefContactValueToAscii();
             });
         },
@@ -339,6 +390,14 @@ document.addEventListener('alpine:init', () => {
             const o = this.preferredOptions.find((x) => x.id === id);
 
             return (o && o.value_placeholder) ? o.value_placeholder : '';
+        },
+
+        preferredValueFieldLabel() {
+            const id = this.form.preferred_contact_channel;
+            const o = this.preferredOptions.find((x) => x.id === id);
+            const lb = o && o.value_label ? String(o.value_label).trim() : '';
+
+            return (lb || 'Контакт в мессенджере') + ' *';
         },
 
         stripPrefContactValueToAscii() {
@@ -570,6 +629,7 @@ document.addEventListener('alpine:init', () => {
             this.form.phone = '';
             this.form.customer_comment = '';
             this.form.preferred_contact_channel = 'phone';
+            this._prefChannelPrev = 'phone';
             this.form.preferred_contact_value = '';
             this.calculatedDays = 0;
             this.totalPrice = 0;
@@ -651,23 +711,31 @@ document.addEventListener('alpine:init', () => {
 
             if (this.selectedNeedsExtraValue()) {
                 const v = (this.form.preferred_contact_value || '').trim();
+                const ch = this.form.preferred_contact_channel;
+                const N = window.RentBaseVisitorContactNormalize;
                 if (! v) {
-                    this.errorMessage = 'Укажите контакт для выбранного способа связи (см. подсказку под полем).';
+                    this.errorMessage =
+                        N && typeof N.preferredContactValueEmptyMessageRu === 'function'
+                            ? N.preferredContactValueEmptyMessageRu(ch)
+                            : 'Укажите контакт для выбранного способа связи.';
                     this.flashFieldGroup(this.$refs.bookingPrefValueInput);
 
                     return;
                 }
-                const ch = this.form.preferred_contact_channel;
-                const N = window.RentBaseVisitorContactNormalize;
                 if (ch === 'telegram' && N && typeof N.normalizeTelegramVisitorInput === 'function' && N.normalizeTelegramVisitorInput(v) === null) {
                     this.errorMessage =
-                        'Telegram: латинский username (5–32 символа) или ссылка https://t.me/… Кириллица в нике не используется.';
+                        N && typeof N.preferredContactValueInvalidMessageRu === 'function'
+                            ? N.preferredContactValueInvalidMessageRu('telegram')
+                            : 'Укажите корректный Telegram.';
                     this.flashFieldGroup(this.$refs.bookingPrefValueInput);
 
                     return;
                 }
                 if (ch === 'vk' && N && typeof N.normalizeVkVisitorInput === 'function' && N.normalizeVkVisitorInput(v) === null) {
-                    this.errorMessage = 'ВКонтакте: укажите ссылку на профиль или латинский id/ник (как в адресе vk.com/…).';
+                    this.errorMessage =
+                        N && typeof N.preferredContactValueInvalidMessageRu === 'function'
+                            ? N.preferredContactValueInvalidMessageRu('vk')
+                            : 'Укажите корректный контакт VK.';
                     this.flashFieldGroup(this.$refs.bookingPrefValueInput);
 
                     return;
@@ -713,6 +781,20 @@ document.addEventListener('alpine:init', () => {
 
                 this.isSuccess = true;
                 window.TenantDatePickers?.destroyModal?.();
+                try {
+                    document.dispatchEvent(
+                        new CustomEvent('rentbase:public-form-success', { detail: { kind: 'tenant_booking_modal' } }),
+                    );
+                } catch {
+                    /* ignore */
+                }
+                this.$nextTick(() => {
+                    try {
+                        this.$refs.bookingSuccessHeading?.focus?.({ preventScroll: true });
+                    } catch {
+                        this.$refs.bookingSuccessHeading?.focus?.();
+                    }
+                });
             } catch (error) {
                 this.errorMessage = error.message;
                 this.$nextTick(() => this.flashFieldGroup(this.$refs.bookingErrorBanner));

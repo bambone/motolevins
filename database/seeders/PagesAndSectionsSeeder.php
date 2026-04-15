@@ -239,6 +239,34 @@ class PagesAndSectionsSeeder extends Seeder
             [
                 'tenant_id' => $tenant->id,
                 'page_id' => $page->id,
+                'section_key' => 'contacts_inquiry',
+            ],
+            [
+                'tenant_id' => $tenant->id,
+                'title' => 'Форма обратной связи',
+                'section_type' => 'contact_inquiry',
+                'data_json' => [
+                    'enabled' => true,
+                    'heading' => 'Напишите нам',
+                    'subheading' => 'Оставьте сообщение, и мы свяжемся с вами удобным способом.',
+                    'submit_label' => 'Отправить сообщение',
+                    'success_message' => 'Спасибо! Мы получили ваше сообщение и свяжемся с вами.',
+                    'section_id' => 'contact-inquiry',
+                    'show_email' => true,
+                    'show_preferred_channel' => true,
+                    'consent_enabled' => false,
+                    'consent_label' => 'Я согласен(на) на обработку персональных данных.',
+                ],
+                'sort_order' => 15,
+                'status' => 'published',
+                'is_visible' => true,
+            ]
+        );
+
+        PageSection::withoutGlobalScopes()->updateOrCreate(
+            [
+                'tenant_id' => $tenant->id,
+                'page_id' => $page->id,
                 'section_key' => 'contacts_tips',
             ],
             [

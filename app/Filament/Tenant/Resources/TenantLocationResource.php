@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace App\Filament\Tenant\Resources;
 
+use App\Filament\Shared\Lifecycle\AdminFilamentDelete;
 use App\Filament\Tenant\Resources\TenantLocationResource\Pages;
 use App\Models\TenantLocation;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
-use App\Filament\Tenant\Resources\Resource;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
@@ -72,7 +72,7 @@ class TenantLocationResource extends Resource
         return $table
             ->columns([
                 TextColumn::make('name')->label('Название')->searchable()->sortable(),
-                TextColumn::make('slug')->label('Slug')->searchable(),
+                TextColumn::make('slug')->label('Код в URL')->searchable(),
                 TextColumn::make('city')->label('Город')->placeholder('—'),
                 TextColumn::make('region')->label('Регион')->placeholder('—')->toggleable(isToggledHiddenByDefault: true),
                 IconColumn::make('is_active')->label('Активна')->boolean(),
@@ -81,7 +81,10 @@ class TenantLocationResource extends Resource
             ->defaultSort('sort_order')
             ->actions([
                 EditAction::make(),
-                DeleteAction::make(),
+                AdminFilamentDelete::configureTableDeleteAction(
+                    DeleteAction::make(),
+                    ['entry' => 'filament.tenant.tenant_location.table'],
+                ),
             ]);
     }
 

@@ -21,8 +21,10 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Schemas\Components\Utilities\Get;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
+use Throwable;
 
 /**
  * Поля модалок «ручное обращение / бронирование» (tenant admin). См. {@see ManualLeadBookingService}.
@@ -332,6 +334,7 @@ final class ManualOperatorBookingForm
             ->label('Добавить бронирование')
             ->icon('heroicon-o-plus-circle')
             ->visible(fn (): bool => Gate::allows('create', Booking::class))
+            ->modalSubmitActionLabel('Создать')
             ->form(self::standaloneBookingComponents())
             ->action(function (array $data) use ($afterSubmit): void {
                 self::submitStandaloneManualBooking($data);
@@ -356,6 +359,12 @@ final class ManualOperatorBookingForm
     {
         $tenant = currentTenant();
         if ($tenant === null) {
+            Notification::make()
+                ->title('Контекст клиента недоступен')
+                ->body('Обновите страницу или войдите в кабинет снова.')
+                ->danger()
+                ->send();
+
             return;
         }
 
@@ -369,22 +378,55 @@ final class ManualOperatorBookingForm
 
         $createCrm = self::effectiveCreateCrm($data);
 
-        app(ManualLeadBookingService::class)->createManualBooking(new ManualBookingCreateData(
-            tenantId: $tenant->id,
-            name: (string) $data['name'],
-            motorcycleId: (int) $data['motorcycle_id'],
-            rentalUnitId: (int) $data['rental_unit_id'],
-            startDateYmd: $start,
-            endDateYmd: $end,
-            phone: (string) $data['phone'],
-            email: $data['email'] ?? null,
-            comment: $data['comment'] ?? null,
-            createLead: true,
-            createCrm: $createCrm,
-        ));
+        try {
+            $result = app(ManualLeadBookingService::class)->createManualBooking(new ManualBookingCreateData(
+                tenantId: $tenant->id,
+                name: (string) $data['name'],
+                motorcycleId: (int) $data['motorcycle_id'],
+                rentalUnitId: (int) $data['rental_unit_id'],
+                startDateYmd: $start,
+                endDateYmd: $end,
+                phone: (string) $data['phone'],
+                email: $data['email'] ?? null,
+                comment: $data['comment'] ?? null,
+                createLead: true,
+                createCrm: $createCrm,
+            ));
+        } catch (ValidationException $e) {
+            throw $e;
+        } catch (AuthorizationException $e) {
+            Notification::make()
+                ->title('Действие недоступно')
+                ->body($e->getMessage())
+                ->danger()
+                ->send();
+
+            return;
+        } catch (Throwable $e) {
+            report($e);
+            Notification::make()
+                ->title('Не удалось создать бронирование')
+                ->body('Попробуйте ещё раз. Если ошибка повторяется — сообщите в поддержку.')
+                ->danger()
+                ->send();
+
+            return;
+        }
+
+        $parts = [];
+        if ($result->booking !== null) {
+            $parts[] = 'Бронь №'.$result->booking->id;
+        }
+        if ($result->lead !== null) {
+            $parts[] = 'Лид №'.$result->lead->id;
+        }
+        if ($result->crmRequest !== null) {
+            $parts[] = 'CRM №'.$result->crmRequest->id;
+        }
 
         Notification::make()
             ->title('Бронирование создано')
+            ->body($parts !== [] ? implode(' · ', $parts) : null)
             ->success()
             ->send();
     }

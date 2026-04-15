@@ -5,9 +5,11 @@ namespace App\Filament\Platform\Resources;
 use App\Filament\Platform\Resources\Concerns\GrantsPlatformPanelAccess;
 use App\Filament\Platform\Resources\DomainLocalizationPresetResource\Pages;
 use App\Filament\Platform\Resources\DomainLocalizationPresetResource\RelationManagers\PresetTermsRelationManager;
+use App\Filament\Shared\Lifecycle\AdminFilamentDelete;
+use App\Filament\Support\AdminEmptyState;
 use App\Models\DomainLocalizationPreset;
 use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\CreateAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -48,15 +50,15 @@ class DomainLocalizationPresetResource extends Resource
         return $schema
             ->components([
                 Section::make('Пресет')
-                    ->description('Slug используется в данных и миграциях; меняйте осознанно.')
+                    ->description('URL-идентификатор пресета используется в данных и миграциях; меняйте осознанно.')
                     ->schema([
                         TextInput::make('slug')
-                            ->label('Slug')
+                            ->label('URL-идентификатор (пресет)')
                             ->required()
                             ->maxLength(255)
                             ->unique(ignoreRecord: true)
                             ->disabledOn('edit')
-                            ->helperText('Например: moto_rental. После создания не редактируют.'),
+                            ->helperText('Латиница в нижнем регистре, например moto_rental. После создания не редактируют.'),
                         TextInput::make('name')
                             ->label('Название')
                             ->required()
@@ -78,33 +80,39 @@ class DomainLocalizationPresetResource extends Resource
 
     public static function table(Table $table): Table
     {
-        return $table
-            ->columns([
-                TextColumn::make('slug')
-                    ->label('Slug')
-                    ->searchable(),
-                TextColumn::make('name')
-                    ->label('Название')
-                    ->searchable(),
-                IconColumn::make('is_active')
-                    ->label('Акт.')
-                    ->boolean(),
-                TextColumn::make('sort_order')
-                    ->label('Порядок')
-                    ->sortable(),
-                TextColumn::make('tenants_count')
-                    ->label('Клиентов')
-                    ->counts('tenants'),
-            ])
-            ->actions([EditAction::make()])
-            ->bulkActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make()
-                        ->modalHeading('Удалить пресеты?')
-                        ->modalDescription('Клиенты с этим пресетом потеряют привязку (FK nullOnDelete). Лучше отключить пресет флагом is_active.'),
-                ]),
-            ])
-            ->defaultSort('sort_order');
+        return AdminEmptyState::applyInitial(
+            $table
+                ->columns([
+                    TextColumn::make('slug')
+                        ->label('URL-идентификатор')
+                        ->searchable(),
+                    TextColumn::make('name')
+                        ->label('Название')
+                        ->searchable(),
+                    IconColumn::make('is_active')
+                        ->label('Акт.')
+                        ->boolean(),
+                    TextColumn::make('sort_order')
+                        ->label('Порядок')
+                        ->sortable(),
+                    TextColumn::make('tenants_count')
+                        ->label('Клиентов')
+                        ->counts('tenants'),
+                ])
+                ->actions([EditAction::make()])
+                ->bulkActions([
+                    BulkActionGroup::make([
+                        AdminFilamentDelete::makeBulkDeleteAction()
+                            ->modalHeading('Удалить пресеты?')
+                            ->modalDescription('Клиенты с этим пресетом потеряют привязку (FK nullOnDelete). Лучше отключить пресет флагом is_active.'),
+                    ]),
+                ])
+                ->defaultSort('sort_order'),
+            'Пресетов терминологии пока нет',
+            'Создайте пресет — набор подписей для кабинета клиента (каталог, CRM, меню). Его можно назначить клиенту в карточке клиента.',
+            'heroicon-o-language',
+            [CreateAction::make()->label('Создать пресет')],
+        );
     }
 
     public static function getRelations(): array

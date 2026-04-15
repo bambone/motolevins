@@ -2,9 +2,11 @@
 
 namespace App\Filament\Tenant\Resources\PageResource\Pages;
 
+use App\Filament\Shared\Lifecycle\AdminFilamentDelete;
 use App\Filament\Tenant\Resources\PageResource;
 use App\Services\Tenancy\TenantPagePrimaryHtmlSync;
 use Filament\Actions\Action;
+use Filament\Actions\DeleteAction;
 use Filament\Resources\Pages\EditRecord;
 
 class EditPage extends EditRecord
@@ -39,6 +41,14 @@ class EditPage extends EditRecord
                 })
                 ->openUrlInNewTab()
                 ->visible(fn (): bool => $this->getRecord()->status === 'published'),
+            AdminFilamentDelete::configureTableDeleteAction(
+                DeleteAction::make()
+                    ->label('Удалить страницу')
+                    ->modalHeading('Удалить страницу?')
+                    ->modalDescription('Страница будет удалена вместе с блоками и SEO-данными.')
+                    ->visible(fn (): bool => $this->getRecord()->slug !== 'home'),
+                ['entry' => 'filament.tenant.page.edit'],
+            ),
         ];
     }
 

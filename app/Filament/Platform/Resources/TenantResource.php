@@ -7,6 +7,7 @@ use App\Filament\Platform\Resources\TenantResource\Pages;
 use App\Filament\Platform\Resources\TenantResource\RelationManagers\TenantMailLogsRelationManager;
 use App\Filament\Platform\Resources\TenantResource\RelationManagers\TenantStorageQuotaEventsRelationManager;
 use App\Filament\Platform\Resources\TenantResource\RelationManagers\TenantUsersRelationManager;
+use App\Filament\Shared\Lifecycle\AdminFilamentDelete;
 use App\Filament\Shared\TenantAnalyticsFormSchema;
 use App\Models\DomainLocalizationPreset;
 use App\Models\TemplatePreset;
@@ -18,7 +19,6 @@ use App\Support\Storage\MediaDeliveryMode;
 use App\Support\Storage\MediaWriteMode;
 use Filament\Actions\BulkAction;
 use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
@@ -168,24 +168,24 @@ class TenantResource extends Resource
                     ->description('Переопределение режимов записи и отдачи публичных файлов. Пусто = глобальный дефолт платформы / env.')
                     ->schema([
                         Select::make('media_write_mode_override')
-                            ->label('Write mode override')
+                            ->label('Режим записи файлов (переопределение)')
                             ->options([
-                                MediaWriteMode::LocalOnly->value => 'local_only',
-                                MediaWriteMode::R2Only->value => 'r2_only',
-                                MediaWriteMode::Dual->value => 'dual',
+                                MediaWriteMode::LocalOnly->value => 'Только локальное хранилище (local_only)',
+                                MediaWriteMode::R2Only->value => 'Только облако R2 (r2_only)',
+                                MediaWriteMode::Dual->value => 'Двойная запись: локально и в облаке (dual)',
                             ])
                             ->native(true)
                             ->placeholder('Нет')
-                            ->helperText('dual: зеркало + R2; local_only / r2_only — узкие режимы.'),
+                            ->helperText('Где физически сохраняются загрузки. Dual — копия на сервере и в облаке; узкие режимы — только для обслуживания и миграций.'),
                         Select::make('media_delivery_mode_override')
-                            ->label('Delivery mode override')
+                            ->label('Режим отдачи файлов посетителям (переопределение)')
                             ->options([
-                                MediaDeliveryMode::Local->value => 'local (/media/…)',
-                                MediaDeliveryMode::R2->value => 'r2 / CDN',
+                                MediaDeliveryMode::Local->value => 'С сервера сайта (local)',
+                                MediaDeliveryMode::R2->value => 'Из облака / CDN (r2)',
                             ])
                             ->native(true)
                             ->placeholder('Нет')
-                            ->helperText('local: first-party URL; без скрытого fallback на R2 при 404.'),
+                            ->helperText('Откуда браузер загружает публичные URL медиа. Обычно согласуют с режимом записи после миграции в облако.'),
                     ])
                     ->columns(2),
 
@@ -420,14 +420,14 @@ class TenantResource extends Resource
             ->bulkActions([
                 BulkActionGroup::make([
                     BulkAction::make('setMediaWriteOverride')
-                        ->label('Override: write mode')
+                        ->label('Задать режим записи медиа')
                         ->form([
                             Select::make('mode')
                                 ->label('Режим записи')
                                 ->options([
-                                    MediaWriteMode::LocalOnly->value => 'local_only',
-                                    MediaWriteMode::R2Only->value => 'r2_only',
-                                    MediaWriteMode::Dual->value => 'dual',
+                                    MediaWriteMode::LocalOnly->value => 'Только локальное хранилище (local_only)',
+                                    MediaWriteMode::R2Only->value => 'Только облако R2 (r2_only)',
+                                    MediaWriteMode::Dual->value => 'Двойная запись (dual)',
                                 ])
                                 ->required()
                                 ->native(true),
@@ -437,13 +437,13 @@ class TenantResource extends Resource
                         })
                         ->deselectRecordsAfterCompletion(),
                     BulkAction::make('setMediaDeliveryOverride')
-                        ->label('Override: delivery mode')
+                        ->label('Задать режим отдачи медиа')
                         ->form([
                             Select::make('mode')
                                 ->label('Режим отдачи')
                                 ->options([
-                                    MediaDeliveryMode::Local->value => 'local',
-                                    MediaDeliveryMode::R2->value => 'r2',
+                                    MediaDeliveryMode::Local->value => 'С сервера сайта (local)',
+                                    MediaDeliveryMode::R2->value => 'Из облака / CDN (r2)',
                                 ])
                                 ->required()
                                 ->native(true),
@@ -453,7 +453,7 @@ class TenantResource extends Resource
                         })
                         ->deselectRecordsAfterCompletion(),
                     BulkAction::make('clearMediaOverrides')
-                        ->label('Сбросить override медиа')
+                        ->label('Сбросить переопределения медиа')
                         ->requiresConfirmation()
                         ->action(function (Collection $records): void {
                             $records->each(fn (Tenant $t) => $t->update([
@@ -462,7 +462,7 @@ class TenantResource extends Resource
                             ]));
                         })
                         ->deselectRecordsAfterCompletion(),
-                    DeleteBulkAction::make()
+                    AdminFilamentDelete::makeBulkDeleteAction()
                         ->modalHeading('Удалить выбранных клиентов?')
                         ->modalDescription('Действие необратимо: клиенты и связанные данные могут быть удалены из базы. Сайты перестанут открываться. Продолжайте только если это осознанное решение.'),
                 ]),

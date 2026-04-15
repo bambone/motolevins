@@ -6,6 +6,7 @@ use App\Models\CrmRequest;
 use App\Models\Page;
 use App\Models\PageSection;
 use App\Models\TenantServiceProgram;
+use App\Models\TenantSetting;
 use App\Support\Typography\RussianTypography;
 use App\Tenant\Expert\ServiceProgramType;
 use Database\Seeders\RolePermissionSeeder;
@@ -65,7 +66,7 @@ class ExpertAutoTenantTest extends TestCase
         $this->assertContains('parking', $payload['intent_tags'] ?? []);
     }
 
-    public function test_expert_inquiry_rejects_invalid_preferred_schedule(): void
+    public function test_expert_inquiry_rejects_too_long_preferred_schedule(): void
     {
         $this->createTenantWithActiveDomain('expertsched', ['theme_key' => 'expert_auto']);
         $host = $this->tenancyHostForSlug('expertsched');
@@ -75,8 +76,26 @@ class ExpertAutoTenantTest extends TestCase
             'phone' => '+79991112299',
             'goal_text' => 'Тест',
             'preferred_contact_channel' => 'phone',
-            'preferred_schedule' => 'вечером',
+            'preferred_schedule' => str_repeat('а', 121),
         ])->assertStatus(422)->assertJsonValidationErrors(['preferred_schedule']);
+    }
+
+    public function test_expert_inquiry_accepts_freeform_preferred_schedule(): void
+    {
+        $this->createTenantWithActiveDomain('expertsched-free', ['theme_key' => 'expert_auto']);
+        $host = $this->tenancyHostForSlug('expertsched-free');
+
+        $this->postJson('http://'.$host.'/api/tenant/expert-inquiry', [
+            'name' => 'Клиент',
+            'phone' => '+79991112299',
+            'goal_text' => 'Тест',
+            'preferred_contact_channel' => 'phone',
+            'preferred_schedule' => 'вечером, будни',
+        ])->assertOk()->assertJsonPath('success', true);
+
+        $crm = CrmRequest::query()->where('request_type', 'expert_service_inquiry')->first();
+        $this->assertNotNull($crm);
+        $this->assertSame('вечером, будни', $crm->payload_json['preferred_schedule'] ?? null);
     }
 
     public function test_expert_inquiry_accepts_time_interval_preferred_schedule(): void
@@ -95,6 +114,152 @@ class ExpertAutoTenantTest extends TestCase
         $crm = CrmRequest::query()->where('request_type', 'expert_service_inquiry')->first();
         $this->assertNotNull($crm);
         $this->assertSame('18:00 – 21:00', $crm->payload_json['preferred_schedule'] ?? null);
+    }
+
+    public function test_expert_inquiry_program_enrollment_marks_source_and_payload(): void
+    {
+        $tenant = $this->createTenantWithActiveDomain('expert-enroll', ['theme_key' => 'expert_auto']);
+        $host = $this->tenancyHostForSlug('expert-enroll');
+
+        $program = TenantServiceProgram::query()->create([
+            'tenant_id' => $tenant->id,
+            'slug' => 'city-comfort',
+            'title' => 'Городской комфорт',
+            'program_type' => ServiceProgramType::Program->value,
+            'is_visible' => true,
+            'sort_order' => 1,
+        ]);
+
+        $this->postJson('http://'.$host.'/api/tenant/expert-inquiry', [
+            'name' => 'Клиент',
+            'phone' => '+79991112299',
+            'goal_text' => 'Запись на программу: «Городской комфорт»',
+            'preferred_contact_channel' => 'phone',
+            'program_slug' => 'city-comfort',
+            'source_type' => 'program_enrollment',
+            'source_page' => '/programs',
+            'program_id' => $program->id,
+            'privacy_accepted' => '1',
+        ])->assertOk()->assertJsonPath('success', true);
+
+        $crm = CrmRequest::query()->where('request_type', 'expert_service_inquiry')->first();
+        $this->assertNotNull($crm);
+        $this->assertSame('programs_page', $crm->source);
+        $payload = $crm->payload_json;
+        $this->assertIsArray($payload);
+        $this->assertSame('program_enrollment', $payload['source_type'] ?? null);
+        $this->assertSame('/programs', $payload['source_page'] ?? null);
+        $this->assertSame((int) $program->id, (int) ($payload['program_id'] ?? 0));
+    }
+
+    public function test_expert_inquiry_enrollment_cta_marks_expert_enrollment_source(): void
+    {
+        $this->createTenantWithActiveDomain('expert-enroll-cta', ['theme_key' => 'expert_auto']);
+        $host = $this->tenancyHostForSlug('expert-enroll-cta');
+
+        $this->postJson('http://'.$host.'/api/tenant/expert-inquiry', [
+            'name' => 'Клиент',
+            'phone' => '+79991112299',
+            'goal_text' => 'Запись со страницы о тренере',
+            'preferred_contact_channel' => 'phone',
+            'source_type' => 'enrollment_cta',
+            'source_page' => '/o-trener',
+            'source_context' => 'trainer_bio_primary_cta',
+            'privacy_accepted' => '1',
+        ])->assertOk()->assertJsonPath('success', true);
+
+        $crm = CrmRequest::query()->where('request_type', 'expert_service_inquiry')->first();
+        $this->assertNotNull($crm);
+        $this->assertSame('expert_enrollment', $crm->source);
+        $payload = $crm->payload_json;
+        $this->assertIsArray($payload);
+        $this->assertSame('enrollment_cta', $payload['source_type'] ?? null);
+        $this->assertSame('/o-trener', $payload['source_page'] ?? null);
+        $this->assertSame('trainer_bio_primary_cta', $payload['source_context'] ?? null);
+    }
+
+    public function test_expert_inquiry_program_enrollment_requires_privacy_acceptance(): void
+    {
+        $this->createTenantWithActiveDomain('expert-priv', ['theme_key' => 'expert_auto']);
+        $host = $this->tenancyHostForSlug('expert-priv');
+
+        $this->postJson('http://'.$host.'/api/tenant/expert-inquiry', [
+            'name' => 'Клиент',
+            'phone' => '+79991112299',
+            'goal_text' => 'Тест',
+            'preferred_contact_channel' => 'phone',
+            'source_type' => 'program_enrollment',
+            'source_page' => '/programs',
+        ])->assertStatus(422)->assertJsonValidationErrors(['privacy_accepted']);
+    }
+
+    public function test_expert_inquiry_rejects_vk_without_contact_value(): void
+    {
+        $tenant = $this->createTenantWithActiveDomain('expert-vk-empty', ['theme_key' => 'expert_auto']);
+        TenantSetting::setForTenant((int) $tenant->id, 'contacts.vk_url', 'https://vk.com/club_test', 'string');
+        $host = $this->tenancyHostForSlug('expert-vk-empty');
+
+        $this->postJson('http://'.$host.'/api/tenant/expert-inquiry', [
+            'name' => 'Клиент',
+            'phone' => '+79991112299',
+            'goal_text' => 'Нужна консультация',
+            'preferred_contact_channel' => 'vk',
+            'preferred_contact_value' => '',
+            'privacy_accepted' => '1',
+        ])->assertStatus(422)->assertJsonValidationErrors(['preferred_contact_value']);
+    }
+
+    public function test_expert_inquiry_rejects_vk_garbage_value(): void
+    {
+        $tenant = $this->createTenantWithActiveDomain('expert-vk-bad', ['theme_key' => 'expert_auto']);
+        TenantSetting::setForTenant((int) $tenant->id, 'contacts.vk_url', 'https://vk.com/club_test', 'string');
+        $host = $this->tenancyHostForSlug('expert-vk-bad');
+
+        $this->postJson('http://'.$host.'/api/tenant/expert-inquiry', [
+            'name' => 'Клиент',
+            'phone' => '+79991112299',
+            'goal_text' => 'Нужна консультация',
+            'preferred_contact_channel' => 'vk',
+            'preferred_contact_value' => 'vk',
+            'privacy_accepted' => '1',
+        ])->assertStatus(422)->assertJsonValidationErrors(['preferred_contact_value']);
+    }
+
+    public function test_expert_inquiry_accepts_vk_normalized_contact(): void
+    {
+        $tenant = $this->createTenantWithActiveDomain('expert-vk-ok', ['theme_key' => 'expert_auto']);
+        TenantSetting::setForTenant((int) $tenant->id, 'contacts.vk_url', 'https://vk.com/club_test', 'string');
+        $host = $this->tenancyHostForSlug('expert-vk-ok');
+
+        $this->postJson('http://'.$host.'/api/tenant/expert-inquiry', [
+            'name' => 'Клиент',
+            'phone' => '+79991112299',
+            'goal_text' => 'Нужна консультация',
+            'preferred_contact_channel' => 'vk',
+            'preferred_contact_value' => 'vk.com/durov',
+            'privacy_accepted' => '1',
+        ])->assertOk()->assertJsonPath('success', true);
+
+        $crm = CrmRequest::query()->where('request_type', 'expert_service_inquiry')->first();
+        $this->assertNotNull($crm);
+        $this->assertSame('vk', $crm->preferred_contact_channel);
+        $this->assertSame('https://vk.com/durov', $crm->preferred_contact_value);
+    }
+
+    public function test_expert_inquiry_honeypot_does_not_create_crm(): void
+    {
+        $this->createTenantWithActiveDomain('expert-hp', ['theme_key' => 'expert_auto']);
+        $host = $this->tenancyHostForSlug('expert-hp');
+
+        $this->postJson('http://'.$host.'/api/tenant/expert-inquiry', [
+            'name' => 'Спам',
+            'phone' => '+79991112299',
+            'goal_text' => 'Тест',
+            'preferred_contact_channel' => 'phone',
+            'website' => 'http://evil.example',
+        ])->assertOk()->assertJsonPath('success', true);
+
+        $this->assertSame(0, CrmRequest::query()->where('request_type', 'expert_service_inquiry')->count());
     }
 
     public function test_expert_home_renders_page_builder_hero(): void

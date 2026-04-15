@@ -7,8 +7,8 @@
     $hasPractices = ! empty($f['practice_items'] ?? []);
     $footerGridClass = $hasPractices ? 'advocate-site-footer__grid--with-practices' : 'advocate-site-footer__grid--no-practices';
 @endphp
-<footer class="advocate-site-footer relative z-10 mt-16 w-full min-w-0 border-t border-stone-300/80 bg-[#e8e2d8]/90 text-stone-800 shadow-[0_-12px_40px_rgba(28,31,38,0.06)] backdrop-blur-sm" role="contentinfo" aria-labelledby="advocate-footer-heading">
-    <div class="mx-auto w-full min-w-0 max-w-[100rem] px-4 pb-12 pt-12 md:px-8 lg:px-12 lg:pb-14 lg:pt-14">
+<footer class="advocate-site-footer relative z-10 mt-10 w-full min-w-0 border-t border-stone-300/80 bg-[#e8e2d8]/90 text-stone-800 shadow-[0_-12px_40px_rgba(28,31,38,0.06)] backdrop-blur-sm sm:mt-12" role="contentinfo" aria-labelledby="advocate-footer-heading">
+    <div class="mx-auto w-full min-w-0 max-w-[100rem] px-4 pb-8 pt-8 md:px-8 lg:px-12 lg:pb-10 lg:pt-10">
         <h2 id="advocate-footer-heading" class="sr-only">Подвал сайта</h2>
 
         {{-- Сетка задана в tenant-advocate-editorial.css (не зависит от purge Tailwind для lg:grid-cols-12). --}}

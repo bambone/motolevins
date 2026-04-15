@@ -4,6 +4,7 @@ namespace Tests\Feature\CRM;
 
 use App\Models\CrmRequestActivity;
 use App\Models\Lead;
+use App\Models\Motorcycle;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -123,5 +124,35 @@ class CrmRequestInboundFlowTest extends TestCase
         $lead = Lead::query()->findOrFail($leadId);
         $this->assertSame($tenantA->id, $lead->tenant_id);
         $this->assertSame($tenantA->id, $lead->crmRequest?->tenant_id);
+    }
+
+    public function test_tenant_api_lead_rejects_motorcycle_id_from_another_tenant(): void
+    {
+        $this->withoutMiddleware(VerifyCsrfToken::class);
+        Mail::fake();
+
+        $tenantA = $this->createTenantWithActiveDomain('tlead_a');
+        $tenantB = $this->createTenantWithActiveDomain('tlead_b');
+
+        $otherTenantBike = Motorcycle::query()->create([
+            'tenant_id' => $tenantB->id,
+            'name' => 'Other fleet bike',
+            'slug' => 'other-bike',
+            'status' => 'available',
+            'show_in_catalog' => true,
+            'price_per_day' => 1000,
+        ]);
+
+        $response = $this->postJson('http://'.$this->tenancyHostForSlug('tlead_a').'/api/leads', [
+            'name' => 'Cross-tenant bike',
+            'phone' => '+79997776655',
+            'comment' => 'Trying foreign id',
+            'motorcycle_id' => $otherTenantBike->id,
+        ]);
+
+        $response->assertUnprocessable();
+        $response->assertJsonValidationErrors(['motorcycle_id']);
+
+        $this->assertSame(0, Lead::query()->where('tenant_id', $tenantA->id)->count());
     }
 }

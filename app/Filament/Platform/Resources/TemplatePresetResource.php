@@ -4,10 +4,10 @@ namespace App\Filament\Platform\Resources;
 
 use App\Filament\Platform\Resources\Concerns\GrantsPlatformPanelAccess;
 use App\Filament\Platform\Resources\TemplatePresetResource\Pages;
+use App\Filament\Shared\Lifecycle\AdminFilamentDelete;
 use App\Filament\Support\FilamentInlineMarkdown;
 use App\Models\TemplatePreset;
 use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\KeyValue;
 use Filament\Forms\Components\Textarea;
@@ -106,7 +106,7 @@ class TemplatePresetResource extends Resource
             ->actions([EditAction::make()])
             ->bulkActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make()
+                    AdminFilamentDelete::makeBulkDeleteAction()
                         ->modalHeading('Удалить шаблоны?')
                         ->modalDescription('Новые клиенты не смогут выбрать удалённый шаблон. Уже созданные сайты не изменятся.'),
                 ]),
