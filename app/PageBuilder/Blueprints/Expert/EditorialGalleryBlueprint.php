@@ -2,8 +2,8 @@
 
 namespace App\PageBuilder\Blueprints\Expert;
 
+use App\Filament\Tenant\PageBuilder\TeleportedEditorRepeater;
 use App\PageBuilder\PageSectionCategory;
-use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -49,8 +49,9 @@ final class EditorialGalleryBlueprint extends ExpertSectionBlueprint
         return [
             TextInput::make('data_json.section_heading')->label('Заголовок')->maxLength(255)->columnSpanFull(),
             Textarea::make('data_json.section_lead')->label('Лид под заголовком')->rows(2)->columnSpanFull(),
-            Repeater::make('data_json.items')
+            TeleportedEditorRepeater::make('data_json.items')
                 ->label('Кадры и видео')
+                ->addActionLabel('Добавить кадр')
                 ->schema([
                     Select::make('media_kind')
                         ->label('Тип')

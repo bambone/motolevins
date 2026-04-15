@@ -4,9 +4,9 @@ namespace App\PageBuilder\Blueprints;
 
 use App\Filament\Forms\Components\TenantPublicImagePicker;
 use App\Filament\Tenant\PageBuilder\SectionAdminSummary;
+use App\Filament\Tenant\PageBuilder\TeleportedEditorRepeater;
 use App\Models\PageSection;
 use App\PageBuilder\PageSectionCategory;
-use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\TextInput;
 
 final class GalleryBlueprint extends AbstractPageSectionBlueprint
@@ -51,7 +51,7 @@ final class GalleryBlueprint extends AbstractPageSectionBlueprint
                 ->label('Заголовок')
                 ->maxLength(255)
                 ->columnSpanFull(),
-            Repeater::make('data_json.images')
+            TeleportedEditorRepeater::make('data_json.images')
                 ->label('Изображения')
                 ->schema([
                     TenantPublicImagePicker::make('url')
@@ -61,6 +61,7 @@ final class GalleryBlueprint extends AbstractPageSectionBlueprint
                     TextInput::make('caption')->label('Подпись')->maxLength(255),
                 ])
                 ->defaultItems(1)
+                ->addActionLabel('Добавить изображение')
                 ->columnSpanFull(),
         ];
     }

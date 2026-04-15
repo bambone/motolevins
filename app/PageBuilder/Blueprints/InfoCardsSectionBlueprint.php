@@ -3,8 +3,8 @@
 namespace App\PageBuilder\Blueprints;
 
 use App\Filament\Forms\Components\PageBuilderIconPicker;
+use App\Filament\Tenant\PageBuilder\TeleportedEditorRepeater;
 use App\PageBuilder\PageSectionCategory;
-use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -59,8 +59,9 @@ final class InfoCardsSectionBlueprint extends AbstractPageSectionBlueprint
                 ->options([2 => '2', 3 => '3', 4 => '4'])
                 ->native(true)
                 ->required(),
-            Repeater::make('data_json.items')
+            TeleportedEditorRepeater::make('data_json.items')
                 ->label('Карточки')
+                ->addActionLabel('Добавить карточку')
                 ->schema([
                     PageBuilderIconPicker::make('icon')
                         ->label('Иконка')

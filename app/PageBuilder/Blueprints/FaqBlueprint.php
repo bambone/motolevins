@@ -2,8 +2,8 @@
 
 namespace App\PageBuilder\Blueprints;
 
+use App\Filament\Tenant\PageBuilder\TeleportedEditorRepeater;
 use App\PageBuilder\PageSectionCategory;
-use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -62,8 +62,9 @@ final class FaqBlueprint extends AbstractPageSectionBlueprint
                 ->formatStateUsing(fn (?string $state): bool => $state === 'faqs_table')
                 ->dehydrateStateUsing(fn (bool $state): string => $state ? 'faqs_table' : '')
                 ->helperText('Если включено, список ниже не используется на сайте — выводятся опубликованные FAQ с признаком «на главной».'),
-            Repeater::make('data_json.items')
+            TeleportedEditorRepeater::make('data_json.items')
                 ->label('Вопросы и ответы')
+                ->addActionLabel('Добавить вопрос')
                 ->schema([
                     TextInput::make('question')->label('Вопрос')->required()->maxLength(500)->columnSpanFull(),
                     Textarea::make('answer')->label('Ответ')->required()->rows(4)->columnSpanFull(),

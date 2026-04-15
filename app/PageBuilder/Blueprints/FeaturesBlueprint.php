@@ -3,8 +3,8 @@
 namespace App\PageBuilder\Blueprints;
 
 use App\Filament\Forms\Components\PageBuilderIconPicker;
+use App\Filament\Tenant\PageBuilder\TeleportedEditorRepeater;
 use App\PageBuilder\PageSectionCategory;
-use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 
@@ -50,8 +50,9 @@ final class FeaturesBlueprint extends AbstractPageSectionBlueprint
                 ->label('Заголовок секции')
                 ->maxLength(255)
                 ->columnSpanFull(),
-            Repeater::make('data_json.items')
+            TeleportedEditorRepeater::make('data_json.items')
                 ->label('Карточки')
+                ->addActionLabel('Добавить карточку')
                 ->schema([
                     PageBuilderIconPicker::make('icon')
                         ->label('Иконка')

@@ -2,8 +2,8 @@
 
 namespace App\PageBuilder\Blueprints\Expert;
 
+use App\Filament\Tenant\PageBuilder\TeleportedEditorRepeater;
 use App\PageBuilder\PageSectionCategory;
-use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -60,8 +60,9 @@ final class ProblemCardsBlueprint extends ExpertSectionBlueprint
                 ->label('Сетка на всю ширину (без боковой колонки)')
                 ->helperText('Для страниц-навигаторов: карточки в одной сетке, все видны на мобиле.')
                 ->columnSpanFull(),
-            Repeater::make('data_json.items')
+            TeleportedEditorRepeater::make('data_json.items')
                 ->label('Карточки')
+                ->addActionLabel('Добавить карточку')
                 ->schema([
                     TextInput::make('title')->label('Заголовок')->required()->maxLength(255),
                     Textarea::make('description')->label('Проблема')->rows(2)->columnSpanFull(),

@@ -5,6 +5,7 @@ namespace App\Services\PageBuilder;
 use App\Models\Page;
 use App\Models\PageSection;
 use App\PageBuilder\Contacts\ContactsInfoDataService;
+use App\PageBuilder\DataTableSectionJsonNormalizer;
 use App\PageBuilder\LegacySectionTypeResolver;
 use App\PageBuilder\PageSectionKeyGenerator;
 use App\PageBuilder\PageSectionTypeRegistry;
@@ -34,7 +35,15 @@ final class PageSectionOperationsService
 
         $blueprint = $this->registry->get($typeId);
         $key = $this->keyGenerator->next($page, $typeId);
-        $dataJson = $this->normalizeDataJson($blueprint->defaultData(), $payload['data_json'] ?? []);
+        $defaults = $blueprint->defaultData();
+        if ($typeId === 'data_table') {
+            $incoming = is_array($payload['data_json'] ?? null) ? $payload['data_json'] : [];
+            $dataJson = DataTableSectionJsonNormalizer::normalizeForPersistence(
+                DataTableSectionJsonNormalizer::shallowBaseForMerge($defaults, $incoming)
+            );
+        } else {
+            $dataJson = $this->normalizeDataJson($defaults, $payload['data_json'] ?? []);
+        }
         if (in_array($typeId, ['contacts_info', 'contacts'], true)) {
             $dataJson = app(ContactsInfoDataService::class)->finalizeForPersistence($dataJson);
         }
@@ -169,8 +178,14 @@ final class PageSectionOperationsService
         }
         $blueprint = $this->registry->get($typeId);
         $existing = is_array($section->data_json) ? $section->data_json : [];
-        $base = ContactsInfoDataService::mergeDataJsonPreservingChannelList($blueprint->defaultData(), $existing);
+        $defaults = $blueprint->defaultData();
+        $base = $typeId === 'data_table'
+            ? DataTableSectionJsonNormalizer::shallowBaseForMerge($defaults, $existing)
+            : ContactsInfoDataService::mergeDataJsonPreservingChannelList($defaults, $existing);
         $dataJson = $this->normalizeDataJson($base, $payload['data_json'] ?? []);
+        if ($typeId === 'data_table') {
+            $dataJson = DataTableSectionJsonNormalizer::normalizeForPersistence($dataJson);
+        }
         if (in_array($typeId, ['contacts_info', 'contacts'], true)) {
             $dataJson = app(ContactsInfoDataService::class)->finalizeForPersistence($dataJson);
         }

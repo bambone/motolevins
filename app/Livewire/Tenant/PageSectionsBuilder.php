@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Tenant;
 
+use App\Contracts\ForcesFullLivewireRender;
 use App\Filament\Tenant\PageBuilder\PageSectionAdminSummaryPresenter;
 use App\Filament\Tenant\PageBuilder\PageSectionBuilderPresentationEnricher;
 use App\Filament\Tenant\Resources\PageResource;
@@ -10,6 +11,7 @@ use App\Models\Page;
 use App\Models\PageSection;
 use App\PageBuilder\Blueprints\Expert\ExpertLeadFormBlueprint;
 use App\PageBuilder\Contacts\ContactsInfoDataService;
+use App\PageBuilder\DataTableSectionJsonNormalizer;
 use App\PageBuilder\LegacySectionTypeResolver;
 use App\PageBuilder\PageBuilderPageContext;
 use App\PageBuilder\PageSectionCategory;
@@ -31,7 +33,7 @@ use Illuminate\Support\Collection;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 
-class PageSectionsBuilder extends Component implements HasActions, HasSchemas
+class PageSectionsBuilder extends Component implements ForcesFullLivewireRender, HasActions, HasSchemas
 {
     use InteractsWithActions;
     use InteractsWithSchemas;
@@ -64,6 +66,11 @@ class PageSectionsBuilder extends Component implements HasActions, HasSchemas
     public bool $showDeleteModal = false;
 
     public ?int $deleteTargetId = null;
+
+    public function forceFullLivewireRender(): void
+    {
+        $this->forceRender();
+    }
 
     public function mount(Page $record): void
     {
@@ -624,7 +631,14 @@ class PageSectionsBuilder extends Component implements HasActions, HasSchemas
         $this->insertAfterSectionId = null;
         $blueprint = app(PageSectionTypeRegistry::class)->get($typeId);
         $existing = is_array($section->data_json) ? $section->data_json : [];
-        $dataJson = ContactsInfoDataService::mergeDataJsonPreservingChannelList($blueprint->defaultData(), $existing);
+        $defaults = $blueprint->defaultData();
+        if ($typeId === 'data_table') {
+            $dataJson = DataTableSectionJsonNormalizer::hydrateForEditor(
+                DataTableSectionJsonNormalizer::shallowBaseForMerge($defaults, $existing)
+            );
+        } else {
+            $dataJson = ContactsInfoDataService::mergeDataJsonPreservingChannelList($defaults, $existing);
+        }
         if ($typeId === 'contacts_info') {
             $dataJson = app(ContactsInfoDataService::class)->hydrateForEditor($dataJson);
             $dataJson['channels'] = ContactsInfoDataService::normalizeChannelsForRepeater($dataJson['channels'] ?? []);

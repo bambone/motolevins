@@ -2,8 +2,9 @@
 
 namespace App\PageBuilder\Blueprints\Expert;
 
+use App\Filament\Tenant\PageBuilder\TeleportedEditorRepeater;
 use App\PageBuilder\PageSectionCategory;
-use Filament\Forms\Components\Repeater;
+use App\Support\RussianQuantity;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 
@@ -66,12 +67,15 @@ final class ProcessStepsBlueprint extends ExpertSectionBlueprint
                 ->columnSpanFull(),
             TextInput::make('data_json.aside_title')->label('Боковой блок — заголовок')->maxLength(255),
             Textarea::make('data_json.aside_body')->label('Боковой блок — текст')->rows(3)->columnSpanFull(),
-            Repeater::make('data_json.steps')
+            TeleportedEditorRepeater::make('data_json.steps')
                 ->label('Шаги')
                 ->schema([
                     TextInput::make('title')->label('Заголовок')->required()->maxLength(255),
                     Textarea::make('body')->label('Текст')->rows(2)->columnSpanFull(),
                 ])
+                ->defaultItems(3)
+                ->minItems(1)
+                ->addActionLabel('Добавить шаг')
                 ->columnSpanFull(),
         ];
     }
@@ -85,6 +89,10 @@ final class ProcessStepsBlueprint extends ExpertSectionBlueprint
     {
         $n = $this->countNestedList($data, 'steps');
 
-        return $n > 0 ? $n.' шагов' : 'Нет шагов';
+        if ($n <= 0) {
+            return 'Нет шагов';
+        }
+
+        return $n.' '.RussianQuantity::fewMany($n, 'шаг', 'шага', 'шагов');
     }
 }

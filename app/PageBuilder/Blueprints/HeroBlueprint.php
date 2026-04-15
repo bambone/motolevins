@@ -4,9 +4,10 @@ namespace App\PageBuilder\Blueprints;
 
 use App\Filament\Forms\Components\TenantPublicImagePicker;
 use App\Filament\Tenant\PageBuilder\SectionAdminSummary;
+use App\Filament\Tenant\PageBuilder\TeleportedEditorRepeater;
 use App\Models\PageSection;
 use App\PageBuilder\PageSectionCategory;
-use Filament\Forms\Components\Repeater;
+use App\Rules\CmsHrefRule;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -96,7 +97,7 @@ final class HeroBlueprint extends AbstractPageSectionBlueprint
                 ->maxLength(120),
             TextInput::make('data_json.button_url')
                 ->label('Ссылка кнопки')
-                ->url()
+                ->rules([new CmsHrefRule])
                 ->maxLength(2048),
             TenantPublicImagePicker::make('data_json.background_image')
                 ->label('Фоновое изображение')
@@ -106,12 +107,13 @@ final class HeroBlueprint extends AbstractPageSectionBlueprint
             Toggle::make('data_json.overlay_dark')
                 ->label('Затемнение фона')
                 ->default(true),
-            Repeater::make('data_json.chips')
+            TeleportedEditorRepeater::make('data_json.chips')
                 ->label('Короткие преимущества (чипы)')
                 ->schema([
                     TextInput::make('text')->label('Текст')->required()->maxLength(120),
                 ])
                 ->defaultItems(0)
+                ->addActionLabel('Добавить чип')
                 ->columnSpanFull(),
         ];
     }

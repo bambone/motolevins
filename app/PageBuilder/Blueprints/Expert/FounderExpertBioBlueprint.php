@@ -2,8 +2,8 @@
 
 namespace App\PageBuilder\Blueprints\Expert;
 
+use App\Filament\Tenant\PageBuilder\TeleportedEditorRepeater;
 use App\PageBuilder\PageSectionCategory;
-use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -58,8 +58,9 @@ final class FounderExpertBioBlueprint extends ExpertSectionBlueprint
         return [
             TextInput::make('data_json.heading')->label('Заголовок')->maxLength(255)->columnSpanFull(),
             Textarea::make('data_json.lead')->label('Лид')->rows(2)->columnSpanFull(),
-            Repeater::make('data_json.paragraphs')
+            TeleportedEditorRepeater::make('data_json.paragraphs')
                 ->label('Абзацы')
+                ->addActionLabel('Добавить абзац')
                 ->schema([
                     Textarea::make('text')->label('Текст')->rows(3)->required()->columnSpanFull(),
                 ])
@@ -76,8 +77,9 @@ final class FounderExpertBioBlueprint extends ExpertSectionBlueprint
                 ->label('HTML id секции (якорь)')
                 ->maxLength(64)
                 ->helperText('Например about — для ссылки /#about'),
-            Repeater::make('data_json.trust_points')
+            TeleportedEditorRepeater::make('data_json.trust_points')
                 ->label('Маркеры доверия')
+                ->addActionLabel('Добавить маркер')
                 ->schema([
                     TextInput::make('text')->label('Пункт')->maxLength(255)->required(),
                 ])

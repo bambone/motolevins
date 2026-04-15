@@ -3,8 +3,10 @@
 namespace App\PageBuilder\Blueprints;
 
 use App\Filament\Forms\Components\TenantPublicImagePicker;
+use App\Filament\Tenant\PageBuilder\TeleportedEditorRepeater;
 use App\PageBuilder\PageSectionCategory;
-use Filament\Forms\Components\Repeater;
+use App\Rules\CmsHrefRule;
+use App\Support\RussianQuantity;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 
@@ -55,7 +57,7 @@ final class CardsTeaserBlueprint extends AbstractPageSectionBlueprint
                 ->label('Описание секции')
                 ->rows(3)
                 ->columnSpanFull(),
-            Repeater::make('data_json.cards')
+            TeleportedEditorRepeater::make('data_json.cards')
                 ->label('Карточки')
                 ->schema([
                     TextInput::make('title')->label('Заголовок')->required()->maxLength(255),
@@ -64,9 +66,11 @@ final class CardsTeaserBlueprint extends AbstractPageSectionBlueprint
                         ->label('Изображение')
                         ->columnSpanFull(),
                     TextInput::make('button_text')->label('Текст кнопки')->maxLength(120),
-                    TextInput::make('button_url')->label('Ссылка')->url()->maxLength(2048),
+                    TextInput::make('button_url')->label('Ссылка')->rules([new CmsHrefRule])->maxLength(2048),
                 ])
                 ->defaultItems(1)
+                ->minItems(1)
+                ->addActionLabel('Добавить карточку')
                 ->columnSpanFull(),
         ];
     }
@@ -81,6 +85,11 @@ final class CardsTeaserBlueprint extends AbstractPageSectionBlueprint
         $n = $this->countNestedList($data, 'cards');
         $h = $this->stringPreview($data, 'heading', 40);
 
-        return $n > 0 ? ($h !== '' ? $h.' · ' : '').$n.' карточек' : 'Нет карточек';
+        if ($n <= 0) {
+            return 'Нет карточек';
+        }
+        $word = RussianQuantity::fewMany($n, 'карточка', 'карточки', 'карточек');
+
+        return ($h !== '' ? $h.' · ' : '').$n.' '.$word;
     }
 }

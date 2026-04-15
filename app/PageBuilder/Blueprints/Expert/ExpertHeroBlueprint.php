@@ -2,8 +2,8 @@
 
 namespace App\PageBuilder\Blueprints\Expert;
 
+use App\Filament\Tenant\PageBuilder\TeleportedEditorRepeater;
 use App\PageBuilder\PageSectionCategory;
-use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -72,8 +72,9 @@ final class ExpertHeroBlueprint extends ExpertSectionBlueprint
             TextInput::make('data_json.primary_cta_anchor')->label('Якорь основной CTA (#id)')->maxLength(120),
             TextInput::make('data_json.secondary_cta_label')->label('Текст второй CTA')->maxLength(120),
             TextInput::make('data_json.secondary_cta_anchor')->label('Якорь второй CTA')->maxLength(120),
-            Repeater::make('data_json.trust_badges')
+            TeleportedEditorRepeater::make('data_json.trust_badges')
                 ->label('Бейджи доверия')
+                ->addActionLabel('Добавить бейдж')
                 ->schema([
                     TextInput::make('text')->label('Текст')->maxLength(255)->required(),
                 ])

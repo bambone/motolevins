@@ -2,8 +2,8 @@
 
 namespace App\PageBuilder\Blueprints\Expert;
 
+use App\Filament\Tenant\PageBuilder\TeleportedEditorRepeater;
 use App\PageBuilder\PageSectionCategory;
-use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 
@@ -52,8 +52,9 @@ final class CredentialsGridBlueprint extends ExpertSectionBlueprint
         return [
             TextInput::make('data_json.section_heading')->label('Заголовок')->maxLength(255)->columnSpanFull(),
             Textarea::make('data_json.lead')->label('Лид под заголовком')->rows(2)->columnSpanFull(),
-            Repeater::make('data_json.items')
+            TeleportedEditorRepeater::make('data_json.items')
                 ->label('Пункты')
+                ->addActionLabel('Добавить пункт')
                 ->schema([
                     TextInput::make('title')->label('Заголовок')->required()->maxLength(255),
                     Textarea::make('description')->label('Описание')->rows(2)->columnSpanFull(),

@@ -3,10 +3,10 @@
 namespace App\PageBuilder\Blueprints;
 
 use App\Filament\Tenant\PageBuilder\SectionAdminSummary;
+use App\Filament\Tenant\PageBuilder\TeleportedEditorRepeater;
 use App\Filament\Tenant\Support\TenantPageRichEditor;
 use App\Models\PageSection;
 use App\PageBuilder\PageSectionCategory;
-use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\RichEditor;
 use Filament\Forms\Components\TextInput;
 
@@ -54,8 +54,9 @@ final class ContentFaqSectionBlueprint extends AbstractPageSectionBlueprint
                 ->label('Заголовок секции')
                 ->maxLength(255)
                 ->columnSpanFull(),
-            Repeater::make('data_json.items')
+            TeleportedEditorRepeater::make('data_json.items')
                 ->label('Вопросы и ответы')
+                ->addActionLabel('Добавить вопрос')
                 ->schema([
                     TextInput::make('question')
                         ->label('Вопрос')

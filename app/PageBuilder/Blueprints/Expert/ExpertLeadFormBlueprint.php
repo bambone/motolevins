@@ -2,8 +2,8 @@
 
 namespace App\PageBuilder\Blueprints\Expert;
 
+use App\Filament\Tenant\PageBuilder\TeleportedEditorRepeater;
 use App\PageBuilder\PageSectionCategory;
-use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\TextInput;
 
 final class ExpertLeadFormBlueprint extends ExpertSectionBlueprint
@@ -100,7 +100,7 @@ final class ExpertLeadFormBlueprint extends ExpertSectionBlueprint
             TextInput::make('data_json.sticky_cta_label')
                 ->label('Текст плавающей кнопки (mobile)')
                 ->maxLength(64),
-            Repeater::make('data_json.trust_chips')
+            TeleportedEditorRepeater::make('data_json.trust_chips')
                 ->label('Мини-маркеры доверия над формой')
                 ->helperText('Короткие подписи над полями формы на сайте (например «Адвокатский статус», «Челябинск»). На странице «Контакты» эта полоса не показывается.')
                 ->schema([

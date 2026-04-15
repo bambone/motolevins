@@ -2,8 +2,8 @@
 
 namespace App\PageBuilder\Blueprints\Expert;
 
+use App\Filament\Tenant\PageBuilder\TeleportedEditorRepeater;
 use App\PageBuilder\PageSectionCategory;
-use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 
@@ -48,8 +48,9 @@ final class ImportantConditionsBlueprint extends ExpertSectionBlueprint
         return [
             TextInput::make('data_json.section_heading')->label('Заголовок')->maxLength(255)->columnSpanFull(),
             Textarea::make('data_json.legal_note')->label('Юридическая сноска')->rows(3)->columnSpanFull(),
-            Repeater::make('data_json.cards')
+            TeleportedEditorRepeater::make('data_json.cards')
                 ->label('Карточки')
+                ->addActionLabel('Добавить карточку')
                 ->schema([
                     TextInput::make('title')->label('Заголовок')->required()->maxLength(255),
                     Textarea::make('body')->label('Текст')->rows(3)->columnSpanFull(),

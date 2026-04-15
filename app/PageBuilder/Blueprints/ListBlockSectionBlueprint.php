@@ -2,8 +2,8 @@
 
 namespace App\PageBuilder\Blueprints;
 
+use App\Filament\Tenant\PageBuilder\TeleportedEditorRepeater;
 use App\PageBuilder\PageSectionCategory;
-use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -62,7 +62,7 @@ final class ListBlockSectionBlueprint extends AbstractPageSectionBlueprint
                 ])
                 ->native(true)
                 ->required(),
-            Repeater::make('data_json.items')
+            TeleportedEditorRepeater::make('data_json.items')
                 ->label('Пункты')
                 ->schema([
                     TextInput::make('title')
@@ -76,6 +76,8 @@ final class ListBlockSectionBlueprint extends AbstractPageSectionBlueprint
                         ->columnSpanFull(),
                 ])
                 ->defaultItems(1)
+                ->minItems(1)
+                ->addActionLabel('Добавить пункт')
                 ->columnSpanFull(),
         ];
     }

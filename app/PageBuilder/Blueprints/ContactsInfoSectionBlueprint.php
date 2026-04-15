@@ -3,6 +3,7 @@
 namespace App\PageBuilder\Blueprints;
 
 use App\Filament\Tenant\PageBuilder\SectionAdminSummary;
+use App\Filament\Tenant\PageBuilder\TeleportedEditorRepeater;
 use App\Models\PageSection;
 use App\PageBuilder\Contacts\ContactChannelRegistry;
 use App\PageBuilder\Contacts\ContactChannelsResolver;
@@ -13,14 +14,12 @@ use App\PageBuilder\Contacts\MapDisplayMode;
 use App\PageBuilder\Contacts\MapInputMode;
 use App\PageBuilder\Contacts\MapProvider;
 use App\PageBuilder\PageSectionCategory;
-use Filament\Actions\Action;
 use Filament\Forms\Components\Placeholder;
-use Filament\Forms\Components\ViewField;
-use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
+use Filament\Forms\Components\ViewField;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
@@ -54,6 +53,8 @@ final class ContactsInfoSectionBlueprint extends AbstractPageSectionBlueprint
 
     public function defaultData(): array
     {
+        // Source of truth: non-empty `channels` from the editor; legacy phone/email/… are read-only fallbacks
+        // for old sections until migrated — do not treat both as parallel editable sources.
         return [
             'title' => 'Контакты',
             'description' => null,
@@ -70,6 +71,7 @@ final class ContactsInfoSectionBlueprint extends AbstractPageSectionBlueprint
             'map_public_url' => '',
             'map_combined_input' => '',
             'map_secondary_combined_input' => '',
+            'map_secondary_public_url' => '',
             'map_input_mode' => MapInputMode::Auto->value,
             'map_display_mode' => MapDisplayMode::EmbedAndButton->value,
             'map_title' => '',
@@ -193,7 +195,7 @@ final class ContactsInfoSectionBlueprint extends AbstractPageSectionBlueprint
                         ->visible(fn (Get $get): bool => (bool) ($get('data_json.map_enabled')) && ($get('data_json.map_provider') ?? MapProvider::None->value) !== MapProvider::None->value)
                         ->rules([
                             function (Get $get): \Closure {
-                                return function (string $attribute, mixed $value, \Closure $fail) use ($get): void {
+                                return function (string $attribute, mixed $value, \Closure $fail): void {
                                     $raw = trim((string) $value);
                                     if ($raw === '') {
                                         return;
@@ -294,7 +296,7 @@ final class ContactsInfoSectionBlueprint extends AbstractPageSectionBlueprint
                             return '';
                         })
                         ->columnSpanFull(),
-                    Repeater::make('data_json.channels')
+                    TeleportedEditorRepeater::make('data_json.channels')
                         ->hiddenLabel()
                         ->schema([
                             Select::make('type')
@@ -418,15 +420,6 @@ final class ContactsInfoSectionBlueprint extends AbstractPageSectionBlueprint
                                 ->columnSpanFull(),
                         ])
                         ->defaultItems(0)
-                        // Partial HTML patches after add/reorder often fail to morph new <li> rows in Livewire; full render is safer.
-                        ->partiallyRenderAfterActionsCalled(false)
-                        // Without this, Filament may still dehydrate partial-only effects; editor is @teleport('body') — force full HTML.
-                        ->addAction(fn (Action $action): Action => $this->withForceFullLivewireRenderAfterRepeaterAction($action))
-                        ->addBetweenAction(fn (Action $action): Action => $this->withForceFullLivewireRenderAfterRepeaterAction($action))
-                        ->deleteAction(fn (Action $action): Action => $this->withForceFullLivewireRenderAfterRepeaterAction($action))
-                        ->moveUpAction(fn (Action $action): Action => $this->withForceFullLivewireRenderAfterRepeaterAction($action))
-                        ->moveDownAction(fn (Action $action): Action => $this->withForceFullLivewireRenderAfterRepeaterAction($action))
-                        ->cloneAction(fn (Action $action): Action => $this->withForceFullLivewireRenderAfterRepeaterAction($action))
                         ->reorderable()
                         ->reorderableWithDragAndDrop(false)
                         ->reorderableWithButtons(true)
@@ -435,20 +428,6 @@ final class ContactsInfoSectionBlueprint extends AbstractPageSectionBlueprint
                 ])
                 ->columnSpanFull(),
         ];
-    }
-
-    /**
-     * Ensures the host Livewire component sends a full snapshot (not partial patches) after repeater mutations.
-     * Fixes missing new rows when the section editor is teleported to <body>.
-     */
-    private function withForceFullLivewireRenderAfterRepeaterAction(Action $action): Action
-    {
-        return $action->after(function () use ($action): void {
-            $livewire = $action->getLivewire();
-            if ($livewire !== null && method_exists($livewire, 'forceRender')) {
-                $livewire->forceRender();
-            }
-        });
     }
 
     /**
@@ -592,7 +571,7 @@ final class ContactsInfoSectionBlueprint extends AbstractPageSectionBlueprint
         foreach ($presentation->allUsableChannels() as $ch) {
             $hints[] = [
                 'icon' => $registry->filamentIcon($ch->type),
-                'label' => $ch->type->value,
+                'label' => $registry->label($ch->type),
                 'on' => true,
                 'primary' => false,
             ];
