@@ -1,31 +1,79 @@
 @php
     use App\Tenant\Expert\ExpertBrandMediaUrl;
+    use App\Tenant\Expert\VideoEmbedUrlNormalizer;
     $raw = is_array($data['items'] ?? null) ? $data['items'] : [];
     $items = [];
     foreach ($raw as $row) {
         if (! is_array($row)) {
             continue;
         }
-        $kind = trim((string) ($row['media_kind'] ?? ''));
-        if ($kind === '') {
-            $kind = trim((string) ($row['video_url'] ?? '')) !== '' ? 'video' : 'image';
+        $mediaKind = trim((string) ($row['media_kind'] ?? ''));
+        if ($mediaKind === '') {
+            $mediaKind = trim((string) ($row['video_url'] ?? '')) !== '' ? 'video' : 'image';
         }
         $imageUrl = ExpertBrandMediaUrl::resolve(trim((string) ($row['image_url'] ?? '')));
         $videoUrl = ExpertBrandMediaUrl::resolve(trim((string) ($row['video_url'] ?? '')));
         $posterUrl = ExpertBrandMediaUrl::resolve(trim((string) ($row['poster_url'] ?? '')));
         $cap = trim((string) ($row['caption'] ?? ''));
-        if ($kind === 'video' && $videoUrl === '') {
+        $sourceUrl = trim((string) ($row['source_url'] ?? ''));
+        $sourceLabel = trim((string) ($row['source_label'] ?? ''));
+        $sourceNewTab = array_key_exists('source_new_tab', $row)
+            ? (bool) $row['source_new_tab']
+            : true;
+        $embedProvider = trim((string) ($row['embed_provider'] ?? ''));
+        $embedShare = trim((string) ($row['embed_share_url'] ?? ''));
+        $iframeSrc = null;
+        if ($mediaKind === 'video_embed' && $embedProvider !== '' && $embedShare !== '') {
+            $iframeSrc = VideoEmbedUrlNormalizer::toIframeSrc($embedProvider, $embedShare);
+        }
+
+        if ($mediaKind === 'video_embed') {
+            if ($iframeSrc === null) {
+                continue;
+            }
+            $items[] = [
+                'kind' => 'embed',
+                'image_url' => $imageUrl,
+                'video_url' => '',
+                'poster_url' => $posterUrl !== '' ? $posterUrl : $imageUrl,
+                'iframe_src' => $iframeSrc,
+                'caption' => $cap,
+                'source_url' => $sourceUrl,
+                'source_label' => $sourceLabel,
+                'source_new_tab' => $sourceNewTab,
+            ];
             continue;
         }
-        if ($kind === 'image' && $imageUrl === '' && $cap === '') {
+        if ($mediaKind === 'video') {
+            if ($videoUrl === '') {
+                continue;
+            }
+            $items[] = [
+                'kind' => 'video',
+                'image_url' => $imageUrl,
+                'video_url' => $videoUrl,
+                'poster_url' => $posterUrl !== '' ? $posterUrl : $imageUrl,
+                'iframe_src' => '',
+                'caption' => $cap,
+                'source_url' => $sourceUrl,
+                'source_label' => $sourceLabel,
+                'source_new_tab' => $sourceNewTab,
+            ];
+            continue;
+        }
+        if ($imageUrl === '') {
             continue;
         }
         $items[] = [
-            'kind' => $kind === 'video' ? 'video' : 'image',
+            'kind' => 'image',
             'image_url' => $imageUrl,
-            'video_url' => $videoUrl,
-            'poster_url' => $posterUrl !== '' ? $posterUrl : $imageUrl,
+            'video_url' => '',
+            'poster_url' => $posterUrl,
+            'iframe_src' => '',
             'caption' => $cap,
+            'source_url' => $sourceUrl,
+            'source_label' => $sourceLabel,
+            'source_new_tab' => $sourceNewTab,
         ];
     }
     if ($items === []) {
@@ -50,6 +98,7 @@
             @php
                 $isHero = $i === 0;
                 $dlgId = 'expert-media-'.$sid.'-'.$i;
+                $sourceLinkText = $item['source_label'] !== '' ? $item['source_label'] : 'Читать материал';
             @endphp
             <figure
                 class="expert-media-gallery__cell group relative min-w-0 overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.03] sm:rounded-2xl lg:rounded-[1.5rem] {{ $isHero ? 'col-span-2 row-span-2 min-h-[12rem] sm:min-h-[20rem] lg:min-h-[26rem]' : 'min-h-[8.5rem] sm:min-h-[11rem] lg:min-h-[14rem]' }}"
@@ -57,7 +106,7 @@
                     x-bind:class="{ 'max-lg:hidden': !galleryMore }"
                 @endif
             >
-                @if($item['kind'] === 'video')
+                @if($item['kind'] === 'video' || $item['kind'] === 'embed')
                     <button type="button" class="relative block h-full w-full text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moto-amber/70" data-expert-video-open="{{ e($dlgId) }}" aria-label="{{ e($item['caption'] ?: 'Воспроизвести видео') }}">
                         @if($item['poster_url'] !== '')
                             <img src="{{ e($item['poster_url']) }}" alt="" class="h-full w-full object-cover transition-transform duration-[1.5s] group-hover:scale-105" loading="{{ $isHero ? 'eager' : 'lazy' }}" decoding="async" width="800" height="600">
@@ -76,7 +125,12 @@
                     </button>
                 @endif
                 @if($item['caption'] !== '')
-                    <figcaption class="pointer-events-none absolute inset-x-0 bottom-0 px-3 pb-3 pt-10 text-left text-[12px] font-semibold leading-snug tracking-wide text-white/95 text-pretty sm:px-5 sm:pb-5 sm:pt-12 sm:text-[15px] drop-shadow-md">{{ $item['caption'] }}</figcaption>
+                    <figcaption class="pointer-events-none absolute inset-x-0 bottom-0 px-3 pb-3 pt-10 text-left text-[12px] font-semibold leading-snug tracking-wide text-white/95 text-pretty sm:px-5 sm:pb-5 sm:pt-12 sm:text-[15px] drop-shadow-md @if($item['source_url'] !== '') sm:pb-10 @endif">{{ $item['caption'] }}</figcaption>
+                @endif
+                @if($item['source_url'] !== '')
+                    <div class="pointer-events-auto absolute inset-x-0 bottom-2 z-20 px-3 sm:bottom-3 sm:px-5">
+                        <a href="{{ e($item['source_url']) }}" class="inline-flex min-h-9 items-center text-[11px] font-bold uppercase tracking-wide text-moto-amber underline decoration-moto-amber/50 underline-offset-2 hover:text-moto-amber/90 sm:text-xs" @if($item['source_new_tab']) target="_blank" rel="noopener noreferrer" @endif>{{ $sourceLinkText }}</a>
+                    </div>
                 @endif
             </figure>
 
@@ -89,7 +143,9 @@
                         </form>
                     </div>
                     <div class="expert-video-dialog__body expert-video-dialog__body--flush">
-                        @if($item['kind'] === 'video')
+                        @if($item['kind'] === 'embed')
+                            <iframe src="about:blank" data-expert-dialog-embed-src="{{ e($item['iframe_src']) }}" class="expert-video-dialog__embed h-[min(78vh,900px)] w-full border-0" title="{{ e($item['caption'] ?: 'Видео') }}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen loading="lazy"></iframe>
+                        @elseif($item['kind'] === 'video')
                             <video class="expert-video-dialog__video" controls playsinline preload="none" @if($item['poster_url'] !== '') poster="{{ e($item['poster_url']) }}" @endif data-expert-dialog-src="{{ e($item['video_url']) }}"></video>
                         @else
                             <img src="{{ e($item['image_url']) }}" alt="{{ e($item['caption'] ?: 'Фото') }}" class="max-h-[min(78vh,900px)] w-full object-contain">
@@ -106,52 +162,4 @@
     </div>
 </section>
 
-@once('expert-video-dialog-script')
-    <script>
-        (function () {
-            function tryPlay(dlg) {
-                requestAnimationFrame(function () {
-                    requestAnimationFrame(function () {
-                        var v = dlg.querySelector('video');
-                        if (!v) return;
-                        try {
-                            v.muted = false;
-                            var p = v.play();
-                            if (p && typeof p.catch === 'function') {
-                                p.catch(function () {
-                                    try {
-                                        v.muted = true;
-                                        v.play().catch(function () {});
-                                    } catch (e2) {}
-                                });
-                            }
-                        } catch (e) {}
-                    });
-                });
-            }
-            document.addEventListener('click', function (e) {
-                var btn = e.target.closest('[data-expert-video-open]');
-                if (!btn) return;
-                var id = btn.getAttribute('data-expert-video-open');
-                if (!id) return;
-                var dlg = document.getElementById(id);
-                if (dlg && typeof dlg.showModal === 'function') {
-                    dlg.showModal();
-                    tryPlay(dlg);
-                }
-            });
-            document.addEventListener('click', function (ev) {
-                var t = ev.target;
-                if (t && t.tagName === 'DIALOG' && t.classList.contains('expert-video-dialog')) {
-                    t.close();
-                }
-            });
-            document.addEventListener('close', function (e) {
-                var dlg = e.target;
-                if (!dlg || dlg.tagName !== 'DIALOG' || !dlg.classList.contains('expert-video-dialog')) return;
-                var v = dlg.querySelector('video');
-                if (v) { try { v.pause(); v.currentTime = 0; } catch (err) {} }
-            }, true);
-        })();
-    </script>
-@endonce
+@include('tenant.partials.expert-video-dialog-script')

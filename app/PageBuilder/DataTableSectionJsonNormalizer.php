@@ -97,6 +97,18 @@ final class DataTableSectionJsonNormalizer
         }
 
         $rowsWereList = array_is_list($rows);
+        $columnsWereList = array_is_list($columns);
+
+        // Filament repeaters expect each item to be an array; legacy/corrupt JSON may contain scalars (500 on getItemLabel).
+        $columns = self::repeaterItemsArraysOnly($columns);
+        $rows = self::repeaterItemsArraysOnly($rows);
+
+        if ($columnsWereList) {
+            $columns = array_values($columns);
+        }
+        if ($rowsWereList) {
+            $rows = array_values($rows);
+        }
 
         $columnsList = self::columnsWithKeysAssigned($columns);
         $rowsWork = self::rowsToAssocWorkArray($rows);
@@ -314,6 +326,22 @@ final class DataTableSectionJsonNormalizer
     private static function isLikelyUuid(string $key): bool
     {
         return (bool) preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $key);
+    }
+
+    /**
+     * @param  array<int|string, mixed>  $items
+     * @return array<int|string, mixed>
+     */
+    private static function repeaterItemsArraysOnly(array $items): array
+    {
+        $out = [];
+        foreach ($items as $key => $item) {
+            if (is_array($item)) {
+                $out[$key] = $item;
+            }
+        }
+
+        return $out;
     }
 
     public static function extractScalarCellValue(mixed $item): string

@@ -97,6 +97,29 @@ class DataTableSectionJsonNormalizerTest extends TestCase
     }
 
     #[Test]
+    public function drops_scalar_repeater_items_keeps_valid_rows_and_columns(): void
+    {
+        $k1 = 'ffffffff-ffff-ffff-ffff-ffffffffffff';
+        $k2 = '99999999-9999-9999-9999-999999999999';
+        $out = DataTableSectionJsonNormalizer::hydrateForEditor([
+            'columns' => [
+                ['key' => $k1, 'name' => 'A'],
+                404,
+                ['key' => $k2, 'name' => 'B'],
+            ],
+            'rows' => [
+                ['cells' => [$k1 => ['value' => 'x'], $k2 => ['value' => 'y']]],
+                0,
+            ],
+        ]);
+
+        $this->assertCount(2, $out['columns']);
+        $this->assertCount(1, $out['rows']);
+        $this->assertSame('x', $out['rows'][0]['cells'][$k1]['value'] ?? null);
+        $this->assertSame('y', $out['rows'][0]['cells'][$k2]['value'] ?? null);
+    }
+
+    #[Test]
     public function column_key_has_non_empty_cells_detects_values(): void
     {
         $k = 'dddddddd-dddd-dddd-dddd-dddddddddddd';

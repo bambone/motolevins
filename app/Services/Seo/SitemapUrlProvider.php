@@ -9,6 +9,8 @@ use App\Models\PageSection;
 use App\Models\SeoLandingPage;
 use App\Models\SeoMeta;
 use App\Models\Tenant;
+use Carbon\CarbonInterface;
+use Illuminate\Support\Carbon;
 
 /**
  * Aggregates sitemap URL rows for a tenant (static config + CMS pages + catalog).
@@ -79,10 +81,10 @@ final class SitemapUrlProvider
                 continue;
             }
             $seen[$loc] = true;
-            $pageTs = $page->updated_at;
-            $secTs = $sectionMax[$page->id] ?? null;
+            $pageTs = self::toCarbonOrNull($page->updated_at);
+            $secTs = self::toCarbonOrNull($sectionMax[$page->id] ?? null);
             $last = $pageTs;
-            if ($secTs !== null && $secTs > $last) {
+            if ($secTs !== null && ($last === null || $secTs->gt($last))) {
                 $last = $secTs;
             }
             $out[] = [
@@ -115,7 +117,7 @@ final class SitemapUrlProvider
                 'loc' => $loc,
                 'changefreq' => 'weekly',
                 'priority' => '0.7',
-                'lastmod' => $moto->updated_at?->format('Y-m-d'),
+                'lastmod' => self::toCarbonOrNull($moto->updated_at)?->format('Y-m-d'),
             ];
         }
 
@@ -141,7 +143,7 @@ final class SitemapUrlProvider
                 'loc' => $loc,
                 'changefreq' => 'monthly',
                 'priority' => '0.6',
-                'lastmod' => $locRow->updated_at?->format('Y-m-d'),
+                'lastmod' => self::toCarbonOrNull($locRow->updated_at)?->format('Y-m-d'),
             ];
         }
 
@@ -167,7 +169,7 @@ final class SitemapUrlProvider
                 'loc' => $loc,
                 'changefreq' => 'monthly',
                 'priority' => '0.55',
-                'lastmod' => $landing->updated_at?->format('Y-m-d'),
+                'lastmod' => self::toCarbonOrNull($landing->updated_at)?->format('Y-m-d'),
             ];
         }
 
@@ -185,5 +187,24 @@ final class SitemapUrlProvider
         $robots = strtolower((string) ($meta->robots ?? ''));
 
         return ! str_contains($robots, 'noindex');
+    }
+
+    private static function toCarbonOrNull(mixed $value): ?Carbon
+    {
+        if ($value === null) {
+            return null;
+        }
+        if ($value instanceof CarbonInterface) {
+            return Carbon::instance($value);
+        }
+        if (is_string($value) && $value !== '') {
+            try {
+                return Carbon::parse($value);
+            } catch (\Throwable) {
+                return null;
+            }
+        }
+
+        return null;
     }
 }
