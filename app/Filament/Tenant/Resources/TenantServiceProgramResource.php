@@ -98,18 +98,18 @@ class TenantServiceProgramResource extends Resource
                             ->reorderable()
                             ->columnSpanFull(),
                     ])->columns(1),
-                Section::make('Обложка карточки программы (R2)')
-                    ->description('В витрине: широкий баннер сверху карточки. Desktop — горизонтальный кадр (~1200×640, WebP); mobile — отдельный вертикальный (~720×1040). Для темы expert_auto массовая заливка пресетов из системного пула: php artisan tenant:sync-program-cover-bundle {slug} (пресеты в R2: tenants/_system/themes/expert_auto/program-covers/, см. expert:seed-system-program-covers / theme:push-system-bundled).')
+                Section::make('Обложка карточки программы')
+                    ->description('На сайте сверху карточки показывается широкий баннер. Для компьютера загрузите горизонтальное изображение (~1200×640, WebP). Для телефона можно отдельно выбрать вертикальное (~720×1040); если не загрузить — на узком экране подставится баннер для компьютера.')
                     ->schema([
                         TenantPublicImagePicker::make('cover_image_ref')
-                            ->label('Desktop (широкий баннер)')
+                            ->label('Баннер для компьютера (широкий)')
                             ->uploadPublicSiteSubdirectory(fn (Get $get): string => 'expert_auto/programs/'.trim((string) ($get('slug') ?: 'draft')))
-                            ->helperText('Рекомендуемо ~1200×640 (WebP). Путь: site/expert_auto/programs/{slug}/card-cover-desktop.webp')
+                            ->helperText('Рекомендуемый размер около 1200×640, формат WebP. Файл сохранится в медиатеке вместе с этой программой.')
                             ->columnSpanFull(),
                         TenantPublicImagePicker::make('cover_mobile_ref')
-                            ->label('Mobile (портрет, опционально)')
+                            ->label('Баннер для телефона (портрет, по желанию)')
                             ->uploadPublicSiteSubdirectory(fn (Get $get): string => 'expert_auto/programs/'.trim((string) ($get('slug') ?: 'draft')))
-                            ->helperText('Рекомендуемо ~720×1040 под узкий экран. Если пусто — используется desktop.')
+                            ->helperText('Рекомендуемый размер около 720×1040. Если не загрузить — на телефоне используется баннер для компьютера.')
                             ->columnSpanFull(),
                         TextInput::make('cover_image_alt')
                             ->label('Alt-текст для изображения')
@@ -117,7 +117,7 @@ class TenantServiceProgramResource extends Resource
                             ->columnSpanFull(),
                         Select::make('cover_object_position_preset')
                             ->label('Фокус кадра на баннере')
-                            ->helperText('Вертикаль обрезки (object-position). «Авто» ≈ center 18%. Обложки из site/brand/ после смены кропа в коде — снова tenant:sync-program-cover-bundle.')
+                            ->helperText('Что показывать, если изображение обрезается по высоте на узком экране. «Авто» подходит в большинстве случаев.')
                             ->options([
                                 'auto' => 'Авто (рекомендуется)',
                                 'center top' => 'Верх кадра',
@@ -126,16 +126,16 @@ class TenantServiceProgramResource extends Resource
                                 'center center' => 'Ровно по центру',
                                 'center 72%' => 'Чуть ниже центра',
                                 'center bottom' => 'Низ кадра',
-                                '__other__' => 'Свой CSS…',
+                                '__other__' => 'Другой вариант…',
                             ])
                             ->default('auto')
                             ->native(false)
                             ->live()
                             ->columnSpanFull(),
                         TextInput::make('cover_object_position')
-                            ->label('Свой object-position')
+                            ->label('Точное положение кадра')
                             ->maxLength(64)
-                            ->placeholder('напр. center 18% или 50% 20%')
+                            ->placeholder('например: center 18%')
                             ->visible(fn (Get $get): bool => $get('cover_object_position_preset') === '__other__')
                             ->required(fn (Get $get): bool => $get('cover_object_position_preset') === '__other__')
                             ->columnSpanFull(),

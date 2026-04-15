@@ -487,7 +487,7 @@
     @if($showDeleteModal && $deleteRow)
         @teleport('body')
             <div
-                class="fixed inset-0 z-[290] flex items-end justify-center bg-black/50 p-4 sm:items-center"
+                class="page-sections-builder-teleport fixed inset-0 z-[290] flex items-end justify-center bg-black/50 p-4 sm:items-center"
                 role="dialog"
                 aria-modal="true"
                 wire:key="delete-section-modal"
@@ -512,7 +512,7 @@
     @if($showEditor)
         @teleport('body')
             <div
-                class="page-sections-builder-editor fixed inset-0 z-[300]"
+                class="page-sections-builder-editor page-sections-builder-teleport fixed inset-0 z-[300]"
                 role="dialog"
                 aria-modal="true"
                 wire:key="page-section-editor-root-{{ $editingSectionId ?? 'new' }}-{{ $activeTypeId ?? 'x' }}"

@@ -10,6 +10,21 @@
             $headerBrandTitle = 'Марат Афлятунов';
         }
     }
+    /** advocate_editorial: длинное ФИО в шапке — две строки (без truncate), последнее слово на второй строке; суффикс «— адвокат» не в ФИО */
+    $advocateBrandLines = null;
+    if ($isAdvocateEditorial && is_string($headerBrandTitle)) {
+        $brandForLines = trim((string) (preg_split('/\s*[—–]\s*/u', $headerBrandTitle, 2)[0] ?? $headerBrandTitle));
+        if ($brandForLines === '') {
+            $brandForLines = trim($headerBrandTitle);
+        }
+        $words = preg_split('/\s+/u', $brandForLines, -1, PREG_SPLIT_NO_EMPTY);
+        if (count($words) >= 2) {
+            $advocateBrandLines = [
+                implode(' ', array_slice($words, 0, -1)),
+                (string) $words[array_key_last($words)],
+            ];
+        }
+    }
     /** advocate_editorial: длинные ФИО + полное меню + телефон — с xl (1280px), иначе бургер; при переполнении Alpine включает бургер (см. tenantHeader). */
     $expertDesktopNavMinPx = $isAdvocateEditorial ? 1280 : 768;
     $expertHeaderShellHeight = $isAdvocateEditorial
@@ -65,7 +80,14 @@
                 @else
                     @include('tenant.components.expert-brand-mark', ['compact' => true])
                 @endif
-                <span class="min-w-0 truncate text-[16px] font-bold tracking-wide md:text-[18px] lg:text-[20px] {{ $isAdvocateEditorial ? 'text-stone-900' : 'text-white/95' }}">{{ $headerBrandTitle }}</span>
+                @if($isAdvocateEditorial && $advocateBrandLines)
+                    <span class="min-w-0 text-left text-[16px] font-bold leading-snug tracking-wide md:text-[18px] lg:text-[20px] text-stone-900">
+                        <span class="block">{{ $advocateBrandLines[0] }}</span>
+                        <span class="block">{{ $advocateBrandLines[1] }}</span>
+                    </span>
+                @else
+                    <span class="min-w-0 truncate text-[16px] font-bold tracking-wide md:text-[18px] lg:text-[20px] {{ $isAdvocateEditorial ? 'text-stone-900' : 'text-white/95' }}">{{ $headerBrandTitle }}</span>
+                @endif
             </a>
 
             @if($isAdvocateEditorial)

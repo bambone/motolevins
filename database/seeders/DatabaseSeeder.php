@@ -34,7 +34,7 @@ class DatabaseSeeder extends Seeder
 
         // Демо-клиенты из bootstrap-миграций: без этого шага `php artisan db:seed` не создаёт/не досинхронизирует
         // тенантов, заведённых только миграциями — в консоли платформы (раздел «Клиенты») их не будет видно.
-        DementievAdvocateBootstrap::run();
+        $this->call(DementievAdvocateBootstrap::class);
         AflyatunovExpertBootstrap::run();
     }
 }

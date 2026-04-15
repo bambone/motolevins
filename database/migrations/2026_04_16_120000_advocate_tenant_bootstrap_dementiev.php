@@ -11,7 +11,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        DementievAdvocateBootstrap::run();
+        (new DementievAdvocateBootstrap)->run();
     }
 
     public function down(): void

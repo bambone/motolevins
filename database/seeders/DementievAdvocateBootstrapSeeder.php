@@ -6,7 +6,7 @@ use Database\Seeders\Tenant\DementievAdvocateBootstrap;
 use Illuminate\Database\Seeder;
 
 /**
- * Обёртка для {@see DementievAdvocateBootstrap}: artisan принимает только классы, расширяющие {@see Seeder}.
+ * Алиас для {@see DementievAdvocateBootstrap} (историческое имя в скриптах).
  *
  * Запуск: {@code php artisan db:seed --class=DementievAdvocateBootstrapSeeder}
  */
@@ -14,6 +14,6 @@ class DementievAdvocateBootstrapSeeder extends Seeder
 {
     public function run(): void
     {
-        DementievAdvocateBootstrap::run();
+        (new DementievAdvocateBootstrap)->run();
     }
 }

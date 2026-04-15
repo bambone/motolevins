@@ -16,6 +16,7 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Group;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
@@ -62,6 +63,13 @@ class PageResource extends Resource
                                         ->extraInputAttributes(['class' => 'tenant-page-primary-html-editor'])
                                 )->helperText('Этот текст выводится на публичной странице в основном блоке.'),
                             ])
+                            ->columnSpan(['default' => 1, 'lg' => 8]),
+                        /*
+                         * На главной левая секция скрыта: без явного «пустого» блока на 8 колонок
+                         * правая колонка (4) прижимается к началу сетки — SEO и кнопки оказываются слева.
+                         */
+                        Group::make([])
+                            ->visible(fn (Get $get): bool => ($get('slug') ?: '') === 'home')
                             ->columnSpan(['default' => 1, 'lg' => 8]),
                         Grid::make(1)
                             ->columnSpan(['default' => 1, 'lg' => 4])

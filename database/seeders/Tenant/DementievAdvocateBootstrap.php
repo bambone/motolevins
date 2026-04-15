@@ -13,16 +13,17 @@ use App\Models\TenantSetting;
 use App\Support\Storage\TenantStorage;
 use App\Support\Storage\TenantStorageArea;
 use App\Tenant\StorageQuota\TenantStorageQuotaService;
-use Database\Seeders\DementievAdvocateBootstrapSeeder;
+use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 
 /**
  * Демо-контент тенанта dementiev: тема advocate_editorial, страницы адвоката, FAQ, формы, SEO.
  *
- * Для `php artisan db:seed --class=…` используйте {@see DementievAdvocateBootstrapSeeder} (это не Seeder).
+ * Запуск: {@code php artisan db:seed --class=Database\Seeders\Tenant\DementievAdvocateBootstrap}
+ * или обёртка {@see DementievAdvocateBootstrapSeeder} (то же содержимое).
  */
-final class DementievAdvocateBootstrap
+final class DementievAdvocateBootstrap extends Seeder
 {
     public const SLUG = 'dementiev';
 
@@ -63,7 +64,7 @@ final class DementievAdvocateBootstrap
         return TenantStorage::forTrusted($tenantId)->publicUrl('site/brand/'.$file);
     }
 
-    public static function run(): void
+    public function run(): void
     {
         $tenantId = DB::table('tenants')->where('slug', self::SLUG)->value('id');
         if (! $tenantId) {

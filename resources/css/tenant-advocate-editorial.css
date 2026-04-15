@@ -2,6 +2,8 @@
 
 body.advocate-editorial-theme {
     --color-moto-amber: #9a7b4f;
+    /* Поверх карточек/форм с relative z-index; ниже шапки (z-50) и типичных cookie-баров */
+    --ex-sticky-z: 46;
 }
 
 body.advocate-editorial-theme.premium-bg {
@@ -315,6 +317,30 @@ body.advocate-editorial-theme .expert-home-section--editorial_gallery .expert-me
         transition:
             opacity 0.32s ease,
             transform 0.32s ease;
+    }
+
+    /*
+     * Без сплошной светлой «полки»: только плавающая кнопка (z-index задан на body).
+     * Сбрасываем тёмный градиент из tenant-expert-auto.css.
+     */
+    body.advocate-editorial-theme .expert-sticky-cta {
+        background: none;
+        border-top: none;
+        box-shadow: none;
+    }
+
+    body.advocate-editorial-theme .expert-sticky-cta__inner {
+        padding-top: 0.25rem;
+    }
+
+    body.advocate-editorial-theme .expert-sticky-cta__btn.tenant-btn-primary {
+        background-color: var(--color-moto-amber);
+        color: #0c0c0c;
+        opacity: 1;
+        box-shadow:
+            0 6px 20px -4px rgba(28, 31, 38, 0.22),
+            0 2px 8px -2px rgba(28, 31, 38, 0.14),
+            0 0 0 1px rgba(28, 31, 38, 0.08);
     }
 }
 

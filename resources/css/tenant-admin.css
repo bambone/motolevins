@@ -117,6 +117,63 @@ select.psb-select {
     border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
+/*
+ * Редактирование записи: Filament по умолчанию Alignment::Start для fi-ac (кнопки слева).
+ * В кабинете клиента — справа, визуально под правой колонкой формы (8+4).
+ */
+.fi-resource-edit-record-page .fi-sc-form .fi-sc-actions .fi-ac {
+    justify-content: flex-end;
+}
+
+/*
+ * Кастомный Blade / Livewire: классы Filament `fi-btn fi-btn-color-*` без `fi-color-custom`.
+ * В светлой теме заливка иногда не применяется (телепорт, разметка вне стандартной модалки) —
+ * получается белый фон + text-white у primary.
+ *
+ * На янтарном primary белый текст даёт слабый контраст — как на публичном сайте: тёмная подпись (#0c0c0c).
+ */
+html:not(.dark) :is(a, button).fi-btn.fi-btn-color-primary:not(.fi-color-custom) {
+    background-color: var(--primary-600, #d97706);
+    color: #0c0c0c !important;
+}
+
+html:not(.dark) :is(a, button).fi-btn.fi-btn-color-primary:not(.fi-color-custom):hover {
+    filter: brightness(1.06);
+}
+
+html:not(.dark) :is(a, button).fi-btn.fi-btn-color-primary:not(.fi-color-custom) svg {
+    color: inherit;
+}
+
+/* Стандартные primary-кнопки Filament (сохранение записи и т.д.) — тот же контраст, не трогаем fi-color-custom */
+html:not(.dark) :is(a, button).fi-btn-primary:not(.fi-color-custom) {
+    color: #0c0c0c !important;
+}
+
+html:not(.dark) :is(a, button).fi-btn-primary:not(.fi-color-custom) svg {
+    color: inherit;
+}
+
+html:not(.dark) :is(a, button).fi-btn.fi-btn-color-danger:not(.fi-color-custom) {
+    background-color: var(--danger-600, rgb(220 38 38));
+    color: #ffffff;
+}
+
+html:not(.dark) :is(a, button).fi-btn.fi-btn-color-danger:not(.fi-color-custom):hover {
+    filter: brightness(1.06);
+}
+
+/* Светлая тема: вторичные / «Отмена» (outlined) — заметная граница; телепорт конструктора — тот же принцип */
+html:not(.dark) :is(a, button).fi-btn.fi-btn-outlined {
+    border-color: rgb(203 213 225);
+    color: rgb(51 65 85);
+}
+
+html:not(.dark) :is(a, button).fi-btn.fi-btn-outlined:hover {
+    background-color: rgb(248 250 252);
+    border-color: rgb(148 163 184);
+}
+
 /* Cards & Elevated Containers */
 .dark .fi-ta-content,
 .dark .fi-section,

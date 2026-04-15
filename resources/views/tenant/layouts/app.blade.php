@@ -586,7 +586,8 @@
 
     {{-- Корневой x-data: без него Alpine не обрабатывает @click/$dispatch на страницах вне обёртки (например карточка мотоцикла). --}}
     <main id="tenant-main-content" tabindex="-1" @class([
-        'w-full min-w-0 scroll-mt-[5.5rem] pb-32 outline-none sm:pb-0 md:scroll-mt-[6rem]',
+        'w-full min-w-0 scroll-mt-[5.5rem] outline-none md:scroll-mt-[6rem]',
+        $__tenantExpertFamilyBody ? 'pb-40 sm:pb-0' : 'pb-32 sm:pb-0',
         'flex-1' => $__tenantExpertFamilyBody,
     ]) x-data="{}">
         @include('tenant.components.public-breadcrumbs')
