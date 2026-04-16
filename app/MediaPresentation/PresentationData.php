@@ -29,6 +29,10 @@ final class PresentationData implements \JsonSerializable
         if ($row === null || $row === []) {
             return self::empty();
         }
+        // Mistaken JSON: [{ "version": … }] instead of { "version": … }
+        if (array_is_list($row) && count($row) === 1 && is_array($row[0]) && isset($row[0]['version'])) {
+            $row = $row[0];
+        }
         $version = (int) ($row['version'] ?? self::CURRENT_VERSION);
         $map = self::normalizeFocalMap(is_array($row['viewport_focal_map'] ?? null) ? $row['viewport_focal_map'] : []);
 

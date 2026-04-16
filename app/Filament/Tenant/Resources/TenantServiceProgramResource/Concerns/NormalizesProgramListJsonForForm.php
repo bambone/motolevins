@@ -49,9 +49,13 @@ trait NormalizesProgramListJsonForForm
         if ($raw instanceof PresentationData) {
             $data['cover_presentation'] = $raw->toArray();
         } elseif (is_array($raw)) {
+            $raw = $this->unwrapPresentationPayloadIfList($raw);
             $data['cover_presentation'] = PresentationData::fromArray($raw)->toArray();
         } elseif (is_string($raw) && $raw !== '') {
             $decoded = json_decode($raw, true);
+            if (is_array($decoded)) {
+                $decoded = $this->unwrapPresentationPayloadIfList($decoded);
+            }
             $data['cover_presentation'] = is_array($decoded)
                 ? PresentationData::fromArray($decoded)->toArray()
                 : PresentationData::empty()->toArray();
@@ -73,6 +77,9 @@ trait NormalizesProgramListJsonForForm
         }
 
         $this->ensurePresentationShape($data['cover_presentation']);
+
+        // Filament fills from $record->attributesToArray(); cast returns PresentationData here — Livewire cannot dehydrate that type.
+        unset($data['cover_presentation_json']);
 
         return $data;
     }
@@ -113,8 +120,42 @@ trait NormalizesProgramListJsonForForm
             $presentation['viewport_focal_map'] = [];
         }
         $m = &$presentation['viewport_focal_map'];
-        $m['mobile'] = $m['mobile'] ?? ['x' => 50.0, 'y' => 52.0];
-        $m['desktop'] = $m['desktop'] ?? ['x' => 50.0, 'y' => 48.0];
+        $m['mobile'] = $this->normalizeFocalPairForForm($m['mobile'] ?? null, 50.0, 52.0);
+        $m['desktop'] = $this->normalizeFocalPairForForm($m['desktop'] ?? null, 50.0, 48.0);
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $row
+     * @return array{x: float, y: float}
+     */
+    private function normalizeFocalPairForForm(?array $row, float $defaultX, float $defaultY): array
+    {
+        if ($row === null) {
+            return ['x' => $defaultX, 'y' => $defaultY];
+        }
+        $x = $row['x'] ?? $defaultX;
+        $y = $row['y'] ?? $defaultY;
+
+        return [
+            'x' => is_numeric($x) ? (float) $x : $defaultX,
+            'y' => is_numeric($y) ? (float) $y : $defaultY,
+        ];
+    }
+
+    /**
+     * Some legacy / mistaken JSON stores one object inside a single-element array: [{ "version": … }].
+     *
+     * @param  array<int|string, mixed>  $raw
+     * @return array<int|string, mixed>
+     */
+    private function unwrapPresentationPayloadIfList(array $raw): array
+    {
+        if (! array_is_list($raw) || count($raw) !== 1) {
+            return $raw;
+        }
+        $only = $raw[0];
+
+        return is_array($only) && isset($only['version']) ? $only : $raw;
     }
 
     /**
