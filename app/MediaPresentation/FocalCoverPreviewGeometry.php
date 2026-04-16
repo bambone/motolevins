@@ -28,14 +28,16 @@ final class FocalCoverPreviewGeometry
 
     /**
      * Translate from "center" position (px=50, py=50) in CSS pixels.
+     * User scale ≥ 1 enlarges the displayed image vs base cover-fit, increasing pan range.
      *
      * @return array{tx: float, ty: float}
      */
-    public static function translateFromFocal(float $px, float $py, float $frameW, float $frameH, float $iw, float $ih): array
+    public static function translateFromFocal(float $px, float $py, float $frameW, float $frameH, float $iw, float $ih, float $userScale = 1.0): array
     {
         $d = self::coverDisplaySize($iw, $ih, $frameW, $frameH);
-        $dispW = $d['dispW'];
-        $dispH = $d['dispH'];
+        $us = max(1.0, $userScale);
+        $dispW = $d['dispW'] * $us;
+        $dispH = $d['dispH'] * $us;
         $tx = (abs($frameW - $dispW) < self::EPS) ? 0.0 : (($px / 100.0) - 0.5) * ($frameW - $dispW);
         $ty = (abs($frameH - $dispH) < self::EPS) ? 0.0 : (($py / 100.0) - 0.5) * ($frameH - $dispH);
 
@@ -45,11 +47,12 @@ final class FocalCoverPreviewGeometry
     /**
      * @return array{x: float, y: float}
      */
-    public static function focalFromTranslate(float $tx, float $ty, float $frameW, float $frameH, float $iw, float $ih): array
+    public static function focalFromTranslate(float $tx, float $ty, float $frameW, float $frameH, float $iw, float $ih, float $userScale = 1.0): array
     {
         $d = self::coverDisplaySize($iw, $ih, $frameW, $frameH);
-        $dispW = $d['dispW'];
-        $dispH = $d['dispH'];
+        $us = max(1.0, $userScale);
+        $dispW = $d['dispW'] * $us;
+        $dispH = $d['dispH'] * $us;
         $px = abs($frameW - $dispW) < self::EPS ? 50.0 : 50.0 + ($tx / ($frameW - $dispW)) * 100.0;
         $py = abs($frameH - $dispH) < self::EPS ? 50.0 : 50.0 + ($ty / ($frameH - $dispH)) * 100.0;
 
@@ -64,12 +67,12 @@ final class FocalCoverPreviewGeometry
      *
      * @return array{tx: float, ty: float}
      */
-    public static function clampTranslate(float $tx, float $ty, float $frameW, float $frameH, float $iw, float $ih): array
+    public static function clampTranslate(float $tx, float $ty, float $frameW, float $frameH, float $iw, float $ih, float $userScale = 1.0): array
     {
-        $f = self::focalFromTranslate($tx, $ty, $frameW, $frameH, $iw, $ih);
+        $f = self::focalFromTranslate($tx, $ty, $frameW, $frameH, $iw, $ih, $userScale);
         $clamped = FocalPoint::normalized($f['x'], $f['y']);
 
-        return self::translateFromFocal($clamped->x, $clamped->y, $frameW, $frameH, $iw, $ih);
+        return self::translateFromFocal($clamped->x, $clamped->y, $frameW, $frameH, $iw, $ih, $userScale);
     }
 
     /**

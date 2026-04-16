@@ -9,6 +9,8 @@ use App\Filament\Tenant\Resources\PageResource;
 use App\Livewire\Concerns\InteractsWithTenantPublicFilePicker;
 use App\Models\Page;
 use App\Models\PageSection;
+use App\PageBuilder\Blueprints\Expert\EditorialGalleryBlueprint;
+use App\PageBuilder\Blueprints\Expert\ExpertHeroBlueprint;
 use App\PageBuilder\Blueprints\Expert\ExpertLeadFormBlueprint;
 use App\PageBuilder\Contacts\ContactsInfoDataService;
 use App\PageBuilder\DataTableSectionJsonNormalizer;
@@ -648,6 +650,12 @@ class PageSectionsBuilder extends Component implements ForcesFullLivewireRender,
         }
         if ($typeId === 'expert_lead_form') {
             $dataJson = ExpertLeadFormBlueprint::normalizeDataJsonForEditor($dataJson);
+        }
+        if ($typeId === 'expert_hero') {
+            $dataJson = ExpertHeroBlueprint::normalizeHeroPresentationForEditor($dataJson);
+        }
+        if ($typeId === 'editorial_gallery') {
+            $dataJson = EditorialGalleryBlueprint::normalizePresentationForEditor($dataJson);
         }
         $this->sectionFormData = [
             'title' => $section->title ?? '',

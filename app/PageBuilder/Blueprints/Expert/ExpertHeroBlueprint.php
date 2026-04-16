@@ -2,11 +2,28 @@
 
 namespace App\PageBuilder\Blueprints\Expert;
 
+use App\Filament\Forms\Components\TenantPublicImagePicker;
+use App\Filament\Tenant\PageBuilder\FramingCoverFocalEditor;
 use App\Filament\Tenant\PageBuilder\TeleportedEditorRepeater;
+use App\MediaPresentation\FramingPresentationSummaryResolver;
+use App\MediaPresentation\MediaPresentationRegistry;
+use App\MediaPresentation\PresentationData;
+use App\MediaPresentation\Profiles\PageHeroCoverPresentationProfile;
+use App\MediaPresentation\ViewportFraming;
+use App\MediaPresentation\ViewportKey;
+use App\PageBuilder\BlueprintFramingSlotDescriptor;
 use App\PageBuilder\PageSectionCategory;
+use App\PageBuilder\PageSectionFormWirePath;
+use App\Support\Storage\TenantPublicAssetResolver;
+use Filament\Forms\Components\Hidden;
+use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
+use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Get;
+use Illuminate\Support\HtmlString;
 
 final class ExpertHeroBlueprint extends ExpertSectionBlueprint
 {
@@ -35,6 +52,24 @@ final class ExpertHeroBlueprint extends ExpertSectionBlueprint
         return PageSectionCategory::Basic;
     }
 
+    /**
+     * Metadata: image framing slots (profile id is not stored in section JSON — only framing state).
+     *
+     * @return list<BlueprintFramingSlotDescriptor>
+     */
+    public function framingSlotDescriptors(): array
+    {
+        return [
+            new BlueprintFramingSlotDescriptor(
+                slotKey: 'hero_background',
+                imageField: 'hero_image_url',
+                presentationField: 'hero_background_presentation',
+                profileSlotId: PageHeroCoverPresentationProfile::SLOT_ID,
+                editorMode: 'inline',
+            ),
+        ];
+    }
+
     public function defaultData(): array
     {
         return [
@@ -53,12 +88,47 @@ final class ExpertHeroBlueprint extends ExpertSectionBlueprint
             'overlay_dark' => true,
             'hero_video_url' => '',
             'hero_video_poster_url' => '',
-            'video_trigger_label' => 'Смотреть, как проходят занятия',
+            'video_trigger_label' => '',
+            'hero_focal_sync_mobile_desktop' => false,
+            'hero_background_presentation' => PresentationData::empty()->toArray(),
         ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $dataJson
+     * @return array<string, mixed>
+     */
+    public static function normalizeHeroPresentationForEditor(array $dataJson): array
+    {
+        $defaults = (new self)->defaultData();
+        $merged = array_replace_recursive($defaults, $dataJson);
+        $hp = is_array($merged['hero_background_presentation'] ?? null) ? $merged['hero_background_presentation'] : [];
+        $map = is_array($hp['viewport_focal_map'] ?? null) ? $hp['viewport_focal_map'] : [];
+        foreach ([ViewportKey::Mobile->value, ViewportKey::Tablet->value, ViewportKey::Desktop->value] as $vk) {
+            $row = $map[$vk] ?? null;
+            $vf = ViewportFraming::fromArray(is_array($row) ? $row : null);
+            if ($vf === null) {
+                $def = PageHeroCoverPresentationProfile::defaultFocalForViewport(ViewportKey::from($vk));
+                $vf = ViewportFraming::normalized(
+                    $def->x,
+                    $def->y,
+                    PageHeroCoverPresentationProfile::FRAMING_SCALE_DEFAULT,
+                );
+            }
+            $map[$vk] = $vf->toArray();
+        }
+        $hp['viewport_focal_map'] = $map;
+        $merged['hero_background_presentation'] = PresentationData::fromArray($hp)->toArray();
+
+        return $merged;
     }
 
     public function formComponents(): array
     {
+        $profile = MediaPresentationRegistry::profile(PageHeroCoverPresentationProfile::SLOT_ID);
+        $summaryResolver = app(FramingPresentationSummaryResolver::class);
+        $wirePrefix = PageSectionFormWirePath::presentationWirePathPrefix('hero_background_presentation');
+
         return [
             TextInput::make('data_json.heading')->label('Заголовок')->maxLength(500)->columnSpanFull(),
             Textarea::make('data_json.subheading')->label('Подзаголовок')->rows(2)->columnSpanFull(),
@@ -71,7 +141,7 @@ final class ExpertHeroBlueprint extends ExpertSectionBlueprint
             TextInput::make('data_json.primary_cta_label')->label('Текст основной CTA')->maxLength(120),
             TextInput::make('data_json.primary_cta_anchor')->label('Якорь основной CTA (#id)')->maxLength(120),
             TextInput::make('data_json.secondary_cta_label')->label('Текст второй CTA')->maxLength(120),
-            TextInput::make('data_json.secondary_cta_anchor')->label('Якорь второй CTA')->maxLength(120),
+            TextInput::make('data_json.secondary_cta_anchor')->label('Якорь второй CTA (#id)')->maxLength(120),
             TeleportedEditorRepeater::make('data_json.trust_badges')
                 ->label('Бейджи доверия')
                 ->addActionLabel('Добавить бейдж')
@@ -80,10 +150,148 @@ final class ExpertHeroBlueprint extends ExpertSectionBlueprint
                 ])
                 ->columnSpanFull(),
             Toggle::make('data_json.overlay_dark')->label('Тёмный оверлей на фоне'),
-            TextInput::make('data_json.hero_image_url')
-                ->label('URL фото hero')
-                ->maxLength(2048)
-                ->helperText('Абсолютный или относительный URL (например /tenants/slug/hero.jpg).')
+            TenantPublicImagePicker::make('data_json.hero_image_url')
+                ->label('Фото hero')
+                ->uploadPublicSiteSubdirectory('site/page-builder/hero')
+                ->helperText('Выберите файл из медиатеки или загрузите новый. Один источник для всех ширин; разные кадры для mobile и desktop задаются ниже (кадрирование и «Синхронизировать»).')
+                ->live()
+                ->columnSpanFull(),
+            Toggle::make('data_json.hero_focal_sync_mobile_desktop')
+                ->label('Синхронизировать mobile и desktop')
+                ->helperText('Включите, чтобы одно перетаскивание меняло оба кадра. Выключите — для портретов в широком баннере: отдельный фокус и zoom для узкого и широкого экрана; в превью появятся кнопки «Копировать mobile → desktop».')
+                ->default(false)
+                ->live()
+                ->columnSpanFull(),
+            Placeholder::make('hero_framing_summary')
+                ->hiddenLabel()
+                ->content(function (Get $get) use ($summaryResolver, $profile): HtmlString {
+                    $row = $get('data_json.hero_background_presentation');
+                    $summ = $summaryResolver->summarize(is_array($row) ? $row : null, $profile);
+
+                    return new HtmlString(
+                        '<div class="space-y-1">'
+                        .'<p class="text-sm font-medium text-gray-700 dark:text-gray-300">'.e('Кадрирование фона').'</p>'
+                        .'<p class="text-sm text-gray-600 dark:text-gray-400">'.e($summ['label']).'</p>'
+                        .'</div>'
+                    );
+                })
+                ->dehydrated(false)
+                ->columnSpanFull(),
+            Hidden::make('data_json.hero_background_presentation.version')
+                ->default(PresentationData::CURRENT_VERSION)
+                ->dehydrated(),
+            FramingCoverFocalEditor::make(
+                'hero_background_framing_preview',
+                'data_json.hero_background_presentation',
+                $profile,
+                $wirePrefix,
+                resolveDesktopImageUrl: function (Get $get): ?string {
+                    $t = currentTenant();
+                    if ($t === null) {
+                        return null;
+                    }
+                    $raw = trim((string) ($get('data_json.hero_image_url') ?? ''));
+
+                    return TenantPublicAssetResolver::resolveForTenantModel($raw !== '' ? $raw : null, $t);
+                },
+                resolveMobileImageUrl: function (Get $get): ?string {
+                    $t = currentTenant();
+                    if ($t === null) {
+                        return null;
+                    }
+                    $raw = trim((string) ($get('data_json.hero_image_url') ?? ''));
+
+                    return TenantPublicAssetResolver::resolveForTenantModel($raw !== '' ? $raw : null, $t);
+                },
+                resolveSyncDefault: fn (Get $get): bool => (bool) ($get('data_json.hero_focal_sync_mobile_desktop') ?? false),
+            ),
+            Grid::make(['default' => 1, 'lg' => 3])
+                ->schema([
+                    Section::make('Кадр mobile (узкий экран)')
+                        ->description('До 767px; дублирует превью (фокус + zoom).')
+                        ->schema([
+                            TextInput::make('data_json.hero_background_presentation.viewport_focal_map.mobile.x')
+                                ->label('X %')
+                                ->numeric()
+                                ->minValue(0)
+                                ->maxValue(100)
+                                ->step(0.1)
+                                ->required()
+                                ->live(debounce: 400),
+                            TextInput::make('data_json.hero_background_presentation.viewport_focal_map.mobile.y')
+                                ->label('Y %')
+                                ->numeric()
+                                ->minValue(0)
+                                ->maxValue(100)
+                                ->step(0.1)
+                                ->required()
+                                ->live(debounce: 400),
+                            TextInput::make('data_json.hero_background_presentation.viewport_focal_map.mobile.scale')
+                                ->label('Zoom (множитель)')
+                                ->numeric()
+                                ->minValue(PageHeroCoverPresentationProfile::FRAMING_SCALE_MIN)
+                                ->maxValue(PageHeroCoverPresentationProfile::FRAMING_SCALE_MAX)
+                                ->step(PageHeroCoverPresentationProfile::FRAMING_SCALE_STEP)
+                                ->required()
+                                ->live(debounce: 400),
+                        ])->columns(3),
+                    Section::make('Кадр tablet')
+                        ->description('768–1023px; отдельно от mobile и desktop.')
+                        ->schema([
+                            TextInput::make('data_json.hero_background_presentation.viewport_focal_map.tablet.x')
+                                ->label('X %')
+                                ->numeric()
+                                ->minValue(0)
+                                ->maxValue(100)
+                                ->step(0.1)
+                                ->required()
+                                ->live(debounce: 400),
+                            TextInput::make('data_json.hero_background_presentation.viewport_focal_map.tablet.y')
+                                ->label('Y %')
+                                ->numeric()
+                                ->minValue(0)
+                                ->maxValue(100)
+                                ->step(0.1)
+                                ->required()
+                                ->live(debounce: 400),
+                            TextInput::make('data_json.hero_background_presentation.viewport_focal_map.tablet.scale')
+                                ->label('Zoom (множитель)')
+                                ->numeric()
+                                ->minValue(PageHeroCoverPresentationProfile::FRAMING_SCALE_MIN)
+                                ->maxValue(PageHeroCoverPresentationProfile::FRAMING_SCALE_MAX)
+                                ->step(PageHeroCoverPresentationProfile::FRAMING_SCALE_STEP)
+                                ->required()
+                                ->live(debounce: 400),
+                        ])->columns(3),
+                    Section::make('Кадр desktop')
+                        ->description('От 1024px')
+                        ->schema([
+                            TextInput::make('data_json.hero_background_presentation.viewport_focal_map.desktop.x')
+                                ->label('X %')
+                                ->numeric()
+                                ->minValue(0)
+                                ->maxValue(100)
+                                ->step(0.1)
+                                ->required()
+                                ->live(debounce: 400),
+                            TextInput::make('data_json.hero_background_presentation.viewport_focal_map.desktop.y')
+                                ->label('Y %')
+                                ->numeric()
+                                ->minValue(0)
+                                ->maxValue(100)
+                                ->step(0.1)
+                                ->required()
+                                ->live(debounce: 400),
+                            TextInput::make('data_json.hero_background_presentation.viewport_focal_map.desktop.scale')
+                                ->label('Zoom (множитель)')
+                                ->numeric()
+                                ->minValue(PageHeroCoverPresentationProfile::FRAMING_SCALE_MIN)
+                                ->maxValue(PageHeroCoverPresentationProfile::FRAMING_SCALE_MAX)
+                                ->step(PageHeroCoverPresentationProfile::FRAMING_SCALE_STEP)
+                                ->required()
+                                ->live(debounce: 400),
+                        ])->columns(3),
+                ])
                 ->columnSpanFull(),
             TextInput::make('data_json.hero_image_alt')
                 ->label('Alt-текст фото')
@@ -99,9 +307,10 @@ final class ExpertHeroBlueprint extends ExpertSectionBlueprint
                 ->maxLength(2048)
                 ->columnSpanFull(),
             TextInput::make('data_json.video_trigger_label')
-                ->label('Текст кнопки «смотреть занятие»')
+                ->label('Текст кнопки видео')
                 ->maxLength(120)
-                ->default('Смотреть, как проходят занятия'),
+                ->helperText('Показывается, если задан URL видео. Пусто — на сайте подставится нейтральное «Смотреть видео». Для обучения можно ввести свой вариант (например «Смотреть, как проходят занятия»).')
+                ->placeholder('Смотреть видео'),
         ];
     }
 

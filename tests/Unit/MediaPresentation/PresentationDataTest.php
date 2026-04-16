@@ -19,7 +19,23 @@ final class PresentationDataTest extends TestCase
         ]);
 
         $this->assertArrayHasKey('mobile', $d->viewportFocalMap);
+        $this->assertSame(40.0, $d->viewportFocalMap['mobile']['x']);
         $this->assertArrayHasKey('desktop', $d->viewportFocalMap);
+        $this->assertArrayNotHasKey('moblie', $d->viewportFocalMap);
+    }
+
+    public function test_viewport_focal_map_moblie_typo_maps_to_mobile_when_mobile_missing(): void
+    {
+        $d = PresentationData::fromArray([
+            'version' => 1,
+            'viewport_focal_map' => [
+                'moblie' => ['x' => 12.0, 'y' => 34.0, 'scale' => 1.0],
+                'desktop' => ['x' => 55.0, 'y' => 45.0],
+            ],
+        ]);
+
+        $this->assertArrayHasKey('mobile', $d->viewportFocalMap);
+        $this->assertSame(12.0, $d->viewportFocalMap['mobile']['x']);
         $this->assertArrayNotHasKey('moblie', $d->viewportFocalMap);
     }
 

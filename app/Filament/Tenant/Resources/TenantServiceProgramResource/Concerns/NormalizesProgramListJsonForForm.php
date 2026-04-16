@@ -4,6 +4,9 @@ namespace App\Filament\Tenant\Resources\TenantServiceProgramResource\Concerns;
 
 use App\MediaPresentation\LegacyCoverObjectPositionParser;
 use App\MediaPresentation\PresentationData;
+use App\MediaPresentation\Profiles\ServiceProgramCardPresentationProfile;
+use App\MediaPresentation\ViewportFraming;
+use App\MediaPresentation\ViewportKey;
 
 /**
  * Конвертация audience_json / outcomes_json между форматом БД (список строк)
@@ -68,7 +71,7 @@ trait NormalizesProgramListJsonForForm
             $map = [];
         }
         if ($map === [] && ($legacy = LegacyCoverObjectPositionParser::parse($data['cover_object_position'] ?? null))) {
-            $a = $legacy->toArray();
+            $a = ViewportFraming::normalized($legacy->x, $legacy->y, ServiceProgramCardPresentationProfile::FRAMING_SCALE_DEFAULT)->toArray();
             $data['cover_presentation']['viewport_focal_map'] = [
                 'default' => $a,
                 'mobile' => $a,
@@ -120,8 +123,24 @@ trait NormalizesProgramListJsonForForm
             $presentation['viewport_focal_map'] = [];
         }
         $m = &$presentation['viewport_focal_map'];
-        $m['mobile'] = $this->normalizeFocalPairForForm($m['mobile'] ?? null, 50.0, 52.0);
-        $m['desktop'] = $this->normalizeFocalPairForForm($m['desktop'] ?? null, 50.0, 48.0);
+        $defT = ServiceProgramCardPresentationProfile::defaultFocalForViewport(ViewportKey::Tablet);
+        $m['mobile'] = $this->normalizeViewportRowForForm($m['mobile'] ?? null, 50.0, 52.0);
+        $m['tablet'] = $this->normalizeViewportRowForForm($m['tablet'] ?? null, $defT->x, $defT->y);
+        $m['desktop'] = $this->normalizeViewportRowForForm($m['desktop'] ?? null, 50.0, 48.0);
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $row
+     * @return array{x: float, y: float, scale: float}
+     */
+    private function normalizeViewportRowForForm(?array $row, float $defaultX, float $defaultY): array
+    {
+        $pair = $this->normalizeFocalPairForForm($row, $defaultX, $defaultY);
+        $scale = isset($row['scale']) && is_numeric($row['scale'])
+            ? ViewportFraming::clampScale((float) $row['scale'])
+            : ServiceProgramCardPresentationProfile::FRAMING_SCALE_DEFAULT;
+
+        return ViewportFraming::normalized($pair['x'], $pair['y'], $scale)->toArray();
     }
 
     /**

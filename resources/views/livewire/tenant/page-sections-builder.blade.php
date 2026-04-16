@@ -516,6 +516,7 @@
                 role="dialog"
                 aria-modal="true"
                 wire:key="page-section-editor-root-{{ $editingSectionId ?? 'new' }}-{{ $activeTypeId ?? 'x' }}"
+                data-psb-livewire-id="{{ $this->getId() }}"
             >
                 <div
                     class="absolute inset-0 bg-black/40 dark:bg-black/60"

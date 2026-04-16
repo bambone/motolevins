@@ -3,11 +3,17 @@
 namespace App\MediaPresentation\Profiles;
 
 use App\MediaPresentation\FocalPoint;
+use App\MediaPresentation\ViewportFraming;
 use App\MediaPresentation\ViewportKey;
 
 /**
  * Slot: service_program_card — ratios/breakpoints are defined here (PHP source of truth).
  * CSS in theme must mirror these numbers for layout; preview uses the same constants.
+ *
+ * **Framing scale** (user zoom on top of object-fit: cover): single source for PHP, Filament, JS clamp.
+ * Stored per viewport in legacy JSON key {@code viewport_focal_map} as part of {@see ViewportFraming}.
+ *
+ * **expert_auto + advocate_editorial:** оба подключают {@code tenant-expert-auto.css} при {@code body.expert-auto-theme}; карточки программ и framing-CSS должны оставаться идентичными на сайте.
  *
  * Tablet vs runtime: the public site maps layout width to only {@link ViewportKey::Mobile} or {@link ViewportKey::Desktop}
  * ({@see viewportKeyForWidth}). {@link ViewportKey::Tablet} is not a third runtime bucket — it exists for
@@ -21,6 +27,15 @@ final class ServiceProgramCardPresentationProfile
     public const PICTURE_MOBILE_MAX_PX = 1023;
 
     public const DESKTOP_MIN_PX = 1024;
+
+    /** User zoom multiplier on top of cover-fit; must be ≥ 1. */
+    public const FRAMING_SCALE_MIN = 1.0;
+
+    public const FRAMING_SCALE_MAX = 1.5;
+
+    public const FRAMING_SCALE_STEP = 0.05;
+
+    public const FRAMING_SCALE_DEFAULT = 1.0;
 
     /**
      * Default focal when no data (neutral; avoids legacy "top-heavy" crop).

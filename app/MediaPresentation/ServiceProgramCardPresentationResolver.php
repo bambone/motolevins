@@ -2,30 +2,39 @@
 
 namespace App\MediaPresentation;
 
+use App\MediaPresentation\Profiles\ServiceProgramCardPresentationProfile;
 use App\Models\Tenant;
 use App\Models\TenantServiceProgram;
-use App\MediaPresentation\Profiles\ServiceProgramCardPresentationProfile;
 use App\Support\Storage\TenantPublicAssetResolver;
 
 /**
  * Resolves source URLs, focal points, and overlay vars for {@code service_program_card} slot.
  * Single place for public site + Filament preview (production-faithful).
+ *
+ * Public + Filament preview (same CSS variables and composition):
+ * {@code img}: {@code object-fit: cover} + {@code object-position} from focal (x%, y%).
+ * {@code .expert-program-card__media-layer}: {@code transform: scale(var(--svc-program-scale-*))}
+ * with {@code transform-origin} at those focal percentages. Нижняя маска — на {@code .expert-program-card__media}, не на слое zoom.
+ * Drag/clamp в админке используют {@see FocalCoverPreviewGeometry} (translate в пикселях); при необходимости точной идентичности
+ * каждого кадра при zoom сверяйте превью с публичной карточкой на тех же данных.
  */
 final class ServiceProgramCardPresentationResolver
 {
     /**
-     * Build inline style fragment for program card article (CSS variables: focal + overlay from profile).
+     * Build inline style fragment for program card article (CSS variables: focal + scale + overlay from profile).
      */
     public function articleStyleAttribute(TenantServiceProgram $program): string
     {
-        $mobile = $this->resolveFocalPointDetails($program, ViewportKey::Mobile);
-        $desktop = $this->resolveFocalPointDetails($program, ViewportKey::Desktop);
+        $mobile = $this->resolveFramingDetails($program, ViewportKey::Mobile);
+        $desktop = $this->resolveFramingDetails($program, ViewportKey::Desktop);
 
         $parts = [
             '--svc-program-focal-x-mobile: '.$mobile['focal']->x.'%',
             '--svc-program-focal-y-mobile: '.$mobile['focal']->y.'%',
             '--svc-program-focal-x-desktop: '.$desktop['focal']->x.'%',
             '--svc-program-focal-y-desktop: '.$desktop['focal']->y.'%',
+            '--svc-program-scale-mobile: '.$mobile['scale'],
+            '--svc-program-scale-desktop: '.$desktop['scale'],
         ];
         foreach (ServiceProgramCardPresentationProfile::articleOverlayCssVariables() as $name => $value) {
             $parts[] = '--'.$name.': '.$value;
@@ -80,8 +89,9 @@ final class ServiceProgramCardPresentationResolver
 
         $missingSource = $resolvedUrl === null;
 
-        $details = $this->resolveFocalPointDetails($program, $viewport);
+        $details = $this->resolveFramingDetails($program, $viewport);
         $focal = $details['focal'];
+        $scale = $details['scale'];
         $legacyUsed = $details['legacyUsed'];
 
         $overlay = $viewport === ViewportKey::Desktop
@@ -93,6 +103,7 @@ final class ServiceProgramCardPresentationResolver
         return new ResolvedPresentation(
             resolvedSourceUrl: $resolvedUrl,
             resolvedFocal: $focal,
+            resolvedUserScale: $scale,
             overlayCssVariables: $overlay,
             activeViewportKey: $viewport,
             safeAreaMeta: $safe,
@@ -103,11 +114,11 @@ final class ServiceProgramCardPresentationResolver
     }
 
     /**
-     * Focal only (no asset URLs) — used by article inline style and by {@see resolveFocal}.
+     * Framing (focal + user scale) — used by article inline style and by {@see resolveFocal}.
      *
-     * @return array{focal: FocalPoint, legacyUsed: bool}
+     * @return array{focal: FocalPoint, scale: float, legacyUsed: bool}
      */
-    private function resolveFocalPointDetails(TenantServiceProgram $program, ViewportKey $viewport): array
+    private function resolveFramingDetails(TenantServiceProgram $program, ViewportKey $viewport): array
     {
         $slotId = ServiceProgramCardPresentationProfile::SLOT_ID;
 
@@ -115,18 +126,30 @@ final class ServiceProgramCardPresentationResolver
         $map = $presentation instanceof PresentationData ? $presentation->viewportFocalMap : [];
 
         $legacyUsed = false;
-        $focal = FocalMapViewport::pickFocalFromMap($map, $viewport);
-        if ($focal === null) {
-            $legacy = LegacyCoverObjectPositionParser::parse($program->cover_object_position);
-            if ($legacy !== null) {
-                $focal = $legacy;
-                $legacyUsed = true;
-            }
-        }
-        if ($focal === null) {
-            $focal = MediaPresentationRegistry::defaultFocalForSlot($slotId, $viewport);
+        $framing = FocalMapViewport::pickFramingFromMap($map, $viewport);
+        if ($framing !== null) {
+            return [
+                'focal' => $framing->toFocalPoint(),
+                'scale' => $framing->scale,
+                'legacyUsed' => false,
+            ];
         }
 
-        return ['focal' => $focal, 'legacyUsed' => $legacyUsed];
+        $legacy = LegacyCoverObjectPositionParser::parse($program->cover_object_position);
+        if ($legacy !== null) {
+            return [
+                'focal' => $legacy,
+                'scale' => 1.0,
+                'legacyUsed' => true,
+            ];
+        }
+
+        $focal = MediaPresentationRegistry::defaultFocalForSlot($slotId, $viewport);
+
+        return [
+            'focal' => $focal,
+            'scale' => 1.0,
+            'legacyUsed' => false,
+        ];
     }
 }

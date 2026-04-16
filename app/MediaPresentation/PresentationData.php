@@ -7,14 +7,17 @@ use Illuminate\Support\Facades\Log;
 /**
  * Stored presentation JSON for a slot on an entity (versioned).
  *
- * @phpstan-type FocalMap array<string, array{x: float, y: float}>
+ * **Legacy JSON key** {@code viewport_focal_map}: historically "focal map"; values are now
+ * {@see ViewportFraming} objects ({@code x}, {@code y}, {@code scale}). The key name is kept for DB compatibility.
+ *
+ * @phpstan-type ViewportFramingMap array<string, array{x: float, y: float, scale: float}>
  */
 final class PresentationData implements \JsonSerializable
 {
-    public const CURRENT_VERSION = 1;
+    public const CURRENT_VERSION = 2;
 
     /**
-     * @param  FocalMap  $viewportFocalMap  keys: default|mobile|tablet|desktop
+     * @param  ViewportFramingMap  $viewportFocalMap  keys: default|mobile|tablet|desktop
      */
     public function __construct(
         public int $version,
@@ -34,7 +37,7 @@ final class PresentationData implements \JsonSerializable
             $row = $row[0];
         }
         $version = (int) ($row['version'] ?? self::CURRENT_VERSION);
-        $map = self::normalizeFocalMap(is_array($row['viewport_focal_map'] ?? null) ? $row['viewport_focal_map'] : []);
+        $map = self::normalizeViewportFramingMap(is_array($row['viewport_focal_map'] ?? null) ? $row['viewport_focal_map'] : []);
 
         return new self($version !== 0 ? $version : self::CURRENT_VERSION, $map);
     }
@@ -46,10 +49,15 @@ final class PresentationData implements \JsonSerializable
 
     /**
      * @param  array<string, mixed>  $map
-     * @return FocalMap
+     * @return ViewportFramingMap
      */
-    private static function normalizeFocalMap(array $map): array
+    private static function normalizeViewportFramingMap(array $map): array
     {
+        if (isset($map['moblie']) && is_array($map['moblie']) && ! isset($map['mobile'])) {
+            $map['mobile'] = $map['moblie'];
+        }
+        unset($map['moblie']);
+
         $out = [];
         foreach ($map as $k => $v) {
             if (! is_string($k) || ! is_array($v)) {
@@ -60,9 +68,9 @@ final class PresentationData implements \JsonSerializable
 
                 continue;
             }
-            $fp = FocalPoint::tryFromArray($v);
-            if ($fp !== null) {
-                $out[$k] = $fp->toArray();
+            $vf = ViewportFraming::fromArray($v);
+            if ($vf !== null) {
+                $out[$k] = $vf->toArray();
             }
         }
 
@@ -70,7 +78,7 @@ final class PresentationData implements \JsonSerializable
     }
 
     /**
-     * @return array{version: int, viewport_focal_map: FocalMap}
+     * @return array{version: int, viewport_focal_map: ViewportFramingMap}
      */
     public function toArray(): array
     {

@@ -242,6 +242,16 @@ body.expert-auto-theme .tenant-thin-scrollbar::-webkit-scrollbar-thumb:hover {
     }
 }
 
+/* Framing: focal + user zoom via PHP resolver on <section>; base scale from profile (see PageHeroCoverPresentationProfile). */
+.expert-hero-cinematic__photo-layer {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+    transform: scale(calc(var(--expert-hero-base-mobile, 1.02) * var(--expert-hero-scale-mobile, 1)));
+    transform-origin: var(--expert-hero-focal-x-mobile, 82%) var(--expert-hero-focal-y-mobile, 18%);
+}
+
 .expert-hero-cinematic__photo {
     position: absolute;
     inset: 0;
@@ -249,9 +259,8 @@ body.expert-auto-theme .tenant-thin-scrollbar::-webkit-scrollbar-thumb:hover {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    /* Единый crop на всех ширинах: инструктор справа, чуть выше центра по вертикали */
-    object-position: 76% 10%;
-    transform: scale(1.02);
+    object-position: var(--expert-hero-focal-x-mobile, 82%) var(--expert-hero-focal-y-mobile, 18%);
+    transform: none;
     filter: saturate(0.92) contrast(1.05) brightness(0.92);
 }
 
@@ -261,12 +270,17 @@ body.expert-auto-theme .tenant-thin-scrollbar::-webkit-scrollbar-thumb:hover {
 
 @media (min-width: 1024px) {
     .expert-hero-cinematic__photo {
-        transform: scale(1.03);
+        object-position: var(--expert-hero-focal-x-desktop, 76%) var(--expert-hero-focal-y-desktop, 10%);
         filter: saturate(0.94) contrast(1.04) brightness(0.9);
     }
 
     .expert-hero-cinematic--photo .expert-hero-cinematic__photo {
         filter: saturate(0.98) contrast(1.02) brightness(1.08);
+    }
+
+    .expert-hero-cinematic--photo .expert-hero-cinematic__photo-layer {
+        transform: scale(calc(var(--expert-hero-base-desktop, 1.03) * var(--expert-hero-scale-desktop, 1)));
+        transform-origin: var(--expert-hero-focal-x-desktop, 76%) var(--expert-hero-focal-y-desktop, 10%);
     }
 }
 
@@ -283,12 +297,15 @@ body.expert-auto-theme .tenant-thin-scrollbar::-webkit-scrollbar-thumb:hover {
         min-height: 100svh;
     }
 
-    /* Верх кадра — лицо/фигура читаются; без сильного scale — иначе при любом изменении вьюпорта заметен рывок */
+    /* Mobile focal: vars from resolver; filter tuned for small screens */
     .expert-hero-cinematic--photo .expert-hero-cinematic__photo {
-        object-position: 82% 18%;
-        transform: scale(1.02);
-        transform-origin: 82% 18%;
+        object-position: var(--expert-hero-focal-x-mobile, 82%) var(--expert-hero-focal-y-mobile, 18%);
         filter: saturate(0.98) contrast(1.04) brightness(1.06);
+    }
+
+    .expert-hero-cinematic--photo .expert-hero-cinematic__photo-layer {
+        transform: scale(calc(var(--expert-hero-base-mobile, 1.02) * var(--expert-hero-scale-mobile, 1)));
+        transform-origin: var(--expert-hero-focal-x-mobile, 82%) var(--expert-hero-focal-y-mobile, 18%);
     }
 
     /* Верх до ~пояса без слоя: не приглушаем лицо и корпус (ниже перебивает только lg-правило overlay-base). */
@@ -373,8 +390,8 @@ body.expert-auto-theme .tenant-thin-scrollbar::-webkit-scrollbar-thumb:hover {
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .expert-hero-cinematic__photo {
-        transform: none;
+    .expert-hero-cinematic__photo-layer {
+        transform: none !important;
     }
 }
 
@@ -900,44 +917,11 @@ body.expert-auto-theme .expert-program-card__media {
     max-height: 16.25rem;
     /* Низ как у фона карточки — через «дырку» маски не вспыхивает чужой цвет */
     background: linear-gradient(180deg, #161d2e 0%, #101522 35%, #0a0d14 65%, #070910 100%);
-}
-
-@media (min-width: 640px) {
-    body.expert-auto-theme .expert-program-card__media {
-        aspect-ratio: 7 / 4.4;
-        max-height: 18.75rem;
-    }
-}
-
-@media (min-width: 1024px) {
-    body.expert-auto-theme .expert-program-card__media {
-        aspect-ratio: 2.1 / 1.1;
-        max-height: 21.5rem;
-    }
-
-    body.expert-auto-theme .expert-program-card--featured .expert-program-card__media {
-        aspect-ratio: 2.25 / 1.1;
-        max-height: 24.25rem;
-    }
-}
-
-body.expert-auto-theme .expert-program-card__media picture {
-    position: absolute;
-    inset: 0;
-    z-index: 0;
-}
-
-body.expert-auto-theme .expert-program-card__media-img {
-    position: absolute;
-    inset: 0;
-    z-index: 0;
-    display: block;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    /* Фокус задаётся CSS-переменными на article (см. ServiceProgramCardPresentationResolver) */
-    object-position: var(--svc-program-focal-x-mobile, 50%) var(--svc-program-focal-y-mobile, 52%);
-    /* Длинное мягкое «растворение» низа фото (много ступеней — без полос от бэндинга) */
+    /*
+     * Маска на рамке (не на масштабируемом img): совпадает с публичным слотом и Filament-превью.
+     * Framing: object-fit cover + object-position (focal) на img; zoom — scale() на .__media-layer с transform-origin = focal.
+     * См. ServiceProgramCardPresentationResolver::articleStyleAttribute().
+     */
     -webkit-mask-image: linear-gradient(
         to bottom,
         #000 0%,
@@ -976,9 +960,17 @@ body.expert-auto-theme .expert-program-card__media-img {
     mask-repeat: no-repeat;
 }
 
+@media (min-width: 640px) {
+    body.expert-auto-theme .expert-program-card__media {
+        aspect-ratio: 7 / 4.4;
+        max-height: 18.75rem;
+    }
+}
+
 @media (min-width: 1024px) {
-    body.expert-auto-theme .expert-program-card__media-img {
-        object-position: var(--svc-program-focal-x-desktop, 50%) var(--svc-program-focal-y-desktop, 48%);
+    body.expert-auto-theme .expert-program-card__media {
+        aspect-ratio: 2.1 / 1.1;
+        max-height: 21.5rem;
         -webkit-mask-image: linear-gradient(
             to bottom,
             #000 0%,
@@ -1011,6 +1003,50 @@ body.expert-auto-theme .expert-program-card__media-img {
             rgba(0, 0, 0, 0.04) 97.5%,
             transparent 100%
         );
+    }
+
+    body.expert-auto-theme .expert-program-card--featured .expert-program-card__media {
+        aspect-ratio: 2.25 / 1.1;
+        max-height: 24.25rem;
+    }
+}
+
+body.expert-auto-theme .expert-program-card__media-layer {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    transform: scale(var(--svc-program-scale-mobile, 1));
+    transform-origin: var(--svc-program-focal-x-mobile, 50%) var(--svc-program-focal-y-mobile, 52%);
+    will-change: transform;
+}
+
+@media (min-width: 1024px) {
+    body.expert-auto-theme .expert-program-card__media-layer {
+        transform: scale(var(--svc-program-scale-desktop, 1));
+        transform-origin: var(--svc-program-focal-x-desktop, 50%) var(--svc-program-focal-y-desktop, 48%);
+    }
+}
+
+body.expert-auto-theme .expert-program-card__media picture {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+}
+
+body.expert-auto-theme .expert-program-card__media-img {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: var(--svc-program-focal-x-mobile, 50%) var(--svc-program-focal-y-mobile, 52%);
+}
+
+@media (min-width: 1024px) {
+    body.expert-auto-theme .expert-program-card__media-img {
+        object-position: var(--svc-program-focal-x-desktop, 50%) var(--svc-program-focal-y-desktop, 48%);
     }
 }
 
@@ -1049,19 +1085,32 @@ body.expert-auto-theme .expert-program-card__media-scrim {
         filter: brightness(1.04);
     }
 
-    body.expert-auto-theme .expert-program-card:hover .expert-program-card__media-img {
-        transform: scale(1.03);
+    body.expert-auto-theme .expert-program-card:hover .expert-program-card__media-layer {
+        transform: scale(calc(var(--svc-program-scale-mobile, 1) * 1.03));
         transition: transform 0.45s ease;
     }
 
-    body.expert-auto-theme .expert-program-card .expert-program-card__media-img {
+    body.expert-auto-theme .expert-program-card .expert-program-card__media-layer {
         transition: transform 0.45s ease;
+    }
+
+    @media (min-width: 1024px) {
+        body.expert-auto-theme .expert-program-card:hover .expert-program-card__media-layer {
+            transform: scale(calc(var(--svc-program-scale-desktop, 1) * 1.03));
+        }
     }
 }
 
 @media (prefers-reduced-motion: reduce) {
-    body.expert-auto-theme .expert-program-card:hover .expert-program-card__media-img {
-        transform: none;
+    /* Без дополнительного hover-zoom к user scale */
+    body.expert-auto-theme .expert-program-card:hover .expert-program-card__media-layer {
+        transform: scale(var(--svc-program-scale-mobile, 1));
+    }
+
+    @media (min-width: 1024px) {
+        body.expert-auto-theme .expert-program-card:hover .expert-program-card__media-layer {
+            transform: scale(var(--svc-program-scale-desktop, 1));
+        }
     }
 }
 

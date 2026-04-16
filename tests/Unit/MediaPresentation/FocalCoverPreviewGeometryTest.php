@@ -35,4 +35,19 @@ final class FocalCoverPreviewGeometryTest extends TestCase
         $this->assertSame(18.3, $c['x']);
         $this->assertSame(52.4, $c['y']);
     }
+
+    public function test_round_trip_focal_translate_with_user_scale(): void
+    {
+        $iw = 1200;
+        $ih = 800;
+        $w = 360.0;
+        $h = 264.0;
+        $us = 1.2;
+        foreach ([30.0, 50.0, 72.5] as $px) {
+            $tr = FocalCoverPreviewGeometry::translateFromFocal($px, 50.0, $w, $h, $iw, $ih, $us);
+            $back = FocalCoverPreviewGeometry::focalFromTranslate($tr['tx'], $tr['ty'], $w, $h, $iw, $ih, $us);
+            $this->assertEqualsWithDelta($px, $back['x'], 0.05, "px={$px}");
+            $this->assertEqualsWithDelta(50.0, $back['y'], 0.05);
+        }
+    }
 }

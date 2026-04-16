@@ -47,7 +47,9 @@ class AdminPanelProvider extends PanelProvider
             ->renderHook(PanelsRenderHook::BODY_START, fn (): string => View::make('components.filament-tenant-storage-quota-banner')->render())
             ->renderHook(
                 PanelsRenderHook::HEAD_END,
-                fn (): string => Blade::render("@vite('resources/css/tenant-admin.css')"),
+                fn (): string => Blade::render(
+                    "@vite(['resources/css/tenant-admin.css', 'resources/js/service-program-cover-focal-editor.js'])",
+                ),
             );
 
         return $panel

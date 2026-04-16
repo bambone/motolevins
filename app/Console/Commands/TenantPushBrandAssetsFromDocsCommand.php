@@ -199,7 +199,7 @@ final class TenantPushBrandAssetsFromDocsCommand extends Command
             $data = json_decode((string) $row->data_json, true) ?: [];
             $data['hero_video_url'] = $videoUrl;
             if (trim((string) ($data['video_trigger_label'] ?? '')) === '') {
-                $data['video_trigger_label'] = 'Смотреть, как проходят занятия';
+                $data['video_trigger_label'] = 'Смотреть видео';
             }
             DB::table('page_sections')->where('id', $row->id)->update([
                 'data_json' => json_encode($data, JSON_UNESCAPED_UNICODE),

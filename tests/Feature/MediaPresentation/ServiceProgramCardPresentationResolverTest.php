@@ -27,9 +27,9 @@ final class ServiceProgramCardPresentationResolverTest extends TestCase
             'is_visible' => true,
             'sort_order' => 1,
             'cover_image_ref' => 'https://example.com/d.jpg',
-            'cover_presentation_json' => (new PresentationData(1, [
-                'mobile' => ['x' => 40.0, 'y' => 60.0],
-                'desktop' => ['x' => 55.0, 'y' => 45.0],
+            'cover_presentation_json' => (new PresentationData(2, [
+                'mobile' => ['x' => 40.0, 'y' => 60.0, 'scale' => 1.25],
+                'desktop' => ['x' => 55.0, 'y' => 45.0, 'scale' => 1.1],
             ]))->toArray(),
         ]);
 
@@ -40,6 +40,8 @@ final class ServiceProgramCardPresentationResolverTest extends TestCase
         $this->assertStringContainsString('--svc-program-focal-y-mobile: 60%', $style);
         $this->assertStringContainsString('--svc-program-focal-x-desktop: 55%', $style);
         $this->assertStringContainsString('--svc-program-focal-y-desktop: 45%', $style);
+        $this->assertStringContainsString('--svc-program-scale-mobile: 1.25', $style);
+        $this->assertStringContainsString('--svc-program-scale-desktop: 1.1', $style);
         $this->assertStringContainsString('--svc-program-mask-fade-start-mobile: 52%', $style);
         $this->assertStringContainsString('--svc-program-mask-fade-mid-desktop: 72%', $style);
     }
@@ -64,5 +66,6 @@ final class ServiceProgramCardPresentationResolverTest extends TestCase
         $this->assertTrue($r->legacyFocalUsed);
         $this->assertSame(50.0, $r->resolvedFocal->x);
         $this->assertSame(72.0, $r->resolvedFocal->y);
+        $this->assertSame(1.0, $r->resolvedUserScale);
     }
 }

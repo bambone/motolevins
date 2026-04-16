@@ -109,6 +109,7 @@
                 <label class="block text-xs font-medium text-gray-700 dark:text-gray-300" for="{{ $getId() }}-embed-cover-url">{{ __('URL изображения') }}</label>
                 <input
                     id="{{ $getId() }}-embed-cover-url"
+                    name="{{ $getId() }}-embed-cover-url"
                     type="url"
                     x-model="urlDraft"
                     class="fi-input block w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-900 dark:border-white/10 dark:bg-white/5 dark:text-white"

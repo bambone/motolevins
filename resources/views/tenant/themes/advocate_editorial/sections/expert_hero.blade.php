@@ -1,4 +1,5 @@
 @php
+    use App\MediaPresentation\ExpertHeroBackgroundPresentationResolver;
     use App\Support\Typography\RussianTypography;
     use App\Tenant\Expert\ExpertBrandMediaUrl;
     $heading = trim((string) ($data['heading'] ?? ''));
@@ -35,14 +36,23 @@
     $videoPoster = ExpertBrandMediaUrl::resolve(trim((string) ($data['hero_video_poster_url'] ?? '')));
     $videoTrigger = trim((string) ($data['video_trigger_label'] ?? ''));
     if ($videoTrigger === '') {
-        $videoTrigger = function_exists('tenant') && tenant()?->theme_key === 'advocate_editorial'
-            ? ''
-            : 'Смотреть, как проходят занятия';
+        $videoTrigger = 'Смотреть видео';
     }
     $hasVideo = $videoUrl !== '';
     $dialogId = 'expert-hero-video-'.(int) data_get($section ?? [], 'id', 0);
     $headingDisplay = RussianTypography::tiePrepositionsToNextWord($heading);
     $subDisplay = $sub !== '' ? RussianTypography::tiePrepositionsToNextWord($sub) : '';
+    $heroPresentationStyle = $hasPhoto
+        ? app(ExpertHeroBackgroundPresentationResolver::class)->sectionStyleAttribute(is_array($data) ? $data : [])
+        : '';
+    $heroSectionStyle = '';
+    if ($hasPhoto) {
+        $heroSectionStyle = $heroPresentationStyle;
+        if ($overlay) {
+            $heroSectionStyle .= '; --ex-hero-vignette: rgba(4,8,18,0.25)';
+        }
+    }
+    $heroSectionStyleAttr = $heroSectionStyle !== '' ? ' style="'.e($heroSectionStyle).'"' : '';
 @endphp
 @push('tenant-preload')
     @if($hasPhoto && $heroUrl !== '')
@@ -53,51 +63,20 @@
 <section
     class="expert-hero-cinematic relative z-0 mb-10 sm:mb-20 lg:mb-28 @if($hasPhoto) expert-hero-cinematic--photo @endif"
     data-expert-hero="1"
-    @if($hasPhoto && $overlay) style="--ex-hero-vignette: rgba(4,8,18,0.25);" @endif
+    {!! $heroSectionStyleAttr !!}
 >
-    @if($hasPhoto)
-        {{-- Первый кадр при переходе на страницу: до CSS entry object-fit по умолчанию = fill → «растянутое» лицо. Критические правила — в том же дереве, до <img>. --}}
-        <style>
-            .expert-hero-cinematic--photo .expert-hero-cinematic__photo {
-                position: absolute;
-                inset: 0;
-                z-index: 0;
-                width: 100%;
-                height: 100%;
-                object-fit: cover;
-                object-position: 68% 22%;
-                transform: scale(1.04);
-                transform-origin: 70% 24%;
-            }
-            @media (max-width: 1023px) {
-                .expert-hero-cinematic--photo .expert-hero-cinematic__photo {
-                    object-position: 58% 24%;
-                    transform: scale(1.03);
-                    transform-origin: 58% 26%;
-                }
-            }
-            @media (min-width: 1024px) {
-                .expert-hero-cinematic--photo .expert-hero-cinematic__photo {
-                    object-position: 72% 20%;
-                    transform: scale(1.05);
-                    transform-origin: 74% 22%;
-                }
-            }
-            @media (prefers-reduced-motion: reduce) {
-                .expert-hero-cinematic--photo .expert-hero-cinematic__photo { transform: none; }
-            }
-        </style>
-    @endif
     <div class="expert-hero-cinematic__bleed expert-hero-cinematic__bleed--stage">
         @if($hasPhoto)
-            <img
-                src="{{ e($heroUrl) }}"
-                alt="{{ e($heroAlt) }}"
-                class="expert-hero-cinematic__photo"
-                loading="eager"
-                fetchpriority="high"
-                decoding="async"
-            >
+            <div class="expert-hero-cinematic__photo-layer">
+                <img
+                    src="{{ e($heroUrl) }}"
+                    alt="{{ e($heroAlt) }}"
+                    class="expert-hero-cinematic__photo"
+                    loading="eager"
+                    fetchpriority="high"
+                    decoding="async"
+                >
+            </div>
         @endif
 
         @if(! $hasPhoto)

@@ -40,6 +40,7 @@
                     {{ $attributes->merge([
                         $applyStateBindingModifiers('wire:model') => $statePath,
                         'id' => $getId(),
+                        'name' => $getId(),
                     ], escape: false) }}
                     class="fi-input block w-full cursor-default rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-700 dark:border-white/10 dark:bg-white/5 dark:text-gray-200"
                     placeholder="{{ $isThemeFallbackPreview ? __('По умолчанию — фон темы (поле пустое)') : __('Ключ файла или URL появится после выбора') }}"

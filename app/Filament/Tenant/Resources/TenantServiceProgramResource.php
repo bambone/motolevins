@@ -5,14 +5,13 @@ namespace App\Filament\Tenant\Resources;
 use App\Filament\Forms\Components\TenantPublicImagePicker;
 use App\Filament\Tenant\Resources\TenantServiceProgramResource\Pages;
 use App\Filament\Tenant\Support\TenantMoneyForms;
-use App\MediaPresentation\FocalMapViewport;
-use App\MediaPresentation\MediaPresentationRegistry;
-use App\MediaPresentation\Profiles\ServiceProgramCardPresentationProfile;
 use App\MediaPresentation\PresentationData;
+use App\MediaPresentation\Profiles\ServiceProgramCardPresentationProfile;
+use App\MediaPresentation\ViewportFraming;
 use App\MediaPresentation\ViewportKey;
 use App\Models\TenantServiceProgram;
-use App\Support\Storage\TenantPublicAssetResolver;
 use App\Money\MoneyBindingRegistry;
+use App\Support\Storage\TenantPublicAssetResolver;
 use App\Tenant\Expert\ServiceProgramType;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\Hidden;
@@ -67,6 +66,7 @@ class TenantServiceProgramResource extends Resource
                         Textarea::make('description')->label('Описание')->rows(4)->columnSpanFull(),
                         Select::make('program_type')
                             ->label('Тип')
+                            ->native(true)
                             ->options(collect(ServiceProgramType::cases())->mapWithKeys(
                                 fn (ServiceProgramType $t): array => [$t->value => $t->label()]
                             ))
@@ -78,7 +78,10 @@ class TenantServiceProgramResource extends Resource
                         TextInput::make('price_prefix')->label('Префикс цены («от» и т.п.)')->maxLength(32),
                         Toggle::make('is_featured')->label('Избранное (широкая карточка)'),
                         Toggle::make('is_visible')->label('Видимость на сайте')->default(true),
-                        TextInput::make('sort_order')->numeric()->default(0),
+                        TextInput::make('sort_order')
+                            ->label('Порядок в списке')
+                            ->numeric()
+                            ->default(0),
                     ])->columns(2),
                 Section::make('Тексты на карточке программы')
                     ->schema([
@@ -145,10 +148,21 @@ class TenantServiceProgramResource extends Resource
                                 $safeArea = ServiceProgramCardPresentationProfile::safeAreaBottomBand();
                                 $cover = $get('cover_presentation') ?? [];
                                 $map = is_array($cover['viewport_focal_map'] ?? null) ? $cover['viewport_focal_map'] : [];
-                                $mx = (float) ($map['mobile']['x'] ?? 50);
-                                $my = (float) ($map['mobile']['y'] ?? 52);
-                                $dx = (float) ($map['desktop']['x'] ?? 50);
-                                $dy = (float) ($map['desktop']['y'] ?? 48);
+                                $mobileFr = ViewportFraming::fromArray(is_array($map['mobile'] ?? null) ? $map['mobile'] : null);
+                                $tabletFr = ViewportFraming::fromArray(is_array($map['tablet'] ?? null) ? $map['tablet'] : null);
+                                $desktopFr = ViewportFraming::fromArray(is_array($map['desktop'] ?? null) ? $map['desktop'] : null);
+                                $defM = ServiceProgramCardPresentationProfile::defaultFocalForViewport(ViewportKey::Mobile);
+                                $defT = ServiceProgramCardPresentationProfile::defaultFocalForViewport(ViewportKey::Tablet);
+                                $defD = ServiceProgramCardPresentationProfile::defaultFocalForViewport(ViewportKey::Desktop);
+                                $mx = $mobileFr ? $mobileFr->x : $defM->x;
+                                $my = $mobileFr ? $mobileFr->y : $defM->y;
+                                $ms = $mobileFr ? $mobileFr->scale : ServiceProgramCardPresentationProfile::FRAMING_SCALE_DEFAULT;
+                                $tx = $tabletFr ? $tabletFr->x : $defT->x;
+                                $ty = $tabletFr ? $tabletFr->y : $defT->y;
+                                $ts = $tabletFr ? $tabletFr->scale : ServiceProgramCardPresentationProfile::FRAMING_SCALE_DEFAULT;
+                                $dx = $desktopFr ? $desktopFr->x : $defD->x;
+                                $dy = $desktopFr ? $desktopFr->y : $defD->y;
+                                $ds = $desktopFr ? $desktopFr->scale : ServiceProgramCardPresentationProfile::FRAMING_SCALE_DEFAULT;
                                 $tenantId = $t ? (int) $t->id : 0;
                                 $desktopUrl = $tenantId !== 0
                                     ? TenantPublicAssetResolver::resolve(trim((string) ($get('cover_image_ref') ?? '')), $tenantId)
@@ -165,15 +179,6 @@ class TenantServiceProgramResource extends Resource
                                     : 'Общий баннер (как на сайте)';
                                 $desktopSourceLabel = 'Баннер для компьютера';
 
-                                $tabletFocal = FocalMapViewport::pickFocalFromMap($map, ViewportKey::Tablet)
-                                    ?? MediaPresentationRegistry::defaultFocalForSlot(
-                                        ServiceProgramCardPresentationProfile::SLOT_ID,
-                                        ViewportKey::Tablet
-                                    );
-
-                                $defM = ServiceProgramCardPresentationProfile::defaultFocalForViewport(ViewportKey::Mobile);
-                                $defD = ServiceProgramCardPresentationProfile::defaultFocalForViewport(ViewportKey::Desktop);
-
                                 $tiles = [];
                                 foreach ($frames as $frame) {
                                     $key = (string) ($frame['key'] ?? '');
@@ -185,10 +190,10 @@ class TenantServiceProgramResource extends Resource
                                         $src = $desktopUrl;
                                         $sourceLabel = $desktopSourceLabel;
                                     } elseif ($isTablet) {
-                                        $fx = $tabletFocal->x;
-                                        $fy = $tabletFocal->y;
+                                        $fx = $tx;
+                                        $fy = $ty;
                                         $src = $mobileUrl;
-                                        $sourceLabel = $mobileSourceLabel.' · предпросмотр по fallback';
+                                        $sourceLabel = $mobileSourceLabel.' · планшет (768–1023px)';
                                     } else {
                                         $fx = $mx;
                                         $fy = $my;
@@ -203,7 +208,7 @@ class TenantServiceProgramResource extends Resource
                                         'fx' => $fx,
                                         'fy' => $fy,
                                         'src' => $src,
-                                        'editable' => $isDesktop || $key === 'mobile',
+                                        'editable' => $isDesktop || $isTablet || $key === 'mobile',
                                         'sourceLabel' => $sourceLabel,
                                     ];
                                 }
@@ -214,15 +219,35 @@ class TenantServiceProgramResource extends Resource
                                     $get('cover_mobile_ref'),
                                     $map,
                                     $syncDefault,
+                                    $ms,
+                                    $ts,
+                                    $ds,
                                 ]));
 
                                 $editorConfig = [
-                                    'mobile' => ['x' => $mx, 'y' => $my],
-                                    'desktop' => ['x' => $dx, 'y' => $dy],
+                                    'mobile' => ['x' => $mx, 'y' => $my, 's' => $ms],
+                                    'tablet' => ['x' => $tx, 'y' => $ty, 's' => $ts],
+                                    'desktop' => ['x' => $dx, 'y' => $dy, 's' => $ds],
                                     'defaults' => [
-                                        'mobile' => ['x' => $defM->x, 'y' => $defM->y],
-                                        'desktop' => ['x' => $defD->x, 'y' => $defD->y],
+                                        'mobile' => [
+                                            'x' => $defM->x,
+                                            'y' => $defM->y,
+                                            's' => ServiceProgramCardPresentationProfile::FRAMING_SCALE_DEFAULT,
+                                        ],
+                                        'tablet' => [
+                                            'x' => $defT->x,
+                                            'y' => $defT->y,
+                                            's' => ServiceProgramCardPresentationProfile::FRAMING_SCALE_DEFAULT,
+                                        ],
+                                        'desktop' => [
+                                            'x' => $defD->x,
+                                            'y' => $defD->y,
+                                            's' => ServiceProgramCardPresentationProfile::FRAMING_SCALE_DEFAULT,
+                                        ],
                                     ],
+                                    'scaleMin' => ServiceProgramCardPresentationProfile::FRAMING_SCALE_MIN,
+                                    'scaleMax' => ServiceProgramCardPresentationProfile::FRAMING_SCALE_MAX,
+                                    'scaleStep' => ServiceProgramCardPresentationProfile::FRAMING_SCALE_STEP,
                                     'wirePathPrefix' => 'data.cover_presentation.viewport_focal_map',
                                     'syncDefault' => $syncDefault,
                                 ];
@@ -237,10 +262,10 @@ class TenantServiceProgramResource extends Resource
                                 ];
                             })
                             ->columnSpanFull(),
-                        Grid::make(['default' => 1, 'lg' => 2])
+                        Grid::make(['default' => 1, 'lg' => 3])
                             ->schema([
-                                Section::make('Фокус mobile (узкий экран)')
-                                    ->description('До 1023px; дублирует перетаскивание в превью.')
+                                Section::make('Кадр mobile (узкий экран)')
+                                    ->description('До 767px; дублирует превью (фокус + zoom).')
                                     ->schema([
                                         TextInput::make('cover_presentation.viewport_focal_map.mobile.x')
                                             ->label('X %')
@@ -258,8 +283,56 @@ class TenantServiceProgramResource extends Resource
                                             ->step(0.1)
                                             ->required()
                                             ->live(debounce: 400),
-                                    ])->columns(2),
-                                Section::make('Фокус desktop')
+                                        TextInput::make('cover_presentation.viewport_focal_map.mobile.scale')
+                                            ->label('Zoom (множитель)')
+                                            ->numeric()
+                                            ->minValue(ServiceProgramCardPresentationProfile::FRAMING_SCALE_MIN)
+                                            ->maxValue(ServiceProgramCardPresentationProfile::FRAMING_SCALE_MAX)
+                                            ->step(ServiceProgramCardPresentationProfile::FRAMING_SCALE_STEP)
+                                            ->required()
+                                            ->live(debounce: 400)
+                                            ->helperText(sprintf(
+                                                'Диапазон %.2f–%.2f, шаг %.2f (как в превью).',
+                                                ServiceProgramCardPresentationProfile::FRAMING_SCALE_MIN,
+                                                ServiceProgramCardPresentationProfile::FRAMING_SCALE_MAX,
+                                                ServiceProgramCardPresentationProfile::FRAMING_SCALE_STEP
+                                            )),
+                                    ])->columns(3),
+                                Section::make('Кадр tablet')
+                                    ->description('768–1023px; в превью и в JSON хранится отдельно от mobile/desktop.')
+                                    ->schema([
+                                        TextInput::make('cover_presentation.viewport_focal_map.tablet.x')
+                                            ->label('X %')
+                                            ->numeric()
+                                            ->minValue(0)
+                                            ->maxValue(100)
+                                            ->step(0.1)
+                                            ->required()
+                                            ->live(debounce: 400),
+                                        TextInput::make('cover_presentation.viewport_focal_map.tablet.y')
+                                            ->label('Y %')
+                                            ->numeric()
+                                            ->minValue(0)
+                                            ->maxValue(100)
+                                            ->step(0.1)
+                                            ->required()
+                                            ->live(debounce: 400),
+                                        TextInput::make('cover_presentation.viewport_focal_map.tablet.scale')
+                                            ->label('Zoom (множитель)')
+                                            ->numeric()
+                                            ->minValue(ServiceProgramCardPresentationProfile::FRAMING_SCALE_MIN)
+                                            ->maxValue(ServiceProgramCardPresentationProfile::FRAMING_SCALE_MAX)
+                                            ->step(ServiceProgramCardPresentationProfile::FRAMING_SCALE_STEP)
+                                            ->required()
+                                            ->live(debounce: 400)
+                                            ->helperText(sprintf(
+                                                'Диапазон %.2f–%.2f, шаг %.2f (как в превью).',
+                                                ServiceProgramCardPresentationProfile::FRAMING_SCALE_MIN,
+                                                ServiceProgramCardPresentationProfile::FRAMING_SCALE_MAX,
+                                                ServiceProgramCardPresentationProfile::FRAMING_SCALE_STEP
+                                            )),
+                                    ])->columns(3),
+                                Section::make('Кадр desktop')
                                     ->description('От 1024px')
                                     ->schema([
                                         TextInput::make('cover_presentation.viewport_focal_map.desktop.x')
@@ -278,7 +351,21 @@ class TenantServiceProgramResource extends Resource
                                             ->step(0.1)
                                             ->required()
                                             ->live(debounce: 400),
-                                    ])->columns(2),
+                                        TextInput::make('cover_presentation.viewport_focal_map.desktop.scale')
+                                            ->label('Zoom (множитель)')
+                                            ->numeric()
+                                            ->minValue(ServiceProgramCardPresentationProfile::FRAMING_SCALE_MIN)
+                                            ->maxValue(ServiceProgramCardPresentationProfile::FRAMING_SCALE_MAX)
+                                            ->step(ServiceProgramCardPresentationProfile::FRAMING_SCALE_STEP)
+                                            ->required()
+                                            ->live(debounce: 400)
+                                            ->helperText(sprintf(
+                                                'Диапазон %.2f–%.2f, шаг %.2f (как в превью).',
+                                                ServiceProgramCardPresentationProfile::FRAMING_SCALE_MIN,
+                                                ServiceProgramCardPresentationProfile::FRAMING_SCALE_MAX,
+                                                ServiceProgramCardPresentationProfile::FRAMING_SCALE_STEP
+                                            )),
+                                    ])->columns(3),
                             ])
                             ->columnSpanFull(),
                     ]),

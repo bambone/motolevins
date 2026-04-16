@@ -87,21 +87,23 @@
 
                     @if($hasPaneMedia)
                         <div class="expert-program-card__media order-1 w-full shrink-0">
-                            <picture>
-                                @if($useMobileSource)
-                                    <source media="(max-width: 1023px)" srcset="{{ e($mobileUrl) }}" />
-                                @endif
-                                <img
-                                    src="{{ e($desktopUrl) }}"
-                                    alt="{{ e($coverAlt) }}"
-                                    class="expert-program-card__media-img h-full w-full object-cover"
-                                    width="1200"
-                                    height="640"
-                                    loading="{{ $pi < 3 ? 'eager' : 'lazy' }}"
-                                    decoding="async"
-                                    onerror="var w=this.closest('.expert-program-card__media');if(w)w.remove()"
-                                />
-                            </picture>
+                            <div class="expert-program-card__media-layer">
+                                <picture>
+                                    @if($useMobileSource)
+                                        <source media="(max-width: 1023px)" srcset="{{ e($mobileUrl) }}" />
+                                    @endif
+                                    <img
+                                        src="{{ e($desktopUrl) }}"
+                                        alt="{{ e($coverAlt) }}"
+                                        class="expert-program-card__media-img h-full w-full object-cover"
+                                        width="1200"
+                                        height="640"
+                                        loading="{{ $pi < 3 ? 'eager' : 'lazy' }}"
+                                        decoding="async"
+                                        onerror="var w=this.closest('.expert-program-card__media');if(w)w.remove()"
+                                    />
+                                </picture>
+                            </div>
                             <div class="expert-program-card__media-scrim" aria-hidden="true"></div>
                         </div>
                     @endif

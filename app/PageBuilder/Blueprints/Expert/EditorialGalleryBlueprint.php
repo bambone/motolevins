@@ -5,6 +5,10 @@ namespace App\PageBuilder\Blueprints\Expert;
 use App\Filament\Forms\Components\TenantPublicEditorialGalleryPoster;
 use App\Filament\Forms\Components\TenantPublicMediaPicker;
 use App\Filament\Tenant\PageBuilder\TeleportedEditorRepeater;
+use App\MediaPresentation\FramingPresentationSummaryResolver;
+use App\MediaPresentation\MediaPresentationRegistry;
+use App\MediaPresentation\PresentationData;
+use App\MediaPresentation\Profiles\PageEditorialGalleryItemPresentationProfile;
 use App\PageBuilder\Expert\EditorialGalleryExternalArticlePreviewApplier;
 use App\PageBuilder\PageSectionCategory;
 use App\Rules\EditorialGalleryAssetUrlRule;
@@ -15,13 +19,16 @@ use App\Services\LinkPreview\ExternalArticlePreviewFetcherInterface;
 use App\Tenant\Expert\VideoEmbedUrlNormalizer;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Hidden;
+use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
+use Filament\Schemas\Components\Section as SchemaSection;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
+use Illuminate\Support\HtmlString;
 
 final class EditorialGalleryBlueprint extends ExpertSectionBlueprint
 {
@@ -82,6 +89,30 @@ final class EditorialGalleryBlueprint extends ExpertSectionBlueprint
         ];
     }
 
+    /**
+     * @param  array<string, mixed>  $dataJson
+     * @return array<string, mixed>
+     */
+    public static function normalizePresentationForEditor(array $dataJson): array
+    {
+        $items = $dataJson['items'] ?? null;
+        if (! is_array($items)) {
+            return $dataJson;
+        }
+        foreach ($items as $k => $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+            if (($row['media_kind'] ?? '') === 'image') {
+                $row['presentation_image'] = PresentationData::fromArray($row['presentation_image'] ?? null)->toArray();
+                $items[$k] = $row;
+            }
+        }
+        $dataJson['items'] = $items;
+
+        return $dataJson;
+    }
+
     public function formComponents(): array
     {
         return [
@@ -99,6 +130,7 @@ final class EditorialGalleryBlueprint extends ExpertSectionBlueprint
                             $seed = [
                                 'media_kind' => 'image',
                                 'source_new_tab' => true,
+                                'presentation_image' => PresentationData::empty()->toArray(),
                             ];
                             if ($newUuid) {
                                 $items[$newUuid] = $seed;
@@ -282,6 +314,31 @@ final class EditorialGalleryBlueprint extends ExpertSectionBlueprint
                             fn ($get): array => ($get('media_kind') ?? '') === 'image'
                                 ? [new EditorialGalleryAssetUrlRule(EditorialGalleryAssetUrlRule::KIND_IMAGE)]
                                 : [],
+                        ]),
+                    // Wire path для будущего редактора: PageSectionFormWirePath::repeaterItemPresentationWirePathPrefix('presentation_image', <uuid>)
+                    SchemaSection::make('Кадрирование (фото)')
+                        ->description('Пока отображается только статус (данные framing в JSON сохраняются). Интерактивный редактор с превью для ячеек галереи будет подключён отдельно — не разворачивайте этот блок у всех материалов сразу на одной странице.')
+                        ->collapsed()
+                        ->visible(fn ($get): bool => ($get('media_kind') ?? '') === 'image')
+                        ->schema([
+                            Placeholder::make('presentation_image_framing_summary')
+                                ->hiddenLabel()
+                                ->content(function (Get $get): HtmlString {
+                                    $row = $get('presentation_image');
+                                    $profile = MediaPresentationRegistry::profile(PageEditorialGalleryItemPresentationProfile::SLOT_ID);
+                                    $label = app(FramingPresentationSummaryResolver::class)->summarize(is_array($row) ? $row : null, $profile)['label'];
+
+                                    return new HtmlString(
+                                        '<div class="space-y-1">'
+                                        .'<p class="text-sm font-medium text-gray-700 dark:text-gray-300">'.e('Статус').'</p>'
+                                        .'<p class="text-sm text-gray-600 dark:text-gray-400">'.e($label).'</p>'
+                                        .'</div>'
+                                    );
+                                })
+                                ->dehydrated(false),
+                            Hidden::make('presentation_image.version')
+                                ->default(PresentationData::CURRENT_VERSION)
+                                ->dehydrated(),
                         ]),
                     TenantPublicMediaPicker::make('video_url')
                         ->label('Видеофайл')

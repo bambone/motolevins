@@ -15,6 +15,8 @@ final readonly class ResolvedPresentation
     public function __construct(
         public ?string $resolvedSourceUrl,
         public FocalPoint $resolvedFocal,
+        /** User zoom on top of cover-fit (≥ 1). */
+        public float $resolvedUserScale,
         public array $overlayCssVariables,
         public ?ViewportKey $activeViewportKey,
         public array $safeAreaMeta,
