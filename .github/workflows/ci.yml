@@ -425,10 +425,13 @@ jobs:
             exit 1
           fi
 
-          echo "Post-deploy smoke: waiting 5s after deploy restarts..."
-          sleep 5
+          # PHP-FPM / nginx / queue just restarted; give the stack a moment before probing.
+          echo "Post-deploy smoke: waiting 12s after deploy restarts..."
+          sleep 12
 
-          curl_common=( -fsSL --connect-timeout 10 --max-time 30 --retry 3 --retry-delay 2 --retry-connrefused -o /dev/null )
+          # HEAD (-I) checks HTTP availability without downloading full HTML (faster after cold start; avoids long body + partial-transfer quirks).
+          # -L follows redirects; generous limits tolerate slow TLS / first-byte after restart.
+          curl_common=( -fsSL --connect-timeout 25 --max-time 75 --retry 3 --retry-delay 4 --retry-connrefused -o /dev/null -I -L )
 
           check_url() {
             local label="$1" url="$2"
