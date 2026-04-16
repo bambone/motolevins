@@ -5,8 +5,11 @@ namespace App\Filament\Tenant\Resources;
 use App\Filament\Forms\Components\TenantPublicImagePicker;
 use App\Filament\Tenant\Resources\TenantServiceProgramResource\Pages;
 use App\Filament\Tenant\Support\TenantMoneyForms;
+use App\MediaPresentation\FocalMapViewport;
+use App\MediaPresentation\MediaPresentationRegistry;
 use App\MediaPresentation\Profiles\ServiceProgramCardPresentationProfile;
 use App\MediaPresentation\PresentationData;
+use App\MediaPresentation\ViewportKey;
 use App\Models\TenantServiceProgram;
 use App\Support\Storage\TenantPublicAssetResolver;
 use App\Money\MoneyBindingRegistry;
@@ -126,49 +129,12 @@ class TenantServiceProgramResource extends Resource
                         Hidden::make('cover_presentation.version')
                             ->default(PresentationData::CURRENT_VERSION)
                             ->dehydrated(),
-                        Grid::make(['default' => 1, 'lg' => 2])
-                            ->schema([
-                                Section::make('Фокус (mobile / узкий экран)')
-                                    ->description('До 1023px; при отдельном файле для телефона превью покажет его.')
-                                    ->schema([
-                                        TextInput::make('cover_presentation.viewport_focal_map.mobile.x')
-                                            ->label('X %')
-                                            ->numeric()
-                                            ->minValue(0)
-                                            ->maxValue(100)
-                                            ->step(0.1)
-                                            ->required()
-                                            ->live(onBlur: true),
-                                        TextInput::make('cover_presentation.viewport_focal_map.mobile.y')
-                                            ->label('Y %')
-                                            ->numeric()
-                                            ->minValue(0)
-                                            ->maxValue(100)
-                                            ->step(0.1)
-                                            ->required()
-                                            ->live(onBlur: true),
-                                    ])->columns(2),
-                                Section::make('Фокус (desktop)')
-                                    ->description('От 1024px')
-                                    ->schema([
-                                        TextInput::make('cover_presentation.viewport_focal_map.desktop.x')
-                                            ->label('X %')
-                                            ->numeric()
-                                            ->minValue(0)
-                                            ->maxValue(100)
-                                            ->step(0.1)
-                                            ->required()
-                                            ->live(onBlur: true),
-                                        TextInput::make('cover_presentation.viewport_focal_map.desktop.y')
-                                            ->label('Y %')
-                                            ->numeric()
-                                            ->minValue(0)
-                                            ->maxValue(100)
-                                            ->step(0.1)
-                                            ->required()
-                                            ->live(onBlur: true),
-                                    ])->columns(2),
-                            ])
+                        Toggle::make('cover_focal_sync_mobile_desktop')
+                            ->label('Синхронизировать mobile и desktop')
+                            ->helperText('Включено: перетаскивание и сброс меняют оба кадра. Выключено: правьте отдельно или скопируйте кнопками в превью.')
+                            ->default(true)
+                            ->dehydrated(false)
+                            ->live()
                             ->columnSpanFull(),
                         ViewField::make('cover_presentation_preview')
                             ->hiddenLabel()
@@ -194,28 +160,126 @@ class TenantServiceProgramResource extends Resource
                                     $mobileUrl = $desktopUrl;
                                 }
 
+                                $mobileSourceLabel = (trim((string) ($get('cover_mobile_ref') ?? '')) !== '')
+                                    ? 'Мобильный файл'
+                                    : 'Общий баннер (как на сайте)';
+                                $desktopSourceLabel = 'Баннер для компьютера';
+
+                                $tabletFocal = FocalMapViewport::pickFocalFromMap($map, ViewportKey::Tablet)
+                                    ?? MediaPresentationRegistry::defaultFocalForSlot(
+                                        ServiceProgramCardPresentationProfile::SLOT_ID,
+                                        ViewportKey::Tablet
+                                    );
+
+                                $defM = ServiceProgramCardPresentationProfile::defaultFocalForViewport(ViewportKey::Mobile);
+                                $defD = ServiceProgramCardPresentationProfile::defaultFocalForViewport(ViewportKey::Desktop);
+
                                 $tiles = [];
                                 foreach ($frames as $frame) {
                                     $key = (string) ($frame['key'] ?? '');
                                     $isDesktop = $key === 'desktop';
-                                    $fx = $isDesktop ? $dx : $mx;
-                                    $fy = $isDesktop ? $dy : $my;
-                                    $src = $isDesktop ? $desktopUrl : $mobileUrl;
+                                    $isTablet = $key === 'tablet';
+                                    if ($isDesktop) {
+                                        $fx = $dx;
+                                        $fy = $dy;
+                                        $src = $desktopUrl;
+                                        $sourceLabel = $desktopSourceLabel;
+                                    } elseif ($isTablet) {
+                                        $fx = $tabletFocal->x;
+                                        $fy = $tabletFocal->y;
+                                        $src = $mobileUrl;
+                                        $sourceLabel = $mobileSourceLabel.' · предпросмотр по fallback';
+                                    } else {
+                                        $fx = $mx;
+                                        $fy = $my;
+                                        $src = $mobileUrl;
+                                        $sourceLabel = $mobileSourceLabel;
+                                    }
                                     $tiles[] = [
+                                        'key' => $key,
                                         'label' => (string) ($frame['label'] ?? $key),
                                         'width' => (int) ($frame['width'] ?? 200),
                                         'height' => (int) ($frame['height'] ?? 120),
                                         'fx' => $fx,
                                         'fy' => $fy,
                                         'src' => $src,
+                                        'editable' => $isDesktop || $key === 'mobile',
+                                        'sourceLabel' => $sourceLabel,
                                     ];
                                 }
+
+                                $syncDefault = (bool) ($get('cover_focal_sync_mobile_desktop') ?? true);
+                                $previewKey = hash('sha256', (string) json_encode([
+                                    $get('cover_image_ref'),
+                                    $get('cover_mobile_ref'),
+                                    $map,
+                                    $syncDefault,
+                                ]));
+
+                                $editorConfig = [
+                                    'mobile' => ['x' => $mx, 'y' => $my],
+                                    'desktop' => ['x' => $dx, 'y' => $dy],
+                                    'defaults' => [
+                                        'mobile' => ['x' => $defM->x, 'y' => $defM->y],
+                                        'desktop' => ['x' => $defD->x, 'y' => $defD->y],
+                                    ],
+                                    'wirePathPrefix' => 'data.cover_presentation.viewport_focal_map',
+                                    'syncDefault' => $syncDefault,
+                                ];
 
                                 return [
                                     'tiles' => $tiles,
                                     'safeArea' => $safeArea,
+                                    'editorConfig' => $editorConfig,
+                                    'previewKey' => $previewKey,
+                                    'overlayMobile' => ServiceProgramCardPresentationProfile::overlayVariablesMobile(),
+                                    'overlayDesktop' => ServiceProgramCardPresentationProfile::overlayVariablesDesktop(),
                                 ];
                             })
+                            ->columnSpanFull(),
+                        Grid::make(['default' => 1, 'lg' => 2])
+                            ->schema([
+                                Section::make('Фокус mobile (узкий экран)')
+                                    ->description('До 1023px; дублирует перетаскивание в превью.')
+                                    ->schema([
+                                        TextInput::make('cover_presentation.viewport_focal_map.mobile.x')
+                                            ->label('X %')
+                                            ->numeric()
+                                            ->minValue(0)
+                                            ->maxValue(100)
+                                            ->step(0.1)
+                                            ->required()
+                                            ->live(debounce: 400),
+                                        TextInput::make('cover_presentation.viewport_focal_map.mobile.y')
+                                            ->label('Y %')
+                                            ->numeric()
+                                            ->minValue(0)
+                                            ->maxValue(100)
+                                            ->step(0.1)
+                                            ->required()
+                                            ->live(debounce: 400),
+                                    ])->columns(2),
+                                Section::make('Фокус desktop')
+                                    ->description('От 1024px')
+                                    ->schema([
+                                        TextInput::make('cover_presentation.viewport_focal_map.desktop.x')
+                                            ->label('X %')
+                                            ->numeric()
+                                            ->minValue(0)
+                                            ->maxValue(100)
+                                            ->step(0.1)
+                                            ->required()
+                                            ->live(debounce: 400),
+                                        TextInput::make('cover_presentation.viewport_focal_map.desktop.y')
+                                            ->label('Y %')
+                                            ->numeric()
+                                            ->minValue(0)
+                                            ->maxValue(100)
+                                            ->step(0.1)
+                                            ->required()
+                                            ->live(debounce: 400),
+                                    ])->columns(2),
+                            ])
                             ->columnSpanFull(),
                     ]),
             ]);

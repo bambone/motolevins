@@ -115,7 +115,7 @@ final class ServiceProgramCardPresentationResolver
         $map = $presentation instanceof PresentationData ? $presentation->viewportFocalMap : [];
 
         $legacyUsed = false;
-        $focal = $this->pickFocalFromMap($map, $viewport);
+        $focal = FocalMapViewport::pickFocalFromMap($map, $viewport);
         if ($focal === null) {
             $legacy = LegacyCoverObjectPositionParser::parse($program->cover_object_position);
             if ($legacy !== null) {
@@ -128,29 +128,5 @@ final class ServiceProgramCardPresentationResolver
         }
 
         return ['focal' => $focal, 'legacyUsed' => $legacyUsed];
-    }
-
-    /**
-     * @param  array<string, array{x: float, y: float}>  $map
-     */
-    private function pickFocalFromMap(array $map, ViewportKey $viewport): ?FocalPoint
-    {
-        $order = match ($viewport) {
-            ViewportKey::Tablet => ['tablet', 'mobile', 'default'],
-            ViewportKey::Mobile => ['mobile', 'default'],
-            ViewportKey::Desktop => ['desktop', 'default'],
-            ViewportKey::Default => ['default'],
-        };
-        foreach ($order as $k) {
-            if (! isset($map[$k])) {
-                continue;
-            }
-            $fp = FocalPoint::tryFromArray($map[$k]);
-            if ($fp !== null) {
-                return $fp;
-            }
-        }
-
-        return null;
     }
 }

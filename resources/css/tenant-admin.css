@@ -1323,3 +1323,17 @@ html.dark .page-sections-builder-root .psb-input-field:focus {
 .page-sections-builder-root .psb-menu-panel a {
     text-decoration: none;
 }
+
+[x-cloak] {
+    display: none !important;
+}
+
+/* Service program cover focal editor (tenant Filament) */
+.svc-program-focal-frame {
+    touch-action: none;
+    cursor: grab;
+}
+
+.svc-program-focal-frame:active {
+    cursor: grabbing;
+}
