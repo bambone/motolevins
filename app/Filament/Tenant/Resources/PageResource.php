@@ -60,7 +60,10 @@ class PageResource extends Resource
                                     RichEditor::make('primary_html')
                                         ->label('Текст страницы')
                                         ->columnSpanFull()
-                                        ->extraInputAttributes(['class' => 'tenant-page-primary-html-editor'])
+                                        ->extraInputAttributes([
+                                            'class' => 'tenant-page-primary-html-editor',
+                                            'data-setup-focus-target' => '',
+                                        ])
                                 )->helperText('Этот текст выводится на публичной странице в основном блоке.'),
                             ])
                             ->columnSpan(['default' => 1, 'lg' => 8]),

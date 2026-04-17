@@ -13,7 +13,7 @@ final class SetupItemUrlResolver
 {
     public function urlFor(Tenant $tenant, SetupItemDefinition $def): ?string
     {
-        if ($def->key === 'programs.first_published_program') {
+        if ($def->key === 'programs.first_published_program' || $def->key === 'programs.two_visible_programs') {
             if (Route::has('filament.admin.resources.tenant-service-programs.create')) {
                 return route('filament.admin.resources.tenant-service-programs.create', [], true);
             }
@@ -32,7 +32,11 @@ final class SetupItemUrlResolver
                 return PageResource::getUrl('index');
             }
 
-            return PageResource::getUrl('edit', ['record' => $page]);
+            $url = PageResource::getUrl('edit', ['record' => $page]);
+            $sep = str_contains($url, '?') ? '&' : '?';
+
+            // Вкладка «Секции страницы»: Filament v5 — query `relation` (см. HasRelationManagers::$activeRelationManager).
+            return $url.$sep.'relation='.rawurlencode('0');
         }
 
         if ($def->filamentRouteName === null) {

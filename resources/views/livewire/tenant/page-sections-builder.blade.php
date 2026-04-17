@@ -222,6 +222,9 @@
                         wire:key="section-card-{{ $row['id'] }}"
                         @if($sortableEnabled) x-sortable-item="{{ $row['id'] }}" @endif
                         class="{{ $cardClass }}"
+                        @if($pageCtx->isHome)
+                            data-setup-section-type="{{ $row['type_id'] }}"
+                        @endif
                     >
                         <div class="flex flex-col gap-2 p-2.5 sm:flex-row sm:items-stretch sm:gap-3 sm:p-3 cursor-pointer transition hover:bg-black/[0.02] dark:hover:bg-white/[0.02]" wire:click="toggleExpanded({{ $row['id'] }})">
                             <div class="flex flex-shrink-0 items-start gap-2 sm:w-[3.5rem] sm:flex-col sm:items-center sm:pt-0.5">
@@ -289,7 +292,15 @@
                             </div>
 
                             <div class="flex flex-shrink-0 flex-col justify-center gap-1.5 border-t pt-3 sm:w-[8rem] sm:border-t-0 sm:pt-0 sm:pl-3" style="border-color: var(--psb-border)" wire:click.stop>
-                                <button type="button" wire:click.stop="startEdit({{ $row['id'] }})" class="fi-btn fi-color-custom fi-btn-color-primary inline-flex min-h-8 w-full items-center justify-center rounded-lg px-3 py-1.5 text-[11.5px] font-semibold text-white shadow-sm transition" style="background-color: var(--primary-600); --fi-color: var(--primary-600)">
+                                <button
+                                    type="button"
+                                    wire:click.stop="startEdit({{ $row['id'] }})"
+                                    @if($pageCtx->isHome && $isHero)
+                                        data-setup-focus-target=""
+                                    @endif
+                                    class="fi-btn fi-color-custom fi-btn-color-primary inline-flex min-h-8 w-full items-center justify-center rounded-lg px-3 py-1.5 text-[11.5px] font-semibold text-white shadow-sm transition"
+                                    style="background-color: var(--primary-600); --fi-color: var(--primary-600)"
+                                >
                                     Редактировать
                                 </button>
                                 <div class="flex items-center justify-center gap-0.5 mt-0.5">

@@ -7,6 +7,7 @@ use App\TenantSiteSetup\SetupApplicabilityEvaluator;
 use App\TenantSiteSetup\SetupCompletionEvaluator;
 use App\TenantSiteSetup\SetupItemRegistry;
 use App\TenantSiteSetup\SetupItemUrlResolver;
+use App\TenantSiteSetup\SetupLaunchContextPresenter;
 use App\TenantSiteSetup\SetupLaunchCtaSpec;
 use App\TenantSiteSetup\SetupLaunchUiGroupMapper;
 use App\TenantSiteSetup\SetupProgressService;
@@ -166,6 +167,22 @@ class TenantSiteSetupCenterPage extends Page
         }
 
         return app(SetupProgressService::class)->summary($tenant);
+    }
+
+    /**
+     * Дорожки, цель сайта и пояснения для секции «Запуск» (P1).
+     *
+     * @return array<string, mixed>
+     */
+    public function getLaunchContextProperty(): array
+    {
+        $tenant = currentTenant();
+        $user = Auth::user();
+        if ($tenant === null || $user === null) {
+            return [];
+        }
+
+        return app(SetupLaunchContextPresenter::class)->present($tenant, $user)->toArray();
     }
 
     /**

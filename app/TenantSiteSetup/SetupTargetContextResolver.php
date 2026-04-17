@@ -14,6 +14,14 @@ use Illuminate\Support\Facades\Route;
  */
 final class SetupTargetContextResolver
 {
+    /**
+     * Ключ вкладки relation manager на {@see \Filament\Resources\Pages\EditRecord} с combined tabs:
+     * первый менеджер из {@see \App\Filament\Tenant\Resources\PageResource::getRelations()} — индекс 0.
+     *
+     * @see \Filament\Resources\Pages\Concerns\HasRelationManagers::$activeRelationManager
+     */
+    private const HOME_PAGE_SECTIONS_RELATION_TAB = '0';
+
     public function __construct(
         private readonly SetupItemUrlResolver $urls,
     ) {}
@@ -25,6 +33,9 @@ final class SetupTargetContextResolver
      *     target_url: ?string,
      *     settings_tab_active: ?string,
      *     settings_tab_matches: ?bool,
+     *     page_edit_relation_tab: ?string,
+     *     page_edit_relation_active: ?string,
+     *     page_edit_relation_matches: ?bool,
      *     target_context_mismatch: ?string,
      * }
      */
@@ -33,20 +44,26 @@ final class SetupTargetContextResolver
         $targetUrl = $this->urls->urlFor($tenant, $def);
         $currentName = $request->route()?->getName();
 
-        $tabState = $this->settingsTabState($def, $request, $currentName);
+        $settingsTabState = $this->settingsTabState($def, $request, $currentName);
+        $pageRelationTabState = $this->pageEditRelationTabState($tenant, $def, $request, $currentName);
         $onTarget = $this->matchesTargetRoute($tenant, $def, $request, $currentName);
-        if ($tabState['blocks_target']) {
+        if ($settingsTabState['blocks_target'] || $pageRelationTabState['blocks_target']) {
             $onTarget = false;
         }
         $canComplete = $this->canCompleteHere($tenant, $def, $request, $onTarget, $currentName);
+
+        $mismatch = $settingsTabState['mismatch_code'] ?? $pageRelationTabState['mismatch_code'];
 
         return [
             'on_target_route' => $onTarget,
             'can_complete_here' => $canComplete,
             'target_url' => $targetUrl,
-            'settings_tab_active' => $tabState['active'],
-            'settings_tab_matches' => $tabState['matches'],
-            'target_context_mismatch' => $tabState['mismatch_code'],
+            'settings_tab_active' => $settingsTabState['active'],
+            'settings_tab_matches' => $settingsTabState['matches'],
+            'page_edit_relation_tab' => $pageRelationTabState['expected'],
+            'page_edit_relation_active' => $pageRelationTabState['active'],
+            'page_edit_relation_matches' => $pageRelationTabState['matches'],
+            'target_context_mismatch' => $mismatch,
         ];
     }
 
@@ -98,6 +115,64 @@ final class SetupTargetContextResolver
         }
 
         return 'general';
+    }
+
+    /**
+     * @return array{
+     *     expected: ?string,
+     *     active: ?string,
+     *     matches: ?bool,
+     *     blocks_target: bool,
+     *     mismatch_code: ?string,
+     * }
+     */
+    private function pageEditRelationTabState(Tenant $tenant, SetupItemDefinition $def, Request $request, ?string $currentName): array
+    {
+        if (! $this->isHomePageBuilderItem($def->key)) {
+            return [
+                'expected' => null,
+                'active' => null,
+                'matches' => null,
+                'blocks_target' => false,
+                'mismatch_code' => null,
+            ];
+        }
+
+        if ($currentName !== 'filament.admin.resources.pages.edit' || ! $this->isHomePageRecord($tenant, $request)) {
+            return [
+                'expected' => null,
+                'active' => null,
+                'matches' => null,
+                'blocks_target' => false,
+                'mismatch_code' => null,
+            ];
+        }
+
+        $expected = self::HOME_PAGE_SECTIONS_RELATION_TAB;
+        $active = $this->effectivePageEditRelationQuery($request);
+        $matches = $active === $expected;
+        $mismatch = $matches ? null : 'wrong_page_edit_relation_tab';
+
+        return [
+            'expected' => $expected,
+            'active' => $active,
+            'matches' => $matches,
+            'blocks_target' => ! $matches,
+            'mismatch_code' => $mismatch,
+        ];
+    }
+
+    /**
+     * Filament: {@see \Filament\Resources\Pages\Concerns\HasRelationManagers::$activeRelationManager} в query как `relation`.
+     */
+    private function effectivePageEditRelationQuery(Request $request): ?string
+    {
+        $raw = $request->query('relation');
+        if ($raw === null || $raw === '') {
+            return null;
+        }
+
+        return (string) $raw;
     }
 
     private function matchesTargetRoute(Tenant $tenant, SetupItemDefinition $def, Request $request, ?string $currentName): bool

@@ -382,6 +382,9 @@ final class SetupSessionService
                 'target_url' => null,
                 'settings_tab_active' => null,
                 'settings_tab_matches' => null,
+                'page_edit_relation_tab' => null,
+                'page_edit_relation_active' => null,
+                'page_edit_relation_matches' => null,
                 'target_context_mismatch' => null,
             ];
 
@@ -417,6 +420,9 @@ final class SetupSessionService
             'guided_next_hint' => $def !== null ? $def->guidedNextHint->value : 'save_then_next',
             'settings_tab_active' => $ctx['settings_tab_active'] ?? null,
             'settings_tab_matches' => $ctx['settings_tab_matches'] ?? null,
+            'page_edit_relation_tab' => $ctx['page_edit_relation_tab'] ?? null,
+            'page_edit_relation_active' => $ctx['page_edit_relation_active'] ?? null,
+            'page_edit_relation_matches' => $ctx['page_edit_relation_matches'] ?? null,
             'target_context_mismatch' => $ctx['target_context_mismatch'] ?? null,
         ];
 
@@ -434,6 +440,9 @@ final class SetupSessionService
                 'settings_tab_expected' => $def?->settingsTabKey,
                 'settings_tab_active' => $ctx['settings_tab_active'] ?? null,
                 'settings_tab_matches' => $ctx['settings_tab_matches'] ?? null,
+                'page_edit_relation_tab' => $ctx['page_edit_relation_tab'] ?? null,
+                'page_edit_relation_active' => $ctx['page_edit_relation_active'] ?? null,
+                'page_edit_relation_matches' => $ctx['page_edit_relation_matches'] ?? null,
                 'target_context_mismatch' => $ctx['target_context_mismatch'] ?? null,
                 'on_target_route' => $ctx['on_target_route'],
                 'can_complete_here' => $ctx['can_complete_here'],

@@ -1,6 +1,10 @@
 /**
  * Guided setup: highlight [data-setup-target] / fallbacks for active session (payload in #tenant-site-setup-payload).
  */
+
+/** Отмена предыдущего resolveTargetWithRetry (DOMContentLoaded + livewire:navigated подряд). */
+let activeSetupResolveAbort = null;
+
 function isSetupElementVisible(el) {
     if (!el || !(el instanceof Element)) {
         return false;
@@ -43,12 +47,12 @@ function firstVisibleByDataAttr(attr, value) {
 
 /**
  * @param {Record<string, unknown>} payload
- * @returns {Element|null}
+ * @returns {{ el: Element|null, via: string }}
  */
-function resolveSetupHighlightTarget(payload) {
+function resolveSetupHighlightTargetWithMeta(payload) {
     const primary = payload.target_key;
     if (!primary || typeof primary !== 'string') {
-        return null;
+        return { el: null, via: '' };
     }
 
     const sectionId =
@@ -69,7 +73,7 @@ function resolveSetupHighlightTarget(payload) {
         for (let j = 0; j < matches.length; j += 1) {
             const el = matches[j];
             if (isSetupElementVisible(el)) {
-                return el;
+                return { el, via: `[data-setup-target="${key}"]` };
             }
         }
     }
@@ -77,7 +81,7 @@ function resolveSetupHighlightTarget(payload) {
     if (sectionId !== '') {
         const sec = firstVisibleByDataAttr('data-setup-section', sectionId);
         if (sec) {
-            return sec;
+            return { el: sec, via: `[data-setup-section="${sectionId}"]` };
         }
     }
 
@@ -91,7 +95,7 @@ function resolveSetupHighlightTarget(payload) {
         }
         const inCatalog = firstVisibleByDataAttr('data-setup-section-type', id);
         if (inCatalog) {
-            return inCatalog;
+            return { el: inCatalog, via: `[data-setup-section-type="${id}"]` };
         }
     }
 
@@ -99,11 +103,19 @@ function resolveSetupHighlightTarget(payload) {
     if (typeof action === 'string' && action !== '') {
         const byAction = firstVisibleByDataAttr('data-setup-action', action);
         if (byAction) {
-            return byAction;
+            return { el: byAction, via: `[data-setup-action="${action}"]` };
         }
     }
 
-    return null;
+    return { el: null, via: '' };
+}
+
+/**
+ * @param {Record<string, unknown>} payload
+ * @returns {Element|null}
+ */
+function resolveSetupHighlightTarget(payload) {
+    return resolveSetupHighlightTargetWithMeta(payload).el;
 }
 
 /**
@@ -117,14 +129,19 @@ function hasHiddenTargetCandidate(payload) {
     if (!primary || typeof primary !== 'string') {
         return false;
     }
-    const esc =
-        typeof CSS !== 'undefined' && typeof CSS.escape === 'function'
-            ? CSS.escape(primary)
-            : primary.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-    const matches = document.querySelectorAll(`[data-setup-target="${esc}"]`);
-    for (let j = 0; j < matches.length; j += 1) {
-        if (!isSetupElementVisible(matches[j])) {
-            return true;
+    const fallbackKeys = Array.isArray(payload.target_fallback_keys) ? payload.target_fallback_keys : [];
+    const keysToTry = [primary, ...fallbackKeys.filter((k) => typeof k === 'string' && k.length > 0)];
+    for (let i = 0; i < keysToTry.length; i += 1) {
+        const key = keysToTry[i];
+        const esc =
+            typeof CSS !== 'undefined' && typeof CSS.escape === 'function'
+                ? CSS.escape(key)
+                : key.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+        const matches = document.querySelectorAll(`[data-setup-target="${esc}"]`);
+        for (let j = 0; j < matches.length; j += 1) {
+            if (!isSetupElementVisible(matches[j])) {
+                return true;
+            }
         }
     }
     return false;
@@ -136,7 +153,11 @@ function hasHiddenTargetCandidate(payload) {
  * @returns {string}
  */
 function resolveTargetMissReason(payload, clientReason) {
-    if (payload.target_context_mismatch === 'wrong_settings_tab') {
+    if (
+        payload.target_context_mismatch === 'wrong_settings_tab' ||
+        payload.target_context_mismatch === 'wrong_page_edit_relation_tab' ||
+        clientReason === 'wrong_tab'
+    ) {
         return 'wrong_tab';
     }
     if (clientReason === 'hidden_by_condition') {
@@ -152,7 +173,12 @@ function resolveTargetMissReason(payload, clientReason) {
  * @param {Record<string, unknown>} payload
  * @param {string} clientReason
  */
-function updateGuidedDevDebug(payload, clientReason) {
+/**
+ * @param {Record<string, unknown>} payload
+ * @param {string} clientReason
+ * @param {string|null} [resolvedVia]
+ */
+function updateGuidedDevDebug(payload, clientReason, resolvedVia) {
     const dbg = payload.guided_dev_debug;
     if (!dbg || typeof dbg !== 'object') {
         return;
@@ -170,6 +196,7 @@ function updateGuidedDevDebug(payload, clientReason) {
         client_target_miss_reason: clientReason,
         resolved_reason: resolveTargetMissReason(payload, clientReason),
         target_found: clientReason === '',
+        resolved_via: resolvedVia ?? null,
     };
     el.textContent = JSON.stringify(merged, null, 2);
 }
@@ -199,6 +226,23 @@ function primaryHighlightElement(raw) {
  */
 function tryFocusFieldControl(primaryEl) {
     if (!primaryEl || !(primaryEl instanceof Element)) {
+        return;
+    }
+    const explicit = primaryEl.querySelector('[data-setup-focus-target]');
+    if (explicit instanceof HTMLElement) {
+        try {
+            explicit.focus({ preventScroll: true });
+        } catch {
+            /* ignore */
+        }
+        return;
+    }
+    if (primaryEl.matches('[data-setup-focus-target]') && primaryEl instanceof HTMLElement) {
+        try {
+            primaryEl.focus({ preventScroll: true });
+        } catch {
+            /* ignore */
+        }
         return;
     }
     const focusable = primaryEl.querySelector(
@@ -232,14 +276,12 @@ function sectionContextElement(primaryEl) {
 
 /**
  * На странице настроек активная вкладка хранится в query (`settings_tab`). Подставляем нужное значение до поиска целей.
+ * Не опираемся на `on_target_route`: при неверной вкладке сервер честно ставит `on_target_route = false`, но автопереход всё равно нужен.
  *
  * @param {Record<string, unknown>} payload
  * @returns {boolean} true если будет перезагрузка страницы
  */
 function syncSettingsTabQueryIfNeeded(payload) {
-    if (payload.on_target_route !== true) {
-        return false;
-    }
     if (payload.route_name !== 'filament.admin.pages.settings') {
         return false;
     }
@@ -247,11 +289,46 @@ function syncSettingsTabQueryIfNeeded(payload) {
     if (typeof tab !== 'string' || tab === '') {
         return false;
     }
+    const tabMismatch = payload.settings_tab_matches === false;
+    const wrongTabCode = payload.target_context_mismatch === 'wrong_settings_tab';
+    if (!tabMismatch && !wrongTabCode) {
+        return false;
+    }
     const u = new URL(window.location.href);
     if (u.searchParams.get('settings_tab') === tab) {
         return false;
     }
     u.searchParams.set('settings_tab', tab);
+    window.location.replace(u.toString());
+
+    return true;
+}
+
+/**
+ * На редактировании страницы вкладка relation managers в query — `relation` (Filament v5).
+ * Подставляем нужное значение до поиска целей (builder на вкладке «Секции страницы»).
+ *
+ * @param {Record<string, unknown>} payload
+ * @returns {boolean} true если будет перезагрузка страницы
+ */
+function syncPageEditRelationQueryIfNeeded(payload) {
+    const tab = payload.page_edit_relation_tab;
+    if (typeof tab !== 'string' || tab === '') {
+        return false;
+    }
+    if (payload.route_name !== 'filament.admin.resources.pages.edit') {
+        return false;
+    }
+    const tabMismatch = payload.page_edit_relation_matches === false;
+    const wrongTabCode = payload.target_context_mismatch === 'wrong_page_edit_relation_tab';
+    if (!tabMismatch && !wrongTabCode) {
+        return false;
+    }
+    const u = new URL(window.location.href);
+    if (u.searchParams.get('relation') === tab) {
+        return false;
+    }
+    u.searchParams.set('relation', tab);
     window.location.replace(u.toString());
 
     return true;
@@ -317,6 +394,9 @@ function mountInlineSetupCardIfNeeded(payload, primaryEl, sectionEl) {
     if (payload.on_target_route !== true) {
         return;
     }
+    if (document.querySelector('.fi-ts-setup-inline-mount')) {
+        return;
+    }
     const tpl = document.getElementById('tenant-site-setup-inline-template');
     if (!tpl || !(tpl instanceof HTMLTemplateElement)) {
         return;
@@ -348,6 +428,9 @@ function floatingFallbackStorageKey() {
  */
 function mountInlineSetupFallbackFloating(payload, reason) {
     if (document.getElementById('tenant-site-setup-bar')) {
+        return;
+    }
+    if (document.querySelector('.fi-ts-setup-inline-card.fi-ts-setup-inline-card-floating')) {
         return;
     }
     try {
@@ -390,12 +473,15 @@ function mountInlineSetupFallbackFloating(payload, reason) {
 
 /**
  * @param {Record<string, unknown>} payload
- * @param {(raw: Element) => void} onFound
+ * @param {(raw: Element, via: string) => void} onFound
  * @param {(reason: string) => void} onMiss
+ * @returns {(() => void) | null} abort — отмена поиска; null если цель обработана синхронно
  */
 function resolveTargetWithRetry(payload, onFound, onMiss) {
     const start = Date.now();
     const maxMs = 5000;
+    /** Дать Livewire/Filament время смонтировать скрытый контейнер до причины hidden_by_condition */
+    const hiddenGraceMs = 500;
     let done = false;
     let observer = null;
     let intervalId = null;
@@ -411,24 +497,45 @@ function resolveTargetWithRetry(payload, onFound, onMiss) {
         }
     };
 
+    const abort = () => {
+        if (done) {
+            return;
+        }
+        done = true;
+        cleanup();
+    };
+
     const tick = () => {
         if (done) {
             return;
         }
-        const raw = resolveSetupHighlightTarget(payload);
-        if (raw) {
+        const elapsed = Date.now() - start;
+        const meta = resolveSetupHighlightTargetWithMeta(payload);
+        if (meta.el) {
             done = true;
             cleanup();
-            onFound(raw);
+            onFound(meta.el, meta.via);
+            return;
+        }
+        if (
+            payload.target_context_mismatch === 'wrong_settings_tab' ||
+            payload.target_context_mismatch === 'wrong_page_edit_relation_tab'
+        ) {
+            done = true;
+            cleanup();
+            onMiss('wrong_tab');
             return;
         }
         if (hasHiddenTargetCandidate(payload)) {
+            if (elapsed < hiddenGraceMs) {
+                return;
+            }
             done = true;
             cleanup();
             onMiss('hidden_by_condition');
             return;
         }
-        if (Date.now() - start >= maxMs) {
+        if (elapsed >= maxMs) {
             done = true;
             cleanup();
             onMiss('target_missing');
@@ -437,14 +544,24 @@ function resolveTargetWithRetry(payload, onFound, onMiss) {
 
     tick();
     if (done) {
-        return;
+        return null;
     }
 
-    intervalId = window.setInterval(tick, 50);
+    /** Быстрый polling только в начале; дальше — в основном MutationObserver (без attributes: меньше шума). */
+    const fastPollMs = 1500;
+    intervalId = window.setInterval(() => {
+        tick();
+        if (intervalId !== null && Date.now() - start >= fastPollMs) {
+            clearInterval(intervalId);
+            intervalId = null;
+        }
+    }, 80);
     observer = new MutationObserver(() => {
         tick();
     });
-    observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true });
+    observer.observe(document.documentElement, { childList: true, subtree: true });
+
+    return abort;
 }
 
 /**
@@ -465,8 +582,9 @@ function applyBarPadding(bar) {
  * @param {Element} primaryEl
  * @param {Element | null} sectionEl
  * @param {Element | null} bar
+ * @param {string} resolvedVia
  */
-function finalizeHighlight(payload, primaryEl, sectionEl, bar) {
+function finalizeHighlight(payload, primaryEl, sectionEl, bar, resolvedVia) {
     primaryEl.classList.add('fi-ts-setup-highlight');
     primaryEl.setAttribute('data-setup-highlighted', 'primary');
 
@@ -497,7 +615,7 @@ function finalizeHighlight(payload, primaryEl, sectionEl, bar) {
         tryFocusFieldControl(primaryEl);
     }
 
-    updateGuidedDevDebug(payload, '');
+    updateGuidedDevDebug(payload, '', resolvedVia);
 }
 
 function initTenantSiteSetup() {
@@ -524,33 +642,42 @@ function initTenantSiteSetup() {
 
     clearTenantSiteSetupHighlights();
 
+    if (typeof activeSetupResolveAbort === 'function') {
+        activeSetupResolveAbort();
+        activeSetupResolveAbort = null;
+    }
+
     if (syncSettingsTabQueryIfNeeded(payload)) {
+        return;
+    }
+
+    if (syncPageEditRelationQueryIfNeeded(payload)) {
         return;
     }
 
     const bar = document.getElementById('tenant-site-setup-bar');
 
-    resolveTargetWithRetry(
+    const cancelResolve = resolveTargetWithRetry(
         payload,
-        (rawTarget) => {
+        (rawTarget, via) => {
             const primaryEl = primaryHighlightElement(rawTarget);
             if (!primaryEl) {
                 const reason = hasHiddenTargetCandidate(payload) ? 'hidden_by_condition' : 'target_missing';
-                updateGuidedDevDebug(payload, reason);
+                updateGuidedDevDebug(payload, reason, via || null);
                 if (payload.on_target_route === true) {
                     mountInlineSetupFallbackFloating(payload, reason);
                 }
                 applyBarPadding(bar);
                 if (window.console && console.info) {
-                    console.info('[tenant-site-setup]', reason, payload.target_key);
+                    console.info('[tenant-site-setup]', reason, payload.target_key, via);
                 }
                 return;
             }
             const sectionEl = sectionContextElement(primaryEl);
-            finalizeHighlight(payload, primaryEl, sectionEl, bar);
+            finalizeHighlight(payload, primaryEl, sectionEl, bar, via);
         },
         (reason) => {
-            updateGuidedDevDebug(payload, reason);
+            updateGuidedDevDebug(payload, reason, null);
             if (payload.on_target_route === true) {
                 mountInlineSetupFallbackFloating(payload, reason);
             }
@@ -560,6 +687,7 @@ function initTenantSiteSetup() {
             }
         },
     );
+    activeSetupResolveAbort = typeof cancelResolve === 'function' ? cancelResolve : null;
 }
 
 if (document.readyState === 'loading') {

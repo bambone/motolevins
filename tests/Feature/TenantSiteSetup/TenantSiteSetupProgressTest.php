@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\TenantSiteSetup;
 
+use App\Models\Tenant;
 use App\Models\TenantSetting;
 use App\Models\User;
 use App\Tenant\CurrentTenant;
@@ -12,6 +13,7 @@ use App\TenantSiteSetup\TenantSiteSetupFeature;
 use Database\Seeders\RolePermissionSeeder;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 use Tests\Support\CreatesTenantsWithDomains;
 use Tests\TestCase;
 
@@ -33,7 +35,7 @@ class TenantSiteSetupProgressTest extends TestCase
 
         $summary = app(SetupProgressService::class)->computeSummary($tenant);
 
-        $this->assertSame(10, $summary['applicable_count']);
+        $this->assertSame(13, $summary['applicable_count']);
         $this->assertSame(0, $summary['completed_count']);
     }
 
@@ -44,7 +46,7 @@ class TenantSiteSetupProgressTest extends TestCase
 
         $summary = app(SetupProgressService::class)->computeSummary($tenant);
 
-        $this->assertSame(9, $summary['applicable_count']);
+        $this->assertSame(11, $summary['applicable_count']);
     }
 
     public function test_completed_only_from_data_site_name(): void
@@ -73,7 +75,7 @@ class TenantSiteSetupProgressTest extends TestCase
             new CurrentTenant($tenant, $domain, false, $this->tenancyHostForSlug((string) $tenant->slug))
         );
 
-        $this->expectException(\Symfony\Component\HttpKernel\Exception\HttpException::class);
+        $this->expectException(HttpException::class);
         $this->actingAs($user);
         app(SetupItemStateService::class)->markNotNeeded($tenant, $user, 'settings.site_name', 'do_later', null);
     }
@@ -90,7 +92,7 @@ class TenantSiteSetupProgressTest extends TestCase
         $this->assertFalse(TenantSiteSetupFeature::enabled());
     }
 
-    private function actingAsTenant(\App\Models\Tenant $tenant): void
+    private function actingAsTenant(Tenant $tenant): void
     {
         $user = User::factory()->create(['status' => 'active']);
         $user->tenants()->attach($tenant->id, ['role' => 'tenant_owner', 'status' => 'active']);

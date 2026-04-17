@@ -18,17 +18,108 @@
                 role="status"
             >
                 @if($guidedDone === 'base_launch')
-                    <p class="font-semibold">Базовый запуск по чеклисту завершён.</p>
+                    <p class="font-semibold">Базовый запуск завершён</p>
                     <p class="mt-1 text-emerald-900/90 dark:text-emerald-100/90">
-                        Все пункты быстрого запуска отмечены. Дальше можно усилить публичный контур и расширенные настройки.
+                        Все пункты контура «быстрый запуск» в чеклисте отмечены. Дальше можно усилить публичный контур и расширенные настройки.
                     </p>
                 @else
-                    <p class="font-semibold">Очередь guided завершена.</p>
+                    <p class="font-semibold">Маршрут guided завершён</p>
                     <p class="mt-1 text-emerald-900/90 dark:text-emerald-100/90">
-                        Переходите к следующим шагам чеклиста или к разделам кабинета по необходимости.
+                        Очередь шагов guided закончилась; отметки пунктов в прогрессе при этом сами не ставились. Проверьте чеклист ниже — часть пунктов может быть ещё не закрыта.
                     </p>
                 @endif
             </div>
+        @endif
+
+        @if(session('site_setup_guided_completed') === 'checklist')
+            @php
+                $pendingAfterGuided = array_values(array_filter(
+                    $summary['next_pending_items'] ?? [],
+                    static fn ($row): bool => is_array($row) && ! empty($row['title']),
+                ));
+            @endphp
+            @if(($summary['applicable_count'] ?? 0) > ($summary['completed_count'] ?? 0) && $pendingAfterGuided !== [])
+                <section
+                    class="rounded-xl border border-amber-200 bg-amber-50/90 p-4 text-sm text-amber-950 shadow-sm dark:border-amber-900/50 dark:bg-amber-950/35 dark:text-amber-50"
+                    aria-labelledby="site-setup-after-guided-heading"
+                >
+                    <h2 id="site-setup-after-guided-heading" class="font-semibold text-amber-950 dark:text-amber-100">
+                        Что могло остаться незакрытым после guided
+                    </h2>
+                    <p class="mt-1 text-amber-900/90 dark:text-amber-100/85">
+                        Кнопка «Дальше» только переводила очередь; пункты ниже по-прежнему в работе, пока вы их не закроете вручную или через данные на экранах.
+                    </p>
+                    <ul class="mt-3 list-inside list-disc space-y-1 text-amber-950/95 dark:text-amber-50/95">
+                        @foreach(array_slice($pendingAfterGuided, 0, 10) as $item)
+                            <li>{{ $item['title'] }}</li>
+                        @endforeach
+                    </ul>
+                </section>
+            @endif
+        @endif
+
+        @if(! empty($this->launchContext))
+            @php
+                $lc = $this->launchContext;
+                $pg = $lc['primary_goal'] ?? [];
+                $trackRows = collect($lc['tracks'] ?? [])->sortByDesc(fn ($t) => ! empty($t['recommended']) ? 1 : 0)->values()->all();
+            @endphp
+            <section
+                class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-900/40 sm:p-6"
+                aria-labelledby="site-setup-tracks-heading"
+            >
+                <h2 id="site-setup-tracks-heading" class="text-base font-semibold text-gray-950 dark:text-white">
+                    Дорожки запуска и цель сайта
+                </h2>
+                <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                    Активные и скрытые направления зависят от модулей и прав; применимость шагов — от темы и данных.
+                </p>
+
+                @if(! empty($pg['label']))
+                    <div class="mt-4 rounded-lg border border-primary-500/25 bg-primary-50/80 p-3 dark:border-primary-400/25 dark:bg-primary-950/35">
+                        <p class="text-xs font-semibold uppercase tracking-wide text-primary-800 dark:text-primary-200/90">Цель сайта</p>
+                        <p class="mt-1 text-sm font-medium text-gray-950 dark:text-white">{{ $pg['label'] }}</p>
+                        @if(! empty($pg['hint']))
+                            <p class="mt-1 text-sm text-gray-700 dark:text-gray-300">{{ $pg['hint'] }}</p>
+                        @endif
+                    </div>
+                @endif
+
+                <div class="mt-4 grid gap-3 sm:grid-cols-2">
+                    @foreach($trackRows as $tr)
+                        @php
+                            $isSuppressed = ($tr['state'] ?? '') === 'suppressed';
+                            $isInactive = ($tr['state'] ?? '') === 'inactive_by_scope';
+                            $cardBorder = $isSuppressed
+                                ? 'border-amber-200 bg-amber-50/80 dark:border-amber-900/50 dark:bg-amber-950/30'
+                                : ($isInactive
+                                    ? 'border-gray-200 bg-gray-50/90 dark:border-gray-700 dark:bg-gray-900/50'
+                                    : 'border-emerald-200 bg-emerald-50/70 dark:border-emerald-900/40 dark:bg-emerald-950/25');
+                        @endphp
+                        <article class="rounded-lg border p-3 {{ $cardBorder }}">
+                            <div class="flex flex-wrap items-start justify-between gap-2">
+                                <h3 class="text-sm font-semibold text-gray-950 dark:text-white">{{ $tr['label'] }}</h3>
+                                @if(! empty($tr['recommended']))
+                                    <span class="shrink-0 rounded-full bg-primary-600 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white dark:bg-primary-500">Рекомендуем</span>
+                                @endif
+                            </div>
+                            <p class="mt-1 text-xs font-medium text-gray-700 dark:text-gray-300">{{ $tr['reason_title'] }}</p>
+                            <p class="mt-1 text-xs text-gray-600 dark:text-gray-400">{{ $tr['reason_body'] }}</p>
+                            @if(! empty($tr['action_hint']))
+                                <p class="mt-2 text-xs text-gray-700 dark:text-gray-300">{{ $tr['action_hint'] }}</p>
+                            @endif
+                            @if(($tr['items_total'] ?? 0) > 0)
+                                <p class="mt-2 text-xs text-gray-600 dark:text-gray-400">
+                                    Пункты чеклиста: {{ $tr['items_completed'] ?? 0 }} / {{ $tr['items_applicable'] ?? 0 }} выполнено
+                                    @if(($tr['items_not_applicable_by_system'] ?? 0) > 0)
+                                        · не применимо по теме/настройкам: {{ $tr['items_not_applicable_by_system'] }}
+                                    @endif
+                                </p>
+                            @endif
+                        </article>
+                    @endforeach
+                </div>
+            </section>
         @endif
 
         {{-- 1. Верхний action-блок (порядок зафиксирован в ТЗ) --}}

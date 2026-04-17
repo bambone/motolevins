@@ -1,6 +1,7 @@
 @props(['payload' => null])
 
 @if($payload)
+    @once
     @php
         $actionUrl = $payload['session_action_url'] ?? null;
         $canSnooze = ! empty($payload['can_snooze']);
@@ -84,4 +85,5 @@
         </template>
     @endif
     <script type="application/json" id="tenant-site-setup-payload">@json($payload)</script>
+    @endonce
 @endif

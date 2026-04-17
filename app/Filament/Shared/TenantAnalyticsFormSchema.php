@@ -77,7 +77,8 @@ final class TenantAnalyticsFormSchema
                 TextInput::make('analytics_yandex_counter_id')
                     ->label('ID счётчика Метрики')
                     ->helperText('Укажите только ID счётчика, например 12345678. Не вставляйте код Метрики целиком.')
-                    ->maxLength(32),
+                    ->maxLength(32)
+                    ->extraAttributes(['data-setup-focus-target' => '']),
                 Toggle::make('analytics_yandex_webvisor_enabled')
                     ->label('Вебвизор')
                     ->default(false)
@@ -125,7 +126,8 @@ final class TenantAnalyticsFormSchema
                 TextInput::make('analytics_ga4_measurement_id')
                     ->label('Идентификатор GA4')
                     ->helperText('Только код вида G-ABC123DEF4 (как в интерфейсе Google Analytics). Не вставляйте целиком скрипт с сайта.')
-                    ->maxLength(32),
+                    ->maxLength(32)
+                    ->extraAttributes(['data-setup-focus-target' => '']),
             ])->columns(2);
     }
 

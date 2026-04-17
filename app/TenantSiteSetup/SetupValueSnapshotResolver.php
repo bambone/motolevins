@@ -32,6 +32,9 @@ final class SetupValueSnapshotResolver
             'pages.home.hero_cta_or_contact_block' => $this->pageInspector->ctaOrContactSnapshot($tenant),
             'settings.favicon' => $this->faviconSnapshot($tenant),
             'settings.analytics_counters' => $this->analyticsSnapshot($tenant),
+            'settings.branding_hero_social_image' => $this->brandingHeroSnapshot($tenant),
+            'programs.two_visible_programs' => $this->twoProgramsSnapshot($tenant),
+            'settings.public_canonical_url' => $this->canonicalUrlSnapshot($tenant),
             default => '—',
         };
     }
@@ -77,5 +80,30 @@ final class SetupValueSnapshotResolver
         }
 
         return $parts !== [] ? implode(', ', $parts) : 'частично';
+    }
+
+    private function brandingHeroSnapshot(Tenant $tenant): string
+    {
+        $hero = trim((string) TenantSetting::getForTenant($tenant->id, 'branding.hero', ''));
+        $path = trim((string) TenantSetting::getForTenant($tenant->id, 'branding.hero_path', ''));
+
+        return ($hero !== '' || $path !== '') ? 'задано' : '—';
+    }
+
+    private function twoProgramsSnapshot(Tenant $tenant): string
+    {
+        $n = TenantServiceProgram::query()
+            ->where('tenant_id', $tenant->id)
+            ->where('is_visible', true)
+            ->count();
+
+        return (string) $n.' витринных';
+    }
+
+    private function canonicalUrlSnapshot(Tenant $tenant): string
+    {
+        $raw = trim((string) TenantSetting::getForTenant($tenant->id, 'general.domain', ''));
+
+        return $raw !== '' ? mb_substr($raw, 0, 80) : '—';
     }
 }

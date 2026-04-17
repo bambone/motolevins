@@ -200,7 +200,10 @@ class Settings extends Page
                 ->maxLength(2000)
                 ->helperText('Коротко о том, что предлагаете посетителю. Используется в готовности сайта и подсказках.')
                 ->visible(fn (): bool => $tenant !== null)
-                ->extraAttributes(['data-setup-target' => 'settings.tagline_or_short_description']),
+                ->extraAttributes([
+                    'data-setup-target' => 'settings.tagline_or_short_description',
+                    'data-setup-focus-target' => '',
+                ]),
         ];
         if ($tenant === null) {
             $siteIdentityFields[] = TextInput::make('general_domain')
@@ -221,6 +224,7 @@ class Settings extends Page
                         ->label('Канонический URL сайта')
                         ->url()
                         ->nullable()
+                        ->extraAttributes(['data-setup-target' => 'settings.public_canonical_url'])
                         ->helperText(
                             'Полный адрес с https://. Оставьте пустым и сохраните — будет использоваться адрес из раздела «Свой домен» / основной домен без дублирования здесь.'
                         ),
@@ -330,6 +334,7 @@ class Settings extends Page
                                             ->schema([
                                                 TenantPublicImagePicker::make('branding_logo_path')
                                                     ->label('Логотип (файл)')
+                                                    ->extraAttributes(['data-setup-focus-target' => ''])
                                                     ->uploadSlotSelector('[data-settings-tenant-upload-input]')
                                                     ->uploadPublicSiteSubdirectory('site/logo')
                                                     ->helperText('PNG, JPG, WebP. До 4 МБ; можно выбрать из каталога.'),
@@ -349,6 +354,7 @@ class Settings extends Page
                                             ->schema([
                                                 TenantPublicImagePicker::make('branding_favicon_path')
                                                     ->label('Иконка сайта (файл)')
+                                                    ->extraAttributes(['data-setup-focus-target' => ''])
                                                     ->uploadSlotSelector('[data-settings-tenant-upload-input]')
                                                     ->uploadPublicSiteSubdirectory('site/favicon')
                                                     ->helperText('PNG, ICO, SVG. До 4 МБ; для иконки лучше заранее оптимизировать файл.'),
@@ -359,9 +365,11 @@ class Settings extends Page
                                                     ->helperText('Только если файл не задан.'),
                                             ]),
                                         Grid::make(2)
+                                            ->extraAttributes(['data-setup-target' => 'settings.branding_hero_social_image'])
                                             ->schema([
                                                 TenantPublicImagePicker::make('branding_hero_path')
                                                     ->label('Картинка для шапки и соцсетей (файл)')
+                                                    ->extraAttributes(['data-setup-focus-target' => ''])
                                                     ->uploadSlotSelector('[data-settings-tenant-upload-input]')
                                                     ->uploadPublicSiteSubdirectory('site/hero')
                                                     ->helperText('Крупное изображение; как именно показывается — зависит от темы сайта.'),

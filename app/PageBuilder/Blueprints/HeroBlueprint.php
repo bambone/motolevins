@@ -73,7 +73,10 @@ final class HeroBlueprint extends AbstractPageSectionBlueprint
                 ->label('Заголовок')
                 ->maxLength(255)
                 ->columnSpanFull()
-                ->extraAttributes(['data-setup-target' => 'pages.home.hero_title']),
+                ->extraAttributes([
+                    'data-setup-target' => 'pages.home.hero_title',
+                    'data-setup-focus-target' => '',
+                ]),
             TextInput::make('data_json.subheading')
                 ->label('Подзаголовок')
                 ->maxLength(500)

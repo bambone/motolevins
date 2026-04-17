@@ -58,20 +58,29 @@ use App\Services\Tenancy\TenantMainMenuPages;
 use App\Services\Tenancy\TenantPagePrimaryHtmlSync;
 use App\Services\Tenancy\TenantViewResolver;
 use App\Support\TenantPanelMembershipCache;
+use App\Tenant\Reviews\TenantReviewSubmitConfig;
+use App\Tenant\StorageQuota\TenantMediaStorageQuotaObserver;
+use App\TenantPush\TenantPushCrmRequestRecipientResolver;
+use App\TenantPush\TenantPushDiagnosticsService;
+use App\TenantPush\TenantPushFeatureGate;
+use App\TenantPush\TenantPushIosReadinessResolver;
+use App\TenantPush\TenantPushNotificationBindingSync;
+use App\TenantPush\TenantPushOnesignalClient;
 use App\TenantSiteSetup\BrandingSetupItemsProvider;
+use App\TenantSiteSetup\CatalogSetupItemsProvider;
+use App\TenantSiteSetup\ContentExtrasSetupItemsProvider;
 use App\TenantSiteSetup\CoreSetupItemsProvider;
+use App\TenantSiteSetup\NotificationsSetupItemsProvider;
 use App\TenantSiteSetup\ProgramsSetupItemsProvider;
+use App\TenantSiteSetup\SchedulingSetupItemsProvider;
+use App\TenantSiteSetup\SeoSetupItemsProvider;
 use App\TenantSiteSetup\SetupItemsAggregator;
+use App\TenantSiteSetup\SetupLaunchContextPresenter;
+use App\TenantSiteSetup\SetupPrimaryGoalPresenter;
+use App\TenantSiteSetup\SetupTrackApplicabilitySummaryService;
+use App\TenantSiteSetup\SetupTrackReasonCatalog;
 use App\TenantSiteSetup\SetupTracksResolver;
 use App\TenantSiteSetup\WavePlaceholderSetupItemsProvider;
-use App\Tenant\Reviews\TenantReviewSubmitConfig;
-use App\TenantPush\TenantPushCrmRequestRecipientResolver;
-use App\TenantPush\TenantPushFeatureGate;
-use App\TenantPush\TenantPushNotificationBindingSync;
-use App\TenantPush\TenantPushDiagnosticsService;
-use App\TenantPush\TenantPushIosReadinessResolver;
-use App\TenantPush\TenantPushOnesignalClient;
-use App\Tenant\StorageQuota\TenantMediaStorageQuotaObserver;
 use App\Terminology\TenantTerminologyService;
 use App\Themes\ThemeRegistry;
 use Filament\Facades\Filament;
@@ -155,13 +164,27 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(CoreSetupItemsProvider::class);
         $this->app->singleton(BrandingSetupItemsProvider::class);
         $this->app->singleton(ProgramsSetupItemsProvider::class);
+        $this->app->singleton(SeoSetupItemsProvider::class);
+        $this->app->singleton(NotificationsSetupItemsProvider::class);
+        $this->app->singleton(SchedulingSetupItemsProvider::class);
+        $this->app->singleton(CatalogSetupItemsProvider::class);
+        $this->app->singleton(ContentExtrasSetupItemsProvider::class);
         $this->app->singleton(WavePlaceholderSetupItemsProvider::class);
         $this->app->singleton(SetupTracksResolver::class);
+        $this->app->singleton(SetupTrackReasonCatalog::class);
+        $this->app->singleton(SetupTrackApplicabilitySummaryService::class);
+        $this->app->singleton(SetupPrimaryGoalPresenter::class);
+        $this->app->singleton(SetupLaunchContextPresenter::class);
         $this->app->singleton(SetupItemsAggregator::class, static function ($app): SetupItemsAggregator {
             return new SetupItemsAggregator([
                 $app->make(CoreSetupItemsProvider::class),
                 $app->make(BrandingSetupItemsProvider::class),
                 $app->make(ProgramsSetupItemsProvider::class),
+                $app->make(SeoSetupItemsProvider::class),
+                $app->make(NotificationsSetupItemsProvider::class),
+                $app->make(SchedulingSetupItemsProvider::class),
+                $app->make(CatalogSetupItemsProvider::class),
+                $app->make(ContentExtrasSetupItemsProvider::class),
                 $app->make(WavePlaceholderSetupItemsProvider::class),
             ]);
         });

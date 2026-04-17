@@ -9,6 +9,7 @@ use App\Models\Tenant;
 use App\Models\TenantServiceProgram;
 use App\Models\TenantSetting;
 use App\Services\Analytics\AnalyticsSettingsPersistence;
+use App\Support\Analytics\AnalyticsSettingsData;
 use App\Support\RussianPhone;
 
 final class SetupCompletionEvaluator
@@ -34,6 +35,9 @@ final class SetupCompletionEvaluator
             'pages.home.hero_cta_or_contact_block' => $this->pageInspector->hasCtaOrContactBlock($tenant),
             'settings.favicon' => $this->faviconComplete($tenant),
             'settings.analytics_counters' => $this->analyticsCountersComplete($tenant),
+            'settings.branding_hero_social_image' => $this->brandingHeroSocialComplete($tenant),
+            'programs.two_visible_programs' => $this->twoVisibleProgramsComplete($tenant),
+            'settings.public_canonical_url' => $this->publicCanonicalUrlComplete($tenant),
             default => false,
         };
     }
@@ -94,12 +98,35 @@ final class SetupCompletionEvaluator
 
     /**
      * Пункт «аналитика» закрывается при **любом** валидном подключённом счётчике (Метрика и/или GA4),
-     * см. {@see \App\Support\Analytics\AnalyticsSettingsData::isEmpty()} — не «полная настройка всех тумблеров».
+     * см. {@see AnalyticsSettingsData::isEmpty()} — не «полная настройка всех тумблеров».
      */
     private function analyticsCountersComplete(Tenant $tenant): bool
     {
         $data = $this->analyticsPersistence->load((int) $tenant->id);
 
         return ! $data->isEmpty();
+    }
+
+    private function brandingHeroSocialComplete(Tenant $tenant): bool
+    {
+        $hero = trim((string) TenantSetting::getForTenant($tenant->id, 'branding.hero', ''));
+        $path = trim((string) TenantSetting::getForTenant($tenant->id, 'branding.hero_path', ''));
+
+        return $hero !== '' || $path !== '';
+    }
+
+    private function twoVisibleProgramsComplete(Tenant $tenant): bool
+    {
+        return TenantServiceProgram::query()
+            ->where('tenant_id', $tenant->id)
+            ->where('is_visible', true)
+            ->count() >= 2;
+    }
+
+    private function publicCanonicalUrlComplete(Tenant $tenant): bool
+    {
+        $raw = trim((string) TenantSetting::getForTenant($tenant->id, 'general.domain', ''));
+
+        return $raw !== '' && filter_var($raw, FILTER_VALIDATE_URL) !== false;
     }
 }

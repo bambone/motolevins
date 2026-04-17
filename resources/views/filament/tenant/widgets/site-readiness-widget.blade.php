@@ -12,6 +12,9 @@
     $nextItem = $this->nextPendingItem;
     $remaining = $this->remainingCount;
     $whatsNext = $this->whatsNextHint;
+    $launchCtx = $this->launchContextSummary;
+    $lcRem = (int) ($summary['launch_critical_remaining'] ?? 0);
+    $lcTot = (int) ($summary['launch_critical_total'] ?? 0);
 @endphp
 
 @if($summary && $primaryCta)
@@ -23,10 +26,41 @@
             Чеклист мастера — не весь кабинет; состав пунктов можно наращивать.
         </x-slot>
 
-        {{-- Поверхности: без полупрозрачного «светлого» слоя в тёмной теме; те же токены в светлой --}}
         <div
-            class="max-w-4xl space-y-4 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm ring-1 ring-gray-950/5 dark:border-gray-700 dark:bg-gray-950 dark:ring-white/10 sm:p-6"
+            class="max-w-5xl space-y-5 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm ring-1 ring-gray-950/5 dark:border-gray-700 dark:bg-gray-950 dark:ring-white/10 sm:p-6"
         >
+            {{-- Верхний уровень: главный KPI + следующий шаг + CTA --}}
+            <div class="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between lg:gap-8">
+                @if($lcTot > 0)
+                    <div class="min-w-0 lg:max-w-md">
+                        <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">До минимального запуска</p>
+                        <p class="mt-1 text-2xl font-bold tabular-nums text-gray-950 dark:text-white sm:text-3xl">
+                            {{ $lcRem }}
+                            <span class="text-lg font-semibold text-gray-500 dark:text-gray-400">/ {{ $lcTot }}</span>
+                        </p>
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Критичные шаги для честного старта сайта</p>
+                    </div>
+                @endif
+
+                <div
+                    class="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:items-center sm:justify-end sm:gap-4"
+                >
+                    @if(is_array($nextItem) && !empty($nextItem['title']))
+                        <div class="min-w-0 flex-1 rounded-xl border border-primary-500/35 bg-primary-50 p-3 dark:border-primary-400/30 dark:bg-primary-950/45">
+                            <p class="text-xs font-medium text-primary-800 dark:text-primary-200/90">Следующий шаг</p>
+                            <p class="mt-0.5 text-base font-semibold leading-snug text-gray-950 dark:text-white">
+                                {{ $nextItem['title'] }}
+                            </p>
+                        </div>
+                    @endif
+                    <div class="shrink-0">
+                        <x-filament::button tag="a" href="{{ $primaryCta['href'] }}" size="md" color="primary">
+                            {{ $primaryCta['label'] }}
+                        </x-filament::button>
+                    </div>
+                </div>
+            </div>
+
             <div class="flex flex-wrap items-center gap-2">
                 <span
                     class="inline-flex items-center gap-1 rounded-md bg-primary-600 px-2 py-0.5 text-xs font-semibold text-white dark:bg-primary-500"
@@ -42,14 +76,32 @@
                 @endif
             </div>
 
+            @if(! empty($launchCtx['primary_goal_label']))
+                <p class="text-xs text-gray-600 dark:text-gray-400">
+                    <span class="font-medium text-gray-800 dark:text-gray-200">Цель:</span>
+                    {{ $launchCtx['primary_goal_label'] }}
+                </p>
+            @endif
+            @if(! empty($launchCtx['suppressed_line']))
+                <p class="text-xs text-amber-900/90 dark:text-amber-100/85">{{ $launchCtx['suppressed_line'] }}</p>
+            @endif
+            <p class="text-xs">
+                <a
+                    href="{{ $launchCtx['overview_url'] }}"
+                    class="font-medium text-primary-600 underline decoration-primary-600/30 hover:decoration-primary-600 dark:text-primary-400"
+                >
+                    Подробнее в обзоре запуска
+                </a>
+            </p>
+
             @if($qA > 0 || $eA > 0)
-                <div class="grid gap-4 sm:grid-cols-2">
+                <div class="grid gap-3 sm:grid-cols-2">
                     @if($qA > 0)
                         <div
                             class="min-w-0 rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-900/80"
                         >
                             <p class="text-xs font-medium text-gray-600 dark:text-gray-400">Быстрый запуск</p>
-                            <p class="text-lg font-semibold text-gray-950 dark:text-white">
+                            <p class="text-base font-semibold text-gray-950 dark:text-white">
                                 {{ $qC }} из {{ $qA }}
                                 <span class="text-sm font-normal text-gray-500 dark:text-gray-400">({{ $qPct }}%)</span>
                             </p>
@@ -69,11 +121,10 @@
                             class="min-w-0 rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-900/80"
                         >
                             <p class="text-xs font-medium text-gray-600 dark:text-gray-400">Расширенный запуск</p>
-                            <p class="text-lg font-semibold text-gray-950 dark:text-white">
+                            <p class="text-base font-semibold text-gray-950 dark:text-white">
                                 {{ $eC }} из {{ $eA }}
                                 <span class="text-sm font-normal text-gray-500 dark:text-gray-400">({{ $ePct }}%)</span>
                             </p>
-                            <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Пока небольшой набор — дальше подключается в реестре.</p>
                             <svg
                                 class="mt-1 h-2 w-full overflow-hidden rounded-full text-gray-200 dark:text-gray-600"
                                 viewBox="0 0 100 2"
@@ -96,7 +147,7 @@
                         ({{ $summary['completed_count'] }} из {{ $summary['applicable_count'] }})
                     </span>
                 </div>
-                @if($remaining > 0)
+                @if($remaining > 0 && $lcTot === 0)
                     <p class="mt-1 text-sm text-gray-700 dark:text-gray-300">
                         Осталось пунктов: <span class="font-medium">{{ $remaining }}</span>
                     </p>
@@ -112,38 +163,17 @@
                 </svg>
             </div>
 
-            @if(is_array($nextItem) && !empty($nextItem['title']))
-                <div
-                    class="rounded-lg border border-dashed border-primary-500/40 bg-primary-50 p-3 dark:border-primary-400/35 dark:bg-primary-950/50"
-                >
-                    <p class="text-xs font-medium text-gray-600 dark:text-gray-400">Следующий шаг</p>
-                    <p class="text-sm font-semibold text-gray-950 dark:text-white">{{ $nextItem['title'] }}</p>
-                </div>
-            @endif
-
-            @if(($summary['launch_critical_remaining'] ?? 0) > 0)
-                <p class="text-sm text-gray-700 dark:text-gray-300">
-                    До минимального запуска осталось шагов: <span class="font-medium">{{ $summary['launch_critical_remaining'] }}</span>
-                </p>
-            @endif
-
             @if($whatsNext !== '')
-                <p class="text-sm text-gray-600 dark:text-gray-400">{{ $whatsNext }}</p>
+                <p class="line-clamp-2 text-xs leading-relaxed text-gray-500 dark:text-gray-400">{{ $whatsNext }}</p>
             @endif
 
-            @if(! empty($summary['next_pending_items']))
+            @if(! empty($summary['next_pending_items']) && (!is_array($nextItem) || empty($nextItem['title'])))
                 <ul class="list-inside list-disc text-sm text-gray-700 dark:text-gray-300">
-                    @foreach(array_slice($summary['next_pending_items'], 0, 3) as $item)
+                    @foreach(array_slice($summary['next_pending_items'], 0, 2) as $item)
                         <li>{{ $item['title'] ?? '' }}</li>
                     @endforeach
                 </ul>
             @endif
-
-            <div class="flex flex-wrap gap-2">
-                <x-filament::button tag="a" href="{{ $primaryCta['href'] }}" size="sm" color="primary">
-                    {{ $primaryCta['label'] }}
-                </x-filament::button>
-            </div>
         </div>
     </x-filament::section>
 @endif

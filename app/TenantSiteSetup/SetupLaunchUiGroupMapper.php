@@ -20,7 +20,7 @@ final class SetupLaunchUiGroupMapper
 
     public static function uiGroupForItemKey(string $itemKey): string
     {
-        if (in_array($itemKey, ['settings.favicon', 'settings.analytics_counters'], true)) {
+        if (in_array($itemKey, ['settings.favicon', 'settings.analytics_counters', 'settings.public_canonical_url'], true)) {
             return self::LAUNCH_POLISH;
         }
         if (str_starts_with($itemKey, 'settings.')) {

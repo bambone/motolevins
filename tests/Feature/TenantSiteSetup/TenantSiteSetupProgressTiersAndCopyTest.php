@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\TenantSiteSetup;
 
+use App\Models\Tenant;
 use App\Models\TenantSetting;
 use App\Models\User;
 use App\Tenant\CurrentTenant;
@@ -37,9 +38,9 @@ class TenantSiteSetupProgressTiersAndCopyTest extends TestCase
 
         $summary = app(SetupProgressService::class)->computeSummary($tenant);
 
-        $this->assertSame(10, $summary['applicable_count']);
-        $this->assertSame(8, $summary['quick_launch_applicable']);
-        $this->assertSame(2, $summary['extended_applicable']);
+        $this->assertSame(13, $summary['applicable_count']);
+        $this->assertSame(10, $summary['quick_launch_applicable']);
+        $this->assertSame(3, $summary['extended_applicable']);
         $this->assertSame(0, $summary['quick_launch_completed']);
         $this->assertSame(0, $summary['extended_completed']);
         $this->assertSame(0, $summary['quick_launch_percent']);
@@ -103,6 +104,7 @@ class TenantSiteSetupProgressTiersAndCopyTest extends TestCase
         $response->assertOk();
         $response->assertSee('Считается по чеклисту запуска', false);
         $response->assertSee('сводка по всем пунктам текущего чеклиста', false);
+        $response->assertSee('Дорожки запуска и цель сайта', false);
     }
 
     public function test_dashboard_widget_includes_honest_checklist_copy(): void
@@ -129,6 +131,7 @@ class TenantSiteSetupProgressTiersAndCopyTest extends TestCase
         $response->assertOk();
         $response->assertSee('Сводка по чеклисту', false);
         $response->assertSee('Чеклист мастера', false);
+        $response->assertSee('Подробнее в обзоре запуска', false);
     }
 
     protected function tearDown(): void
@@ -137,7 +140,7 @@ class TenantSiteSetupProgressTiersAndCopyTest extends TestCase
         parent::tearDown();
     }
 
-    private function actingAsTenant(\App\Models\Tenant $tenant): void
+    private function actingAsTenant(Tenant $tenant): void
     {
         $user = User::factory()->create(['status' => 'active']);
         $user->tenants()->attach($tenant->id, ['role' => 'tenant_owner', 'status' => 'active']);

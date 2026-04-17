@@ -3,12 +3,11 @@
 namespace App\Filament\Tenant\Widgets;
 
 use App\Filament\Tenant\Pages\TenantSiteSetupCenterPage;
-use App\TenantSiteSetup\SetupCapabilitySnapshot;
+use App\TenantSiteSetup\SetupLaunchContextPresenter;
 use App\TenantSiteSetup\SetupLaunchCtaSpec;
-use App\TenantSiteSetup\SetupProfileRepository;
+use App\TenantSiteSetup\SetupLaunchUiTrackState;
 use App\TenantSiteSetup\SetupProgressService;
 use App\TenantSiteSetup\SetupSessionService;
-use App\TenantSiteSetup\SetupTracksResolver;
 use App\TenantSiteSetup\TenantSiteSetupFeature;
 use Filament\Widgets\Widget;
 use Illuminate\Support\Facades\Auth;
@@ -86,6 +85,20 @@ class SiteReadinessWidget extends Widget
             return 'Базовый запуск в процессе';
         }
 
+        $summary = $this->summary;
+        if ($summary !== null) {
+            $applicable = (int) ($summary['applicable_count'] ?? 0);
+            $completed = (int) ($summary['completed_count'] ?? 0);
+            if ($applicable > 0 && $completed >= $applicable) {
+                return 'Чеклист завершён';
+            }
+            $qA = (int) ($summary['quick_launch_applicable'] ?? 0);
+            $qC = (int) ($summary['quick_launch_completed'] ?? 0);
+            if ($qA > 0 && $qC >= $qA) {
+                return 'Базовый запуск завершён';
+            }
+        }
+
         return '';
     }
 
@@ -119,20 +132,52 @@ class SiteReadinessWidget extends Widget
         return max(0, $a - $c);
     }
 
-    public function getWhatsNextHintProperty(): string
+    /**
+     * Компактные строки для цели и скрытых дорожек (P1).
+     *
+     * @return array{primary_goal_label: string, primary_goal_hint: string, suppressed_line: string, overview_url: string}
+     */
+    public function getLaunchContextSummaryProperty(): array
     {
         $tenant = currentTenant();
         $user = Auth::user();
+        $overview = TenantSiteSetupCenterPage::getUrl();
         if ($tenant === null || $user === null) {
-            return '';
-        }
-        $profile = app(SetupProfileRepository::class)->getMerged((int) $tenant->id);
-        $snap = SetupCapabilitySnapshot::capture($tenant, $user);
-        $tracks = app(SetupTracksResolver::class)->resolve($tenant, $user, $profile, $snap);
-        if ($tracks->suppressedTracks !== []) {
-            return 'Часть направлений отключена по модулям или правам — их можно подключить позже в кабинете.';
+            return [
+                'primary_goal_label' => '',
+                'primary_goal_hint' => '',
+                'suppressed_line' => '',
+                'overview_url' => $overview,
+            ];
         }
 
-        return 'Дальше — расширенный контур и другие разделы панели по мере необходимости.';
+        $ctx = app(SetupLaunchContextPresenter::class)->present($tenant, $user);
+        $labels = [];
+        foreach ($ctx->tracks as $row) {
+            if ($row->state === SetupLaunchUiTrackState::Suppressed) {
+                $labels[] = $row->label;
+            }
+        }
+
+        return [
+            'primary_goal_label' => $ctx->primaryGoal->label,
+            'primary_goal_hint' => $ctx->primaryGoal->hint,
+            'suppressed_line' => $ctx->suppressedCount > 0
+                ? 'Скрытые дорожки: '.implode(', ', array_slice($labels, 0, 4)).(count($labels) > 4 ? '…' : '')
+                : '',
+            'overview_url' => $overview,
+        ];
+    }
+
+    public function getWhatsNextHintProperty(): string
+    {
+        $s = $this->launchContextSummary;
+        if ($s['suppressed_line'] !== '') {
+            return $s['suppressed_line'];
+        }
+
+        return $s['primary_goal_hint'] !== ''
+            ? $s['primary_goal_hint']
+            : 'Дальше: расширенный контур и другие разделы панели.';
     }
 }
