@@ -9,6 +9,7 @@ use App\Filament\Platform\Resources\TenantResource\RelationManagers\TenantStorag
 use App\Filament\Platform\Resources\TenantResource\RelationManagers\TenantUsersRelationManager;
 use App\Filament\Shared\Lifecycle\AdminFilamentDelete;
 use App\Filament\Shared\TenantAnalyticsFormSchema;
+use App\Filament\Support\TenantPushPlatformFormSchema;
 use App\Models\DomainLocalizationPreset;
 use App\Models\TemplatePreset;
 use App\Models\Tenant;
@@ -128,7 +129,7 @@ class TenantResource extends Resource
                             ->label('Тариф')
                             ->relationship('plan', 'name')
                             ->preload()
-                            ->helperText('Лимиты и функции.'),
+                            ->helperText('Лимиты и функции. Для Push/PWA в тарифе должна быть отмечена функция «OneSignal Web Push…» (Платформа → Тарифы → редактирование).'),
                         Select::make('template_preset_id')
                             ->label('Шаблон сайта при создании')
                             ->options(TemplatePreset::where('is_active', true)->pluck('name', 'id'))
@@ -214,6 +215,8 @@ class TenantResource extends Resource
                             ->placeholder('RUB')
                             ->helperText('Трёхбуквенный код для цен и отчётов.'),
                     ])->columns(2),
+
+                TenantPushPlatformFormSchema::section(),
 
                 TenantAnalyticsFormSchema::section(
                     function (): bool {

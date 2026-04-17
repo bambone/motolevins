@@ -2,6 +2,8 @@
 
 namespace App\Filament\Support;
 
+use App\TenantPush\TenantPushFeature;
+
 /**
  * Известные ключи лимитов и функций тарифа для человекочитаемой формы (данные остаются в JSON в БД).
  */
@@ -19,6 +21,7 @@ final class PlanUiSchema
             'seo' => 'SEO-настройки',
             'booking_engine' => 'Онлайн-бронирование',
             'custom_domain' => 'Свой домен',
+            TenantPushFeature::WEB_PUSH_ONESIGNAL => 'OneSignal Web Push и PWA (уведомления, установка на экран)',
         ];
     }
 

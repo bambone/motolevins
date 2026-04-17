@@ -4,11 +4,14 @@ namespace App\Filament\Platform\Resources\TenantResource\Pages;
 
 use App\Filament\Platform\Resources\TenantResource;
 use App\Filament\Shared\TenantAnalyticsFormSchema;
+use App\Filament\Support\TenantPushPlatformFormSchema;
 use App\Jobs\RecalculateTenantStorageUsageJob;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Services\Analytics\AnalyticsSettingsPersistence;
 use App\Support\Analytics\AnalyticsSettingsFormMapper;
+use App\TenantPush\TenantPushFeatureGate;
+use App\TenantPush\TenantPushOverride;
 use App\Tenant\StorageQuota\TenantStorageQuotaService;
 use Filament\Actions;
 use Filament\Actions\Action;
@@ -121,6 +124,11 @@ class EditTenant extends EditRecord
      */
     protected array $pendingAnalyticsForm = [];
 
+    /**
+     * @var array<string, mixed>
+     */
+    protected array $pendingPushSettingsForm = [];
+
     protected function getHeaderActions(): array
     {
         return [
@@ -215,11 +223,18 @@ class EditTenant extends EditRecord
     {
         $data = parent::mutateFormDataBeforeFill($data);
 
+        $record = $this->getRecord();
+        if ($record instanceof Tenant) {
+            $push = app(TenantPushFeatureGate::class)->ensureSettings($record);
+            $data['platform_push_override'] = $push->push_override;
+            $data['platform_push_commercial_active'] = $push->commercial_service_active;
+            $data['platform_push_self_serve_allowed'] = $push->self_serve_allowed;
+        }
+
         if (! $this->canEditTenantAnalytics()) {
             return $data;
         }
 
-        $record = $this->getRecord();
         $persistence = app(AnalyticsSettingsPersistence::class);
 
         return array_merge(
@@ -234,6 +249,14 @@ class EditTenant extends EditRecord
      */
     protected function mutateFormDataBeforeSave(array $data): array
     {
+        $this->pendingPushSettingsForm = [];
+        foreach (TenantPushPlatformFormSchema::formFieldKeys() as $key) {
+            if (array_key_exists($key, $data)) {
+                $this->pendingPushSettingsForm[$key] = $data[$key];
+                unset($data[$key]);
+            }
+        }
+
         $this->pendingAnalyticsForm = [];
         foreach (TenantAnalyticsFormSchema::formFieldKeys() as $key) {
             if (array_key_exists($key, $data)) {
@@ -247,6 +270,8 @@ class EditTenant extends EditRecord
 
     protected function afterSave(): void
     {
+        $this->persistPushPlatformSettings();
+
         if (! $this->canEditTenantAnalytics()) {
             return;
         }
@@ -267,5 +292,24 @@ class EditTenant extends EditRecord
 
             throw (new Halt)->rollBackDatabaseTransaction();
         }
+    }
+
+    private function persistPushPlatformSettings(): void
+    {
+        if ($this->pendingPushSettingsForm === []) {
+            return;
+        }
+
+        $tenant = $this->record;
+        if (! $tenant instanceof Tenant) {
+            return;
+        }
+
+        $settings = app(TenantPushFeatureGate::class)->ensureSettings($tenant);
+        $settings->push_override = TenantPushOverride::tryFrom((string) ($this->pendingPushSettingsForm['platform_push_override'] ?? ''))
+            ?? TenantPushOverride::InheritPlan;
+        $settings->commercial_service_active = (bool) ($this->pendingPushSettingsForm['platform_push_commercial_active'] ?? false);
+        $settings->self_serve_allowed = (bool) ($this->pendingPushSettingsForm['platform_push_self_serve_allowed'] ?? true);
+        $settings->save();
     }
 }
