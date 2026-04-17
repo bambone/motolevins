@@ -36,7 +36,7 @@ final class SetupSessionService
             if ($active->journey_version !== $version) {
                 $active->update([
                     'journey_version' => $version,
-                    'visible_step_keys_json' => $this->journeyBuilder->visibleStepKeys($tenant),
+                    'visible_step_keys_json' => $this->journeyBuilder->visibleStepKeys($tenant, $user),
                 ]);
                 $active->refresh();
             }
@@ -77,7 +77,7 @@ final class SetupSessionService
     private function createNewSession(Tenant $tenant, User $user): TenantSetupSession
     {
         $version = $this->journeyVersion->compute($tenant, $this->profiles);
-        $keys = $this->journeyBuilder->visibleStepKeys($tenant);
+        $keys = $this->journeyBuilder->visibleStepKeys($tenant, $user);
 
         return DB::transaction(function () use ($tenant, $user, $version, $keys): TenantSetupSession {
             TenantSetupSession::query()
@@ -107,7 +107,7 @@ final class SetupSessionService
     private function resumePausedSession(Tenant $tenant, User $user, TenantSetupSession $paused): TenantSetupSession
     {
         $version = $this->journeyVersion->compute($tenant, $this->profiles);
-        $keys = $this->journeyBuilder->visibleStepKeys($tenant);
+        $keys = $this->journeyBuilder->visibleStepKeys($tenant, $user);
 
         return DB::transaction(function () use ($tenant, $user, $paused, $version, $keys): TenantSetupSession {
             TenantSetupSession::query()
@@ -181,12 +181,15 @@ final class SetupSessionService
      * Одна и та же операция для кнопок «Дальше» (когда можно завершить шаг на месте) и «Пропустить шаг» (временно
      * сдвинуть очередь). Явные решения по пункту — через {@see snoozeCurrentAndAdvance} и {@see markNotNeededCurrentAndAdvance}.
      */
-    public function advanceToNext(Tenant $tenant, User $user): void
+    /**
+     * @return bool true если очередь guided исчерпана и сессия завершена
+     */
+    public function advanceToNext(Tenant $tenant, User $user): bool
     {
         Gate::authorize('manage_settings');
         $session = $this->requireActiveSession($tenant, $user);
         $defs = SetupItemRegistry::definitions();
-        $keys = $this->journeyBuilder->visibleStepKeys($tenant);
+        $keys = $this->journeyBuilder->visibleStepKeys($tenant, $user);
         $session->update(['visible_step_keys_json' => $keys]);
 
         $current = $session->current_item_key;
@@ -202,7 +205,7 @@ final class SetupSessionService
         if ($nextKey === null) {
             $this->completeSession($session);
 
-            return;
+            return true;
         }
 
         $nextDef = $defs[$nextKey] ?? null;
@@ -211,6 +214,8 @@ final class SetupSessionService
             'step_index' => $nextIdx,
             'current_route_name' => $nextDef?->filamentRouteName,
         ]);
+
+        return false;
     }
 
     public function snoozeCurrentAndAdvance(Tenant $tenant, User $user): void
@@ -223,7 +228,7 @@ final class SetupSessionService
         }
 
         $this->itemStates->markSnoozed($tenant, $user, $currentKey, 'guided_snooze', null);
-        $this->repositionAfterUserChoice($tenant, $session, $currentKey);
+        $this->repositionAfterUserChoice($tenant, $user, $session, $currentKey);
     }
 
     public function markNotNeededCurrentAndAdvance(Tenant $tenant, User $user): void
@@ -236,16 +241,16 @@ final class SetupSessionService
         }
 
         $this->itemStates->markNotNeeded($tenant, $user, $currentKey, 'guided_not_needed', null);
-        $this->repositionAfterUserChoice($tenant, $session, $currentKey);
+        $this->repositionAfterUserChoice($tenant, $user, $session, $currentKey);
     }
 
     /**
      * @param  list<string>  $keys
      */
-    private function repositionAfterUserChoice(Tenant $tenant, TenantSetupSession $session, string $previousKey): void
+    private function repositionAfterUserChoice(Tenant $tenant, User $user, TenantSetupSession $session, string $previousKey): void
     {
         $defs = SetupItemRegistry::definitions();
-        $keys = $this->journeyBuilder->visibleStepKeys($tenant);
+        $keys = $this->journeyBuilder->visibleStepKeys($tenant, $user);
         $session->update(['visible_step_keys_json' => $keys]);
 
         if ($keys === []) {
@@ -351,7 +356,7 @@ final class SetupSessionService
         if ($session->journey_version !== $version) {
             $session->update([
                 'journey_version' => $version,
-                'visible_step_keys_json' => $this->journeyBuilder->visibleStepKeys($tenant),
+                'visible_step_keys_json' => $this->journeyBuilder->visibleStepKeys($tenant, $user),
             ]);
             $session->refresh();
         }
@@ -375,6 +380,9 @@ final class SetupSessionService
                 'on_target_route' => false,
                 'can_complete_here' => false,
                 'target_url' => null,
+                'settings_tab_active' => null,
+                'settings_tab_matches' => null,
+                'target_context_mismatch' => null,
             ];
 
         $targetUrl = $ctx['target_url'];
@@ -382,7 +390,7 @@ final class SetupSessionService
             && is_string($targetUrl)
             && $targetUrl !== '';
 
-        return [
+        $payload = [
             'session_id' => $session->id,
             'current_item_key' => $currentKey,
             'current_title' => $def?->title,
@@ -407,7 +415,36 @@ final class SetupSessionService
             'settings_section_id' => $def?->settingsSectionId,
             'readiness_tier' => $def?->readinessTier?->value,
             'guided_next_hint' => $def !== null ? $def->guidedNextHint->value : 'save_then_next',
+            'settings_tab_active' => $ctx['settings_tab_active'] ?? null,
+            'settings_tab_matches' => $ctx['settings_tab_matches'] ?? null,
+            'target_context_mismatch' => $ctx['target_context_mismatch'] ?? null,
         ];
+
+        if (config('app.debug')) {
+            $snap = SetupCapabilitySnapshot::capture($tenant, $user);
+            $tracks = app(SetupTracksResolver::class)->resolve(
+                $tenant,
+                $user,
+                $this->profiles->getMerged((int) $tenant->id),
+                $snap,
+            );
+            $payload['guided_dev_debug'] = [
+                'current_item_key' => $currentKey,
+                'route_name' => $def?->filamentRouteName,
+                'settings_tab_expected' => $def?->settingsTabKey,
+                'settings_tab_active' => $ctx['settings_tab_active'] ?? null,
+                'settings_tab_matches' => $ctx['settings_tab_matches'] ?? null,
+                'target_context_mismatch' => $ctx['target_context_mismatch'] ?? null,
+                'on_target_route' => $ctx['on_target_route'],
+                'can_complete_here' => $ctx['can_complete_here'],
+                'target_key' => $def?->targetKey,
+                'has_visible_program' => $snap->hasVisibleServiceProgram,
+                'active_tracks' => $tracks->activeTracks,
+                'suppressed_tracks' => $tracks->suppressedTracks,
+            ];
+        }
+
+        return $payload;
     }
 
     /**

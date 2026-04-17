@@ -2,11 +2,14 @@
 
 namespace Tests\Feature\TenantSiteSetup;
 
+use App\Filament\Tenant\Pages\TenantSiteSetupCenterPage;
 use App\Models\User;
 use App\Tenant\CurrentTenant;
+use App\TenantSiteSetup\SetupItemRegistry;
 use App\TenantSiteSetup\SetupItemStateService;
 use App\TenantSiteSetup\SetupJourneyBuilder;
 use App\TenantSiteSetup\SetupProfileRepository;
+use App\TenantSiteSetup\SetupProgressCache;
 use App\TenantSiteSetup\SetupSessionService;
 use App\TenantSiteSetup\TenantSiteSetupFeature;
 use Database\Seeders\RolePermissionSeeder;
@@ -69,12 +72,12 @@ class TenantSiteSetupSessionTest extends TestCase
         );
         $this->actingAs($user);
 
-        $keysBefore = app(SetupJourneyBuilder::class)->visibleStepKeys($tenant);
+        $keysBefore = app(SetupJourneyBuilder::class)->visibleStepKeys($tenant, $user);
         $this->assertNotEmpty($keysBefore);
 
         app(SetupItemStateService::class)->markSnoozed($tenant, $user, $keysBefore[0], 'test', null);
 
-        $keysAfter = app(SetupJourneyBuilder::class)->visibleStepKeys($tenant);
+        $keysAfter = app(SetupJourneyBuilder::class)->visibleStepKeys($tenant, $user);
         $this->assertNotContains($keysBefore[0], $keysAfter);
     }
 
@@ -166,6 +169,48 @@ class TenantSiteSetupSessionTest extends TestCase
         $this->assertArrayHasKey('business_focus', $merged);
         $this->assertArrayHasKey('primary_goal', $merged);
         $this->assertSame(1, $merged['schema_version']);
+    }
+
+    public function test_next_completing_guided_queue_redirects_to_overview_with_flash(): void
+    {
+        config(['features.tenant_site_setup_framework' => true]);
+        $tenant = $this->createTenantWithActiveDomain('ts_queue_done', ['theme_key' => 'expert_auto']);
+        $user = User::factory()->create(['status' => 'active']);
+        $user->tenants()->attach($tenant->id, ['role' => 'tenant_owner', 'status' => 'active']);
+
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+        $domain = $tenant->domains()->where('is_primary', true)->first();
+        $this->app->instance(
+            CurrentTenant::class,
+            new CurrentTenant($tenant, $domain, false, $this->tenancyHostForSlug((string) $tenant->slug))
+        );
+        $this->actingAs($user);
+
+        $keys = app(SetupJourneyBuilder::class)->visibleStepKeys($tenant, $user);
+        $this->assertNotEmpty($keys);
+
+        $defs = SetupItemRegistry::definitions();
+        $itemStates = app(SetupItemStateService::class);
+        if (count($keys) > 1) {
+            $last = array_pop($keys);
+            foreach ($keys as $k) {
+                $def = $defs[$k];
+                $itemStates->markCompletedBySystem($tenant, $k, $def->categoryKey, null, $def->filamentRouteName);
+            }
+            SetupProgressCache::forget((int) $tenant->id);
+        }
+
+        $sessions = app(SetupSessionService::class);
+        $sessions->startFreshGuidedSession($tenant, $user);
+
+        $host = $this->tenancyHostForSlug('ts_queue_done');
+        $response = $this->post('http://'.$host.'/admin/tenant-site-setup/session', [
+            'action' => 'next',
+            '_token' => csrf_token(),
+        ]);
+
+        $response->assertSessionHas('site_setup_guided_completed');
+        $response->assertRedirect(TenantSiteSetupCenterPage::getUrl());
     }
 
     protected function tearDown(): void

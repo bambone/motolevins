@@ -58,6 +58,12 @@ use App\Services\Tenancy\TenantMainMenuPages;
 use App\Services\Tenancy\TenantPagePrimaryHtmlSync;
 use App\Services\Tenancy\TenantViewResolver;
 use App\Support\TenantPanelMembershipCache;
+use App\TenantSiteSetup\BrandingSetupItemsProvider;
+use App\TenantSiteSetup\CoreSetupItemsProvider;
+use App\TenantSiteSetup\ProgramsSetupItemsProvider;
+use App\TenantSiteSetup\SetupItemsAggregator;
+use App\TenantSiteSetup\SetupTracksResolver;
+use App\TenantSiteSetup\WavePlaceholderSetupItemsProvider;
 use App\Tenant\Reviews\TenantReviewSubmitConfig;
 use App\TenantPush\TenantPushCrmRequestRecipientResolver;
 use App\TenantPush\TenantPushFeatureGate;
@@ -145,6 +151,20 @@ class AppServiceProvider extends ServiceProvider
             $app->make(MoneyAmountConverter::class),
             $app->make(TenantMoneySettingsResolver::class),
         ));
+
+        $this->app->singleton(CoreSetupItemsProvider::class);
+        $this->app->singleton(BrandingSetupItemsProvider::class);
+        $this->app->singleton(ProgramsSetupItemsProvider::class);
+        $this->app->singleton(WavePlaceholderSetupItemsProvider::class);
+        $this->app->singleton(SetupTracksResolver::class);
+        $this->app->singleton(SetupItemsAggregator::class, static function ($app): SetupItemsAggregator {
+            return new SetupItemsAggregator([
+                $app->make(CoreSetupItemsProvider::class),
+                $app->make(BrandingSetupItemsProvider::class),
+                $app->make(ProgramsSetupItemsProvider::class),
+                $app->make(WavePlaceholderSetupItemsProvider::class),
+            ]);
+        });
     }
 
     /**

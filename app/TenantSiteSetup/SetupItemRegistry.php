@@ -8,13 +8,28 @@ namespace App\TenantSiteSetup;
  * Единый реестр пунктов для обзора, прогресса и guided-очереди: наращивается без переделки ядра.
  *
  * Состав «quick» / «extended» и доменных ключей отражает продуктовое покрытие на дату; весь кабинет ими не исчерпывается.
+ *
+ * Граница с продуктовым inventory (план, секция E): этот реестр — roadmap/guided; полный перечень экранов и полей кабинета
+ * остаётся справочным и не должен смешиваться с порядком onboarding.
  */
 final class SetupItemRegistry
 {
+    private static ?array $mergedDefinitions = null;
+
     /**
      * @return array<string, SetupItemDefinition>
      */
     public static function definitions(): array
+    {
+        return self::$mergedDefinitions ??= app(SetupItemsAggregator::class)->merge();
+    }
+
+    /**
+     * Базовый набор без дополнительных провайдеров (см. {@see CoreSetupItemsProvider}).
+     *
+     * @return array<string, SetupItemDefinition>
+     */
+    public static function rawDefinitions(): array
     {
         $items = [
             new SetupItemDefinition(

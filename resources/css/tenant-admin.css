@@ -1799,3 +1799,39 @@ html.dark .page-sections-builder-root .psb-input-field:focus {
     border-color: rgb(180 83 9);
     color: rgb(255 255 255);
 }
+
+/* Guided: фокус после подсветки */
+.fi-ts-setup-highlight:focus-within {
+    outline: 2px solid rgb(217 119 6 / 0.55);
+    outline-offset: 2px;
+}
+
+.dark .fi-ts-setup-highlight:focus-within {
+    outline-color: rgb(251 191 36 / 0.45);
+}
+
+/* P0.5b: dev-панель (payload.guided_dev_debug + клиентские причины) */
+.fi-ts-setup-dev-debug {
+    position: fixed;
+    right: 0.75rem;
+    bottom: 0.75rem;
+    z-index: 99990;
+    max-width: min(100vw - 1.5rem, 28rem);
+    max-height: 40vh;
+    overflow: auto;
+    margin: 0;
+    padding: 0.5rem 0.65rem;
+    border-radius: 0.375rem;
+    border: 1px solid rgb(148 163 184 / 0.5);
+    background: rgb(15 23 42 / 0.92);
+    color: rgb(226 232 240);
+    font-size: 0.65rem;
+    line-height: 1.35;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    box-shadow: 0 10px 25px -5px rgb(0 0 0 / 0.35);
+}
+
+.dark .fi-ts-setup-dev-debug {
+    border-color: rgb(71 85 105 / 0.6);
+    background: rgb(3 7 18 / 0.95);
+}

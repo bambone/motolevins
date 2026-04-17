@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Tenant;
 
+use App\Filament\Tenant\Pages\TenantSiteSetupCenterPage;
 use App\Http\Controllers\Controller;
+use App\TenantSiteSetup\SetupProgressService;
 use App\TenantSiteSetup\SetupSessionService;
 use App\TenantSiteSetup\TenantSiteSetupFeature;
 use Illuminate\Http\RedirectResponse;
@@ -25,7 +27,7 @@ use Illuminate\Support\Facades\Gate;
  */
 final class TenantSiteSetupSessionController extends Controller
 {
-    public function __invoke(Request $request, SetupSessionService $sessions): RedirectResponse
+    public function __invoke(Request $request, SetupSessionService $sessions, SetupProgressService $progress): RedirectResponse
     {
         abort_unless(TenantSiteSetupFeature::enabled(), 404);
         Gate::authorize('manage_settings');
@@ -35,8 +37,22 @@ final class TenantSiteSetupSessionController extends Controller
         abort_if($tenant === null || $user === null, 403);
 
         $action = (string) $request->input('action', '');
+
+        if ($action === 'next') {
+            if ($sessions->advanceToNext($tenant, $user)) {
+                $summary = $progress->computeSummary($tenant);
+                $qA = (int) ($summary['quick_launch_applicable'] ?? 0);
+                $qC = (int) ($summary['quick_launch_completed'] ?? 0);
+                $variant = ($qA > 0 && $qC >= $qA) ? 'base_launch' : 'checklist';
+
+                return redirect()->to(TenantSiteSetupCenterPage::getUrl())
+                    ->with('site_setup_guided_completed', $variant);
+            }
+
+            return redirect()->back();
+        }
+
         match ($action) {
-            'next' => $sessions->advanceToNext($tenant, $user),
             'snooze' => $sessions->snoozeCurrentAndAdvance($tenant, $user),
             'not_needed' => $sessions->markNotNeededCurrentAndAdvance($tenant, $user),
             'pause' => $sessions->pause($tenant, $user),

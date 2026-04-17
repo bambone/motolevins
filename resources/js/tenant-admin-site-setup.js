@@ -107,6 +107,74 @@ function resolveSetupHighlightTarget(payload) {
 }
 
 /**
+ * Есть ли в DOM узел цели, но он скрыт (условная видимость).
+ *
+ * @param {Record<string, unknown>} payload
+ * @returns {boolean}
+ */
+function hasHiddenTargetCandidate(payload) {
+    const primary = payload.target_key;
+    if (!primary || typeof primary !== 'string') {
+        return false;
+    }
+    const esc =
+        typeof CSS !== 'undefined' && typeof CSS.escape === 'function'
+            ? CSS.escape(primary)
+            : primary.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+    const matches = document.querySelectorAll(`[data-setup-target="${esc}"]`);
+    for (let j = 0; j < matches.length; j += 1) {
+        if (!isSetupElementVisible(matches[j])) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/**
+ * @param {Record<string, unknown>} payload
+ * @param {string} clientReason
+ * @returns {string}
+ */
+function resolveTargetMissReason(payload, clientReason) {
+    if (payload.target_context_mismatch === 'wrong_settings_tab') {
+        return 'wrong_tab';
+    }
+    if (clientReason === 'hidden_by_condition') {
+        return 'hidden_by_condition';
+    }
+    if (clientReason === 'target_missing') {
+        return 'target_missing';
+    }
+    return clientReason || 'target_missing';
+}
+
+/**
+ * @param {Record<string, unknown>} payload
+ * @param {string} clientReason
+ */
+function updateGuidedDevDebug(payload, clientReason) {
+    const dbg = payload.guided_dev_debug;
+    if (!dbg || typeof dbg !== 'object') {
+        return;
+    }
+    let el = document.getElementById('tenant-site-setup-dev-debug');
+    if (!el) {
+        el = document.createElement('pre');
+        el.id = 'tenant-site-setup-dev-debug';
+        el.className = 'fi-ts-setup-dev-debug';
+        el.setAttribute('role', 'status');
+        document.body.appendChild(el);
+    }
+    const merged = {
+        ...dbg,
+        client_target_miss_reason: clientReason,
+        resolved_reason: resolveTargetMissReason(payload, clientReason),
+        target_found: clientReason === '',
+    };
+    el.textContent = JSON.stringify(merged, null, 2);
+}
+
+/**
  * Поднять подсветку с input/внутреннего узла к обёртке поля Filament (лейбл + контрол + ошибки).
  *
  * @param {Element} raw
@@ -124,6 +192,25 @@ function primaryHighlightElement(raw) {
         return field;
     }
     return isSetupElementVisible(raw) ? raw : null;
+}
+
+/**
+ * @param {Element} primaryEl
+ */
+function tryFocusFieldControl(primaryEl) {
+    if (!primaryEl || !(primaryEl instanceof Element)) {
+        return;
+    }
+    const focusable = primaryEl.querySelector(
+        'input:not([type="hidden"]):not([disabled]), textarea:not([disabled]), select:not([disabled]), button:not([disabled])',
+    );
+    if (focusable && focusable instanceof HTMLElement) {
+        try {
+            focusable.focus({ preventScroll: true });
+        } catch {
+            /* ignore */
+        }
+    }
 }
 
 /**
@@ -255,8 +342,11 @@ function floatingFallbackStorageKey() {
 
 /**
  * Fallback снизу: только если нет верхней полосы; не показывать повторно после «Скрыть» до смены URL.
+ *
+ * @param {Record<string, unknown>} payload
+ * @param {string} reason
  */
-function mountInlineSetupFallbackFloating() {
+function mountInlineSetupFallbackFloating(payload, reason) {
     if (document.getElementById('tenant-site-setup-bar')) {
         return;
     }
@@ -278,6 +368,7 @@ function mountInlineSetupFallbackFloating() {
     }
     const clone = node.cloneNode(true);
     clone.classList.add('fi-ts-setup-inline-card-floating');
+    clone.setAttribute('data-setup-fallback-reason', reason);
 
     const dismiss = document.createElement('button');
     dismiss.type = 'button';
@@ -297,12 +388,128 @@ function mountInlineSetupFallbackFloating() {
     document.body.appendChild(clone);
 }
 
+/**
+ * @param {Record<string, unknown>} payload
+ * @param {(raw: Element) => void} onFound
+ * @param {(reason: string) => void} onMiss
+ */
+function resolveTargetWithRetry(payload, onFound, onMiss) {
+    const start = Date.now();
+    const maxMs = 5000;
+    let done = false;
+    let observer = null;
+    let intervalId = null;
+
+    const cleanup = () => {
+        if (observer) {
+            observer.disconnect();
+            observer = null;
+        }
+        if (intervalId !== null) {
+            clearInterval(intervalId);
+            intervalId = null;
+        }
+    };
+
+    const tick = () => {
+        if (done) {
+            return;
+        }
+        const raw = resolveSetupHighlightTarget(payload);
+        if (raw) {
+            done = true;
+            cleanup();
+            onFound(raw);
+            return;
+        }
+        if (hasHiddenTargetCandidate(payload)) {
+            done = true;
+            cleanup();
+            onMiss('hidden_by_condition');
+            return;
+        }
+        if (Date.now() - start >= maxMs) {
+            done = true;
+            cleanup();
+            onMiss('target_missing');
+        }
+    };
+
+    tick();
+    if (done) {
+        return;
+    }
+
+    intervalId = window.setInterval(tick, 50);
+    observer = new MutationObserver(() => {
+        tick();
+    });
+    observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true });
+}
+
+/**
+ * @param {Record<string, unknown>} payload
+ * @param {Element} primaryEl
+ * @param {Element | null} bar
+ */
+function applyBarPadding(bar) {
+    const topOffset = bar ? parseFloat(getComputedStyle(bar).top) || 0 : 0;
+    const barH = bar ? bar.offsetHeight : 0;
+    if (topOffset + barH > 0) {
+        document.body.style.paddingTop = `${topOffset + barH}px`;
+    }
+}
+
+/**
+ * @param {Record<string, unknown>} payload
+ * @param {Element} primaryEl
+ * @param {Element | null} sectionEl
+ * @param {Element | null} bar
+ */
+function finalizeHighlight(payload, primaryEl, sectionEl, bar) {
+    primaryEl.classList.add('fi-ts-setup-highlight');
+    primaryEl.setAttribute('data-setup-highlighted', 'primary');
+
+    if (sectionEl) {
+        sectionEl.classList.add('fi-ts-setup-highlight-section');
+        sectionEl.setAttribute('data-setup-highlighted', 'section');
+    }
+
+    mountInlineSetupCardIfNeeded(payload, primaryEl, sectionEl);
+
+    applyBarPadding(bar);
+
+    const barH = bar ? bar.offsetHeight : 0;
+    const topOffset = bar ? parseFloat(getComputedStyle(bar).top) || 0 : 0;
+    const scheduleScroll = () => {
+        const top = primaryEl.getBoundingClientRect().top + window.scrollY - topOffset - barH - 12;
+        window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+    };
+    if (payload.on_target_route === true) {
+        window.requestAnimationFrame(() => {
+            window.requestAnimationFrame(() => {
+                scheduleScroll();
+                tryFocusFieldControl(primaryEl);
+            });
+        });
+    } else {
+        scheduleScroll();
+        tryFocusFieldControl(primaryEl);
+    }
+
+    updateGuidedDevDebug(payload, '');
+}
+
 function initTenantSiteSetup() {
     const payloadEl = document.getElementById('tenant-site-setup-payload');
     if (!payloadEl) {
         document.body.classList.remove('fi-ts-setup-active');
         clearTenantSiteSetupHighlights();
         document.body.style.paddingTop = '';
+        const dbg = document.getElementById('tenant-site-setup-dev-debug');
+        if (dbg) {
+            dbg.remove();
+        }
         return;
     }
 
@@ -321,57 +528,38 @@ function initTenantSiteSetup() {
         return;
     }
 
-    const rawTarget = resolveSetupHighlightTarget(payload);
-    if (!rawTarget) {
-        const key = payload.target_key;
-        if (key && window.console && console.info) {
-            console.info('[tenant-site-setup] target not found', key);
-        }
-        if (payload.on_target_route === true) {
-            mountInlineSetupFallbackFloating();
-        }
-        const barOnly = document.getElementById('tenant-site-setup-bar');
-        const topOffset = barOnly ? parseFloat(getComputedStyle(barOnly).top) || 0 : 0;
-        const barH = barOnly ? barOnly.offsetHeight : 0;
-        if (topOffset + barH > 0) {
-            document.body.style.paddingTop = `${topOffset + barH}px`;
-        }
-        return;
-    }
-
-    const primaryEl = primaryHighlightElement(rawTarget);
-    if (!primaryEl) {
-        return;
-    }
-
-    primaryEl.classList.add('fi-ts-setup-highlight');
-    primaryEl.setAttribute('data-setup-highlighted', 'primary');
-
-    const sectionEl = sectionContextElement(primaryEl);
-    if (sectionEl) {
-        sectionEl.classList.add('fi-ts-setup-highlight-section');
-        sectionEl.setAttribute('data-setup-highlighted', 'section');
-    }
-
-    mountInlineSetupCardIfNeeded(payload, primaryEl, sectionEl);
-
     const bar = document.getElementById('tenant-site-setup-bar');
-    const barH = bar ? bar.offsetHeight : 0;
-    const topOffset = bar ? parseFloat(getComputedStyle(bar).top) || 0 : 0;
-    if (topOffset + barH > 0) {
-        document.body.style.paddingTop = `${topOffset + barH}px`;
-    }
-    const scheduleScroll = () => {
-        const top = primaryEl.getBoundingClientRect().top + window.scrollY - topOffset - barH - 12;
-        window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
-    };
-    if (payload.on_target_route === true) {
-        window.requestAnimationFrame(() => {
-            window.requestAnimationFrame(scheduleScroll);
-        });
-    } else {
-        scheduleScroll();
-    }
+
+    resolveTargetWithRetry(
+        payload,
+        (rawTarget) => {
+            const primaryEl = primaryHighlightElement(rawTarget);
+            if (!primaryEl) {
+                const reason = hasHiddenTargetCandidate(payload) ? 'hidden_by_condition' : 'target_missing';
+                updateGuidedDevDebug(payload, reason);
+                if (payload.on_target_route === true) {
+                    mountInlineSetupFallbackFloating(payload, reason);
+                }
+                applyBarPadding(bar);
+                if (window.console && console.info) {
+                    console.info('[tenant-site-setup]', reason, payload.target_key);
+                }
+                return;
+            }
+            const sectionEl = sectionContextElement(primaryEl);
+            finalizeHighlight(payload, primaryEl, sectionEl, bar);
+        },
+        (reason) => {
+            updateGuidedDevDebug(payload, reason);
+            if (payload.on_target_route === true) {
+                mountInlineSetupFallbackFloating(payload, reason);
+            }
+            applyBarPadding(bar);
+            if (window.console && console.info) {
+                console.info('[tenant-site-setup]', reason, payload.target_key);
+            }
+        },
+    );
 }
 
 if (document.readyState === 'loading') {

@@ -9,6 +9,28 @@
     @endphp
 
     <div class="space-y-8">
+        @if(session()->has('site_setup_guided_completed'))
+            @php
+                $guidedDone = session('site_setup_guided_completed');
+            @endphp
+            <div
+                class="rounded-xl border border-emerald-200 bg-emerald-50/90 p-4 text-sm text-emerald-950 shadow-sm dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-50"
+                role="status"
+            >
+                @if($guidedDone === 'base_launch')
+                    <p class="font-semibold">Базовый запуск по чеклисту завершён.</p>
+                    <p class="mt-1 text-emerald-900/90 dark:text-emerald-100/90">
+                        Все пункты быстрого запуска отмечены. Дальше можно усилить публичный контур и расширенные настройки.
+                    </p>
+                @else
+                    <p class="font-semibold">Очередь guided завершена.</p>
+                    <p class="mt-1 text-emerald-900/90 dark:text-emerald-100/90">
+                        Переходите к следующим шагам чеклиста или к разделам кабинета по необходимости.
+                    </p>
+                @endif
+            </div>
+        @endif
+
         {{-- 1. Верхний action-блок (порядок зафиксирован в ТЗ) --}}
         <section class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-900/40 sm:p-6">
             <h2 class="text-base font-semibold text-gray-950 dark:text-white">Быстрый запуск</h2>

@@ -44,5 +44,33 @@ final readonly class SetupItemDefinition
         public ?string $settingsSectionId = null,
         public SetupReadinessTier $readinessTier = SetupReadinessTier::QuickLaunch,
         public SetupGuidedNextHint $guidedNextHint = SetupGuidedNextHint::SaveThenNext,
+        public ?SetupOnboardingTrack $onboardingTrack = null,
+        public ?SetupOnboardingLayer $onboardingLayer = null,
     ) {}
+
+    public function resolvedOnboardingLayer(): SetupOnboardingLayer
+    {
+        if ($this->onboardingLayer !== null) {
+            return $this->onboardingLayer;
+        }
+
+        return $this->readinessTier === SetupReadinessTier::QuickLaunch
+            ? SetupOnboardingLayer::QuickLaunch
+            : SetupOnboardingLayer::PublicReadiness;
+    }
+
+    public function resolvedOnboardingTrack(): SetupOnboardingTrack
+    {
+        if ($this->onboardingTrack !== null) {
+            return $this->onboardingTrack;
+        }
+
+        return match (true) {
+            str_starts_with($this->key, 'settings.') => SetupOnboardingTrack::Branding,
+            str_starts_with($this->key, 'contact_channels') => SetupOnboardingTrack::Contacts,
+            str_starts_with($this->key, 'pages.home') => SetupOnboardingTrack::Content,
+            str_starts_with($this->key, 'programs') => SetupOnboardingTrack::Programs,
+            default => SetupOnboardingTrack::Base,
+        };
+    }
 }

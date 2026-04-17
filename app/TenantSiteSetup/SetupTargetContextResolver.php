@@ -19,21 +19,85 @@ final class SetupTargetContextResolver
     ) {}
 
     /**
-     * @return array{on_target_route: bool, can_complete_here: bool, target_url: ?string}
+     * @return array{
+     *     on_target_route: bool,
+     *     can_complete_here: bool,
+     *     target_url: ?string,
+     *     settings_tab_active: ?string,
+     *     settings_tab_matches: ?bool,
+     *     target_context_mismatch: ?string,
+     * }
      */
     public function resolve(Tenant $tenant, SetupItemDefinition $def, Request $request): array
     {
         $targetUrl = $this->urls->urlFor($tenant, $def);
         $currentName = $request->route()?->getName();
 
+        $tabState = $this->settingsTabState($def, $request, $currentName);
         $onTarget = $this->matchesTargetRoute($tenant, $def, $request, $currentName);
+        if ($tabState['blocks_target']) {
+            $onTarget = false;
+        }
         $canComplete = $this->canCompleteHere($tenant, $def, $request, $onTarget, $currentName);
 
         return [
             'on_target_route' => $onTarget,
             'can_complete_here' => $canComplete,
             'target_url' => $targetUrl,
+            'settings_tab_active' => $tabState['active'],
+            'settings_tab_matches' => $tabState['matches'],
+            'target_context_mismatch' => $tabState['mismatch_code'],
         ];
+    }
+
+    /**
+     * @return array{active: ?string, matches: ?bool, blocks_target: bool, mismatch_code: ?string}
+     */
+    private function settingsTabState(SetupItemDefinition $def, Request $request, ?string $currentName): array
+    {
+        $settingsRoute = 'filament.admin.pages.settings';
+        if ($currentName !== $settingsRoute || $def->filamentRouteName !== $settingsRoute) {
+            return [
+                'active' => null,
+                'matches' => null,
+                'blocks_target' => false,
+                'mismatch_code' => null,
+            ];
+        }
+
+        $expected = $def->settingsTabKey;
+        $active = $this->effectiveSettingsTabQuery($request);
+        if ($expected === null || $expected === '') {
+            return [
+                'active' => $active,
+                'matches' => true,
+                'blocks_target' => false,
+                'mismatch_code' => null,
+            ];
+        }
+
+        $matches = $active === $expected;
+        $mismatch = $matches ? null : 'wrong_settings_tab';
+
+        return [
+            'active' => $active,
+            'matches' => $matches,
+            'blocks_target' => ! $matches,
+            'mismatch_code' => $mismatch,
+        ];
+    }
+
+    /**
+     * Filament Tabs persist `settings_tab` in query; первый таб в {@see Settings} — general.
+     */
+    private function effectiveSettingsTabQuery(Request $request): string
+    {
+        $raw = $request->query('settings_tab');
+        if (is_string($raw) && $raw !== '') {
+            return $raw;
+        }
+
+        return 'general';
     }
 
     private function matchesTargetRoute(Tenant $tenant, SetupItemDefinition $def, Request $request, ?string $currentName): bool
