@@ -112,7 +112,7 @@
                     <button
                         type="button"
                         class="fi-ts-setup-btn fi-ts-setup-btn-secondary"
-                        onclick="document.getElementById('fi-ts-setup-not-needed-dialog')?.close()"
+                        data-fi-ts-close-dialog="fi-ts-setup-not-needed-dialog"
                     >
                         <span class="fi-ts-setup-btn-label">Отмена</span>
                     </button>

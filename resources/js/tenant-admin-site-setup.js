@@ -17,6 +17,19 @@ let guidedBeforeUnloadBound = false;
 let morphInitTimer = null;
 let livewireMorphHookRegistered = false;
 
+/** Стабилизация baseline «сохранить → дальше»: токен шага + окно после init (без фиксированных 240ms). */
+let guidedBaselineSessionToken = 0;
+let guidedBaselineInitAt = 0;
+/** @type {ReturnType<typeof setTimeout>|null} */
+let guidedBaselineMorphTimer = null;
+const guidedBaselineMorphDebounceMs = 80;
+const guidedBaselineMorphWindowMs = 700;
+/** Пользователь успел тронуть форму до «позднего» снимка после morph — не перезаписывать baseline. */
+let guidedBaselineTouchBeforeLock = false;
+let guidedBaselineTouchBound = false;
+let guidedBaselineMorphHookRegistered = false;
+let tenantSetupDialogControlsBound = false;
+
 // ——— lifecycle / reset ———
 
 function abortActiveSetupResolve() {
@@ -132,22 +145,8 @@ function getVisiblePageBuilderEditor() {
 }
 
 /**
- * Fallback: парсинг wire:key, если нет data-setup-editor-section-id (старая разметка).
- *
- * @param {string} wireKey
- * @returns {number|null}
- */
-function parseEditorSectionIdFromWireKeyFallback(wireKey) {
-    const m = (wireKey || '').match(/page-section-editor-root-(\d+)-/);
-    if (!m) {
-        return null;
-    }
-    const n = parseInt(m[1], 10);
-    return Number.isFinite(n) && n > 0 ? n : null;
-}
-
-/**
- * Id секции в открытом slide-over: {@see data-setup-editor-section-id} на корне editor (устойчивый контракт).
+ * Id секции в открытом slide-over: атрибут data-setup-editor-section-id на корне .page-sections-builder-editor
+ * (resources/views/livewire/tenant/page-sections-builder.blade.php). Обязателен в разметке; см. PageSectionsBuilderEditorDomContractTest.
  *
  * @returns {number|null}
  */
@@ -157,11 +156,11 @@ function getOpenEditorSectionIdFromDom() {
         return null;
     }
     const raw = editor.getAttribute('data-setup-editor-section-id');
-    if (raw !== null && String(raw).trim() !== '') {
-        const n = parseInt(String(raw).trim(), 10);
-        return Number.isFinite(n) && n > 0 ? n : null;
+    if (raw === null || String(raw).trim() === '') {
+        return null;
     }
-    return parseEditorSectionIdFromWireKeyFallback(editor.getAttribute('wire:key') || '');
+    const n = parseInt(String(raw).trim(), 10);
+    return Number.isFinite(n) && n > 0 ? n : null;
 }
 
 /**
@@ -761,6 +760,157 @@ function captureGuidedFormBaseline() {
     guidedFormBaseline = serializeTenantFormState(form);
 }
 
+function markGuidedBaselineFormTouchedIfMainForm(e) {
+    if (!document.body.classList.contains('fi-ts-setup-active')) {
+        return;
+    }
+    const t = e.target;
+    if (!(t instanceof Element)) {
+        return;
+    }
+    const form = getMainTenantForm();
+    if (!form || !form.contains(t)) {
+        return;
+    }
+    guidedBaselineTouchBeforeLock = true;
+}
+
+function bindGuidedBaselineTouchTrackingOnce() {
+    if (guidedBaselineTouchBound) {
+        return;
+    }
+    guidedBaselineTouchBound = true;
+    document.addEventListener('input', markGuidedBaselineFormTouchedIfMainForm, true);
+    document.addEventListener('change', markGuidedBaselineFormTouchedIfMainForm, true);
+}
+
+function registerGuidedBaselineMorphStabilizationHook() {
+    if (guidedBaselineMorphHookRegistered) {
+        return;
+    }
+    if (typeof window.Livewire === 'undefined' || typeof window.Livewire.hook !== 'function') {
+        return;
+    }
+    guidedBaselineMorphHookRegistered = true;
+    window.Livewire.hook('morph.updated', () => {
+        if (!document.body.classList.contains('fi-ts-setup-active')) {
+            return;
+        }
+        const token = guidedBaselineSessionToken;
+        const initAt = guidedBaselineInitAt;
+        if (!initAt || Date.now() - initAt > guidedBaselineMorphWindowMs) {
+            return;
+        }
+        if (guidedBaselineMorphTimer !== null) {
+            clearTimeout(guidedBaselineMorphTimer);
+        }
+        guidedBaselineMorphTimer = window.setTimeout(() => {
+            guidedBaselineMorphTimer = null;
+            if (token !== guidedBaselineSessionToken) {
+                return;
+            }
+            if (Date.now() - guidedBaselineInitAt > guidedBaselineMorphWindowMs) {
+                return;
+            }
+            if (guidedBaselineTouchBeforeLock) {
+                return;
+            }
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    if (token !== guidedBaselineSessionToken) {
+                        return;
+                    }
+                    captureGuidedFormBaseline();
+                });
+            });
+        }, guidedBaselineMorphDebounceMs);
+    });
+}
+
+/**
+ * Снимок «чистой» формы после отрисовки и (если есть Livewire) после серии morph без таймера 240ms.
+ */
+function scheduleGuidedFormBaselineCapture() {
+    guidedBaselineSessionToken += 1;
+    guidedBaselineInitAt = Date.now();
+    guidedBaselineTouchBeforeLock = false;
+    bindGuidedBaselineTouchTrackingOnce();
+    registerGuidedBaselineMorphStabilizationHook();
+
+    const token = guidedBaselineSessionToken;
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            queueMicrotask(() => {
+                if (token !== guidedBaselineSessionToken) {
+                    return;
+                }
+                captureGuidedFormBaseline();
+            });
+        });
+    });
+}
+
+/**
+ * Нативный HTMLDialogElement: во внутренних браузерах showModal иногда падает — есть fallback на show().
+ *
+ * @param {HTMLDialogElement} d
+ */
+function showDialogModalSafe(d) {
+    try {
+        if (typeof d.showModal === 'function') {
+            d.showModal();
+            return;
+        }
+    } catch {
+        /* try show() */
+    }
+    try {
+        if (typeof d.show === 'function') {
+            d.show();
+        }
+    } catch {
+        /* ignore */
+    }
+}
+
+function openTenantNotNeededDialog() {
+    const dlg = document.getElementById('fi-ts-setup-not-needed-dialog');
+    if (!(dlg instanceof HTMLDialogElement)) {
+        return;
+    }
+    showDialogModalSafe(dlg);
+}
+
+function bindTenantSetupDialogControlsOnce() {
+    if (tenantSetupDialogControlsBound) {
+        return;
+    }
+    tenantSetupDialogControlsBound = true;
+    document.addEventListener('click', (e) => {
+        const target = e.target;
+        if (!(target instanceof Element)) {
+            return;
+        }
+        const opener = target.closest('[data-fi-ts-open-not-needed-dialog]');
+        if (opener) {
+            e.preventDefault();
+            openTenantNotNeededDialog();
+            return;
+        }
+        const closer = target.closest('[data-fi-ts-close-dialog]');
+        if (closer) {
+            const id = closer.getAttribute('data-fi-ts-close-dialog');
+            if (!id) {
+                return;
+            }
+            const dlg = document.getElementById(id);
+            if (dlg instanceof HTMLDialogElement) {
+                dlg.close();
+            }
+        }
+    });
+}
+
 function isMainTenantFormDirty() {
     const form = getMainTenantForm();
     if (!form || guidedFormBaseline === null) {
@@ -790,7 +940,7 @@ function showSaveRequiredBeforeNextDialog() {
         const btn = d.querySelector('.fi-ts-setup-save-required-ok');
         btn?.addEventListener('click', () => d.close());
     }
-    d.showModal();
+    showDialogModalSafe(d);
 }
 
 /**
@@ -843,6 +993,7 @@ function bindGuidedSaveGuardsOnce() {
         return;
     }
     guidedSubmitGuardBound = true;
+    bindTenantSetupDialogControlsOnce();
     document.addEventListener('submit', guidedSessionSubmitGuard, true);
     if (!guidedBeforeUnloadBound) {
         guidedBeforeUnloadBound = true;
@@ -1114,7 +1265,7 @@ function logSetup(payload, ...rest) {
     }
 }
 
-/** Slide-over редактора в teleport на body — один observer на body + wire:key для смены секции. */
+/** Slide-over редактора в teleport на body — observer на body + data-setup-editor-section-id при смене секции. */
 function getMutationObserverRoot() {
     return document.body;
 }
@@ -1247,7 +1398,7 @@ function resolveTargetWithRetry(payload, onFound, onMiss, opts) {
         childList: true,
         subtree: true,
         attributes: true,
-        attributeFilter: ['class', 'style', 'hidden', 'wire:key'],
+        attributeFilter: ['class', 'style', 'hidden', 'data-setup-editor-section-id'],
     });
 
     return abort;
@@ -1374,9 +1525,7 @@ function initTenantSiteSetup() {
 
     lastGuidedPayloadForDirty = payload;
     bindGuidedSaveGuardsOnce();
-    window.setTimeout(() => {
-        captureGuidedFormBaseline();
-    }, 240);
+    scheduleGuidedFormBaselineCapture();
 }
 
 if (document.readyState === 'loading') {
@@ -1408,3 +1557,7 @@ function registerLivewireMorphGuidedInitHook() {
 
 document.addEventListener('livewire:init', registerLivewireMorphGuidedInitHook);
 registerLivewireMorphGuidedInitHook();
+
+document.addEventListener('livewire:init', registerGuidedBaselineMorphStabilizationHook);
+registerGuidedBaselineMorphStabilizationHook();
+bindTenantSetupDialogControlsOnce();

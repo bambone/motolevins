@@ -53,7 +53,7 @@
                 aria-label="Не требуется для проекта"
                 aria-haspopup="dialog"
                 aria-controls="fi-ts-setup-not-needed-dialog"
-                onclick="document.getElementById('fi-ts-setup-not-needed-dialog')?.showModal()"
+                data-fi-ts-open-not-needed-dialog
             >
                 Не требуется
             </button>

@@ -554,6 +554,11 @@
     @endif
 
     @if($showEditor)
+        {{--
+          Контракт для tenant-admin-site-setup.js (auto-open / open-editor detection):
+          на корне .page-sections-builder-editor всегда есть data-setup-editor-section-id
+          (числовой id существующей секции или пустая строка для «нового блока»). Не убирать.
+        --}}
         @teleport('body')
             <div
                 class="page-sections-builder-editor page-sections-builder-teleport fixed inset-0 z-[300]"
