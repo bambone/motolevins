@@ -7,6 +7,7 @@ namespace App\TenantSiteSetup;
 use App\Models\Tenant;
 use App\Models\TenantSetupSession;
 use App\Models\User;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 
@@ -18,6 +19,7 @@ final class SetupSessionService
         private readonly SetupJourneyBuilder $journeyBuilder,
         private readonly SetupItemStateService $itemStates,
         private readonly PageBuilderSetupTargetResolver $pageBuilderHints,
+        private readonly SetupTargetContextResolver $targetContext,
     ) {}
 
     public function startOrResume(Tenant $tenant, User $user): TenantSetupSession
@@ -26,6 +28,20 @@ final class SetupSessionService
         $paused = $this->pausedSession($tenant, $user);
         if ($paused !== null) {
             return $this->resumePausedSession($tenant, $user, $paused);
+        }
+
+        $active = $this->activeSession($tenant, $user);
+        if ($active !== null) {
+            $version = $this->journeyVersion->compute($tenant, $this->profiles);
+            if ($active->journey_version !== $version) {
+                $active->update([
+                    'journey_version' => $version,
+                    'visible_step_keys_json' => $this->journeyBuilder->visibleStepKeys($tenant),
+                ]);
+                $active->refresh();
+            }
+
+            return $active;
         }
 
         return $this->createNewSession($tenant, $user);
@@ -160,6 +176,11 @@ final class SetupSessionService
             ]);
     }
 
+    /**
+     * Следующий видимый шаг в guided-сессии **без** записи статуса по текущему пункту в {@see TenantSetupItemState}.
+     * Одна и та же операция для кнопок «Дальше» (когда можно завершить шаг на месте) и «Пропустить шаг» (временно
+     * сдвинуть очередь). Явные решения по пункту — через {@see snoozeCurrentAndAdvance} и {@see markNotNeededCurrentAndAdvance}.
+     */
     public function advanceToNext(Tenant $tenant, User $user): void
     {
         Gate::authorize('manage_settings');
@@ -315,7 +336,7 @@ final class SetupSessionService
     /**
      * @return array<string, mixed>|null
      */
-    public function overlayPayload(?Tenant $tenant, ?User $user): ?array
+    public function overlayPayload(?Tenant $tenant, ?User $user, ?Request $request = null): ?array
     {
         if (! TenantSiteSetupFeature::enabled() || $tenant === null || $user === null) {
             return null;
@@ -347,10 +368,30 @@ final class SetupSessionService
 
         $sessionUrl = route('filament.admin.tenant-site-setup.session');
 
+        $request ??= request();
+        $ctx = $def !== null
+            ? $this->targetContext->resolve($tenant, $def, $request)
+            : [
+                'on_target_route' => false,
+                'can_complete_here' => false,
+                'target_url' => null,
+            ];
+
+        $targetUrl = $ctx['target_url'];
+        $primaryIsTargetNavigation = ! $ctx['can_complete_here']
+            && is_string($targetUrl)
+            && $targetUrl !== '';
+
         return [
             'session_id' => $session->id,
             'current_item_key' => $currentKey,
             'current_title' => $def?->title,
+            'target_item_key' => $currentKey,
+            'target_title' => $def?->title,
+            'target_url' => $targetUrl,
+            'on_target_route' => $ctx['on_target_route'],
+            'can_complete_here' => $ctx['can_complete_here'],
+            'primary_is_target_navigation' => $primaryIsTargetNavigation,
             'step_index' => (int) $session->step_index,
             'steps_total' => max(1, count($keys)),
             'target_key' => $def?->targetKey,
@@ -362,6 +403,35 @@ final class SetupSessionService
             'can_snooze' => $def?->skipAllowed ?? false,
             'can_not_needed' => (bool) ($def?->notNeededAllowed),
             'launch_critical' => $def?->launchCritical ?? false,
+            'settings_tab' => $def?->settingsTabKey,
+            'settings_section_id' => $def?->settingsSectionId,
+            'readiness_tier' => $def?->readinessTier?->value,
         ];
+    }
+
+    /**
+     * После «Начать/Продолжить запуск» ведём на экран текущего шага (если известен URL), иначе — на обзор.
+     */
+    public function redirectUrlAfterGuidedEntry(Tenant $tenant, User $user, string $overviewUrl): string
+    {
+        $session = $this->activeSession($tenant, $user);
+        if ($session === null) {
+            return $overviewUrl;
+        }
+
+        $key = $session->current_item_key;
+        if ($key === null) {
+            return $overviewUrl;
+        }
+
+        $defs = SetupItemRegistry::definitions();
+        $def = $defs[$key] ?? null;
+        if ($def === null) {
+            return $overviewUrl;
+        }
+
+        $url = app(SetupItemUrlResolver::class)->urlFor($tenant, $def);
+
+        return is_string($url) && $url !== '' ? $url : $overviewUrl;
     }
 }

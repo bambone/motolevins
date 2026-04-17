@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\TenantSiteSetup;
 
 /**
- * R1 item set — single source for center, progress, journey.
+ * Единый реестр пунктов для обзора, прогресса и guided-очереди: наращивается без переделки ядра.
+ *
+ * Состав «quick» / «extended» и доменных ключей отражает продуктовое покрытие на дату; весь кабинет ими не исчерпывается.
  */
 final class SetupItemRegistry
 {
@@ -34,6 +36,8 @@ final class SetupItemRegistry
                 completionRefreshTags: ['tenant_setting:general.site_name'],
                 themeConstraints: null,
                 featureConstraints: null,
+                settingsTabKey: 'general',
+                settingsSectionId: 'site_identity',
             ),
             new SetupItemDefinition(
                 key: 'settings.logo',
@@ -54,6 +58,7 @@ final class SetupItemRegistry
                 completionRefreshTags: ['tenant_setting:branding.logo', 'tenant_setting:branding.logo_path'],
                 themeConstraints: null,
                 featureConstraints: null,
+                settingsTabKey: 'appearance',
             ),
             new SetupItemDefinition(
                 key: 'settings.tagline_or_short_description',
@@ -74,6 +79,8 @@ final class SetupItemRegistry
                 completionRefreshTags: ['tenant_setting:general.short_description'],
                 themeConstraints: null,
                 featureConstraints: null,
+                settingsTabKey: 'general',
+                settingsSectionId: 'site_identity',
             ),
             new SetupItemDefinition(
                 key: 'contact_channels.primary_phone',
@@ -94,6 +101,8 @@ final class SetupItemRegistry
                 completionRefreshTags: ['tenant_setting:contacts.phone'],
                 themeConstraints: null,
                 featureConstraints: null,
+                settingsTabKey: 'general',
+                settingsSectionId: 'contacts_block',
             ),
             new SetupItemDefinition(
                 key: 'contact_channels.preferred_contact_channel',
@@ -157,6 +166,51 @@ final class SetupItemRegistry
                 featureConstraints: null,
                 pageBuilderFallbackSectionTypeIds: ['hero'],
                 fallbackSetupAction: 'pages.home.add_block',
+            ),
+            new SetupItemDefinition(
+                key: 'settings.favicon',
+                categoryKey: 'extended',
+                title: 'Иконка сайта (favicon)',
+                description: 'Загрузите favicon для вкладки браузера и закладок.',
+                importance: SetupItemImportance::Recommended,
+                sortOrder: 100,
+                filamentRouteName: 'filament.admin.pages.settings',
+                targetKind: SetupItemTargetKind::Field,
+                targetKey: 'settings.favicon',
+                targetLabel: 'Favicon',
+                prerequisiteKeys: [],
+                skipAllowed: true,
+                notNeededAllowed: true,
+                launchCritical: false,
+                profileDependencyKeys: [],
+                completionRefreshTags: ['tenant_setting:branding.favicon', 'tenant_setting:branding.favicon_path'],
+                themeConstraints: null,
+                featureConstraints: null,
+                settingsTabKey: 'appearance',
+                settingsSectionId: 'branding_favicon',
+                readinessTier: SetupReadinessTier::Extended,
+            ),
+            new SetupItemDefinition(
+                key: 'settings.analytics_counters',
+                categoryKey: 'extended',
+                title: 'Аналитика',
+                description: 'Подключите Яндекс Метрику и/или GA4 по ID.',
+                importance: SetupItemImportance::Recommended,
+                sortOrder: 110,
+                filamentRouteName: 'filament.admin.pages.settings',
+                targetKind: SetupItemTargetKind::Field,
+                targetKey: 'settings.analytics_yandex_ga',
+                targetLabel: 'Счётчики аналитики',
+                prerequisiteKeys: [],
+                skipAllowed: true,
+                notNeededAllowed: true,
+                launchCritical: false,
+                profileDependencyKeys: [],
+                completionRefreshTags: ['tenant_setting:integrations.analytics'],
+                themeConstraints: null,
+                featureConstraints: null,
+                settingsTabKey: 'analytics',
+                readinessTier: SetupReadinessTier::Extended,
             ),
             new SetupItemDefinition(
                 key: 'pages.home.hero_cta_or_contact_block',

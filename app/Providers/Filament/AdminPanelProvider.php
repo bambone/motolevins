@@ -19,10 +19,10 @@ use App\Http\Middleware\FilamentTenantPanelAuthenticate;
 use App\Http\Middleware\ResolveTenantFromDomain;
 use App\Http\Middleware\SetFilamentLocale;
 use App\Models\TenantSetting;
-use App\Terminology\DomainTermKeys;
-use App\Terminology\TenantTerminologyService;
 use App\TenantSiteSetup\SetupSessionService;
 use App\TenantSiteSetup\TenantSiteSetupFeature;
+use App\Terminology\DomainTermKeys;
+use App\Terminology\TenantTerminologyService;
 use Closure;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
@@ -145,6 +145,9 @@ class AdminPanelProvider extends PanelProvider
                 'Infrastructure' => NavigationGroup::make()
                     ->label(self::tenantNavigationGroupLabel(DomainTermKeys::NAV_INFRASTRUCTURE, 'Инфраструктура'))
                     ->icon('heroicon-o-server-stack'),
+                'SiteLaunch' => NavigationGroup::make()
+                    ->label(self::tenantNavigationGroupLabel(DomainTermKeys::NAV_SITE_LAUNCH, 'Запуск сайта'))
+                    ->icon('heroicon-o-rocket-launch'),
                 'Settings' => NavigationGroup::make()
                     ->label(self::tenantNavigationGroupLabel(DomainTermKeys::NAV_SETTINGS, 'Настройки'))
                     ->icon('heroicon-o-cog-8-tooth'),

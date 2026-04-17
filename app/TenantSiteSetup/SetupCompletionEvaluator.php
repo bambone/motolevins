@@ -8,6 +8,7 @@ use App\ContactChannels\TenantContactChannelsStore;
 use App\Models\Tenant;
 use App\Models\TenantServiceProgram;
 use App\Models\TenantSetting;
+use App\Services\Analytics\AnalyticsSettingsPersistence;
 use App\Support\RussianPhone;
 
 final class SetupCompletionEvaluator
@@ -17,6 +18,7 @@ final class SetupCompletionEvaluator
     public function __construct(
         private readonly PageBuilderSetupInspector $pageInspector,
         private readonly TenantContactChannelsStore $contactChannelsStore,
+        private readonly AnalyticsSettingsPersistence $analyticsPersistence,
     ) {}
 
     public function isComplete(Tenant $tenant, SetupItemDefinition $def): bool
@@ -30,6 +32,8 @@ final class SetupCompletionEvaluator
             'programs.first_published_program' => $this->firstProgramComplete($tenant),
             'pages.home.hero_title' => $this->pageInspector->heroHeadingFilled($tenant),
             'pages.home.hero_cta_or_contact_block' => $this->pageInspector->hasCtaOrContactBlock($tenant),
+            'settings.favicon' => $this->faviconComplete($tenant),
+            'settings.analytics_counters' => $this->analyticsCountersComplete($tenant),
             default => false,
         };
     }
@@ -78,5 +82,24 @@ final class SetupCompletionEvaluator
             ->whereRaw('TRIM(COALESCE(title, "")) <> ""')
             ->whereRaw('TRIM(COALESCE(teaser, "")) <> "" OR TRIM(COALESCE(description, "")) <> ""')
             ->exists();
+    }
+
+    private function faviconComplete(Tenant $tenant): bool
+    {
+        $favicon = trim((string) TenantSetting::getForTenant($tenant->id, 'branding.favicon', ''));
+        $path = trim((string) TenantSetting::getForTenant($tenant->id, 'branding.favicon_path', ''));
+
+        return $favicon !== '' || $path !== '';
+    }
+
+    /**
+     * Пункт «аналитика» закрывается при **любом** валидном подключённом счётчике (Метрика и/или GA4),
+     * см. {@see \App\Support\Analytics\AnalyticsSettingsData::isEmpty()} — не «полная настройка всех тумблеров».
+     */
+    private function analyticsCountersComplete(Tenant $tenant): bool
+    {
+        $data = $this->analyticsPersistence->load((int) $tenant->id);
+
+        return ! $data->isEmpty();
     }
 }

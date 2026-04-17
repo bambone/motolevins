@@ -86,6 +86,7 @@ class DomainTerminologySeeder extends Seeder
             [DomainTermKeys::NAV_CONTENT, 'navigation', 'Контент', null],
             [DomainTermKeys::NAV_MARKETING, 'navigation', 'Маркетинг', null],
             [DomainTermKeys::NAV_INFRASTRUCTURE, 'navigation', 'Инфраструктура', null],
+            [DomainTermKeys::NAV_SITE_LAUNCH, 'navigation', 'Запуск сайта', null],
             [DomainTermKeys::NAV_SETTINGS, 'navigation', 'Настройки', null],
         ];
 

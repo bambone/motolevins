@@ -8,6 +8,7 @@ use App\ContactChannels\TenantContactChannelsStore;
 use App\Models\Tenant;
 use App\Models\TenantServiceProgram;
 use App\Models\TenantSetting;
+use App\Services\Analytics\AnalyticsSettingsPersistence;
 use App\Support\RussianPhone;
 
 final class SetupValueSnapshotResolver
@@ -15,6 +16,7 @@ final class SetupValueSnapshotResolver
     public function __construct(
         private readonly PageBuilderSetupInspector $pageInspector,
         private readonly TenantContactChannelsStore $contactChannelsStore,
+        private readonly AnalyticsSettingsPersistence $analyticsPersistence,
     ) {}
 
     public function snapshot(Tenant $tenant, SetupItemDefinition $def): string
@@ -28,6 +30,8 @@ final class SetupValueSnapshotResolver
             'programs.first_published_program' => $this->programSnapshot($tenant),
             'pages.home.hero_title' => $this->pageInspector->heroHeadingSnapshot($tenant),
             'pages.home.hero_cta_or_contact_block' => $this->pageInspector->ctaOrContactSnapshot($tenant),
+            'settings.favicon' => $this->faviconSnapshot($tenant),
+            'settings.analytics_counters' => $this->analyticsSnapshot($tenant),
             default => '—',
         };
     }
@@ -48,5 +52,30 @@ final class SetupValueSnapshotResolver
             ->count();
 
         return $n > 0 ? $n.' опубликовано' : '—';
+    }
+
+    private function faviconSnapshot(Tenant $tenant): string
+    {
+        $favicon = trim((string) TenantSetting::getForTenant($tenant->id, 'branding.favicon', ''));
+        $path = trim((string) TenantSetting::getForTenant($tenant->id, 'branding.favicon_path', ''));
+
+        return ($favicon !== '' || $path !== '') ? 'задано' : '—';
+    }
+
+    private function analyticsSnapshot(Tenant $tenant): string
+    {
+        $data = $this->analyticsPersistence->load((int) $tenant->id);
+        if ($data->isEmpty()) {
+            return 'не подключено';
+        }
+        $parts = [];
+        if ($data->hasRenderableYandex()) {
+            $parts[] = 'Метрика';
+        }
+        if ($data->hasRenderableGa4()) {
+            $parts[] = 'GA4';
+        }
+
+        return $parts !== [] ? implode(', ', $parts) : 'частично';
     }
 }

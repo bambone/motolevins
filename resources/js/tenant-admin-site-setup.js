@@ -51,6 +51,11 @@ function resolveSetupHighlightTarget(payload) {
         return null;
     }
 
+    const sectionId =
+        typeof payload.settings_section_id === 'string' && payload.settings_section_id.length > 0
+            ? payload.settings_section_id
+            : '';
+
     const fallbackKeys = Array.isArray(payload.target_fallback_keys) ? payload.target_fallback_keys : [];
     const keysToTry = [primary, ...fallbackKeys.filter((k) => typeof k === 'string' && k.length > 0)];
 
@@ -66,6 +71,13 @@ function resolveSetupHighlightTarget(payload) {
             if (isSetupElementVisible(el)) {
                 return el;
             }
+        }
+    }
+
+    if (sectionId !== '') {
+        const sec = firstVisibleByDataAttr('data-setup-section', sectionId);
+        if (sec) {
+            return sec;
         }
     }
 
@@ -94,9 +106,73 @@ function resolveSetupHighlightTarget(payload) {
     return null;
 }
 
+/**
+ * Поднять подсветку с input/внутреннего узла к обёртке поля Filament (лейбл + контрол + ошибки).
+ *
+ * @param {Element} raw
+ * @returns {Element|null}
+ */
+function primaryHighlightElement(raw) {
+    if (!raw || !(raw instanceof Element)) {
+        return null;
+    }
+    if (raw.matches('.fi-fo-field')) {
+        return isSetupElementVisible(raw) ? raw : null;
+    }
+    const field = raw.closest('.fi-fo-field');
+    if (field && isSetupElementVisible(field)) {
+        return field;
+    }
+    return isSetupElementVisible(raw) ? raw : null;
+}
+
+/**
+ * Мягкий контекст секции (например блок «Контакты» / «Основное»), если поле внутри [data-setup-section].
+ *
+ * @param {Element} primaryEl
+ * @returns {Element|null}
+ */
+function sectionContextElement(primaryEl) {
+    if (!primaryEl || !(primaryEl instanceof Element)) {
+        return null;
+    }
+    const sec = primaryEl.closest('[data-setup-section]');
+    if (!sec || sec === primaryEl) {
+        return null;
+    }
+    return isSetupElementVisible(sec) ? sec : null;
+}
+
+/**
+ * На странице настроек активная вкладка хранится в query (`settings_tab`). Подставляем нужное значение до поиска целей.
+ *
+ * @param {Record<string, unknown>} payload
+ * @returns {boolean} true если будет перезагрузка страницы
+ */
+function syncSettingsTabQueryIfNeeded(payload) {
+    if (payload.on_target_route !== true) {
+        return false;
+    }
+    if (payload.route_name !== 'filament.admin.pages.settings') {
+        return false;
+    }
+    const tab = payload.settings_tab;
+    if (typeof tab !== 'string' || tab === '') {
+        return false;
+    }
+    const u = new URL(window.location.href);
+    if (u.searchParams.get('settings_tab') === tab) {
+        return false;
+    }
+    u.searchParams.set('settings_tab', tab);
+    window.location.replace(u.toString());
+
+    return true;
+}
+
 function clearTenantSiteSetupHighlights() {
-    document.querySelectorAll('[data-setup-highlighted="1"]').forEach((el) => {
-        el.classList.remove('fi-ts-setup-highlight');
+    document.querySelectorAll('[data-setup-highlighted]').forEach((el) => {
+        el.classList.remove('fi-ts-setup-highlight', 'fi-ts-setup-highlight-section');
         el.removeAttribute('data-setup-highlighted');
     });
 }
@@ -121,8 +197,12 @@ function initTenantSiteSetup() {
 
     clearTenantSiteSetupHighlights();
 
-    const target = resolveSetupHighlightTarget(payload);
-    if (!target) {
+    if (syncSettingsTabQueryIfNeeded(payload)) {
+        return;
+    }
+
+    const rawTarget = resolveSetupHighlightTarget(payload);
+    if (!rawTarget) {
         const key = payload.target_key;
         if (key && window.console && console.info) {
             console.info('[tenant-site-setup] target not found', key);
@@ -136,8 +216,19 @@ function initTenantSiteSetup() {
         return;
     }
 
-    target.classList.add('fi-ts-setup-highlight');
-    target.setAttribute('data-setup-highlighted', '1');
+    const primaryEl = primaryHighlightElement(rawTarget);
+    if (!primaryEl) {
+        return;
+    }
+
+    primaryEl.classList.add('fi-ts-setup-highlight');
+    primaryEl.setAttribute('data-setup-highlighted', 'primary');
+
+    const sectionEl = sectionContextElement(primaryEl);
+    if (sectionEl) {
+        sectionEl.classList.add('fi-ts-setup-highlight-section');
+        sectionEl.setAttribute('data-setup-highlighted', 'section');
+    }
 
     const bar = document.getElementById('tenant-site-setup-bar');
     const barH = bar ? bar.offsetHeight : 0;
@@ -145,7 +236,7 @@ function initTenantSiteSetup() {
     if (topOffset + barH > 0) {
         document.body.style.paddingTop = `${topOffset + barH}px`;
     }
-    const top = target.getBoundingClientRect().top + window.scrollY - topOffset - barH - 12;
+    const top = primaryEl.getBoundingClientRect().top + window.scrollY - topOffset - barH - 12;
     window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
 }
 

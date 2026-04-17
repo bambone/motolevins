@@ -283,15 +283,17 @@ class Settings extends Page
                 Tabs::make(__('tenant_admin_settings.tabs_group'))
                     ->persistTabInQueryString('settings_tab')
                     ->tabs([
-                        Tab::make(__('tenant_admin_settings.tabs.general'))
+                        'general' => Tab::make(__('tenant_admin_settings.tabs.general'))
                             ->icon('heroicon-o-home')
                             ->schema([
                                 Section::make(__('tenant_admin_settings.sections.site_identity'))
                                     ->description(__('tenant_admin_settings.sections.site_identity_hint'))
+                                    ->extraAttributes(['data-setup-section' => 'site_identity'])
                                     ->schema($siteIdentityFields)->columns(2),
 
                                 Section::make('Контакты')
                                     ->description('Телефоны и мессенджеры обычно выводятся в шапке, подвале и на странице контактов.')
+                                    ->extraAttributes(['data-setup-section' => 'contacts_block'])
                                     ->schema([
                                         TextInput::make('contacts_phone')
                                             ->label('Телефон')
@@ -316,7 +318,7 @@ class Settings extends Page
                                     ])->columns(2),
                             ]),
 
-                        Tab::make(__('tenant_admin_settings.tabs.appearance'))
+                        'appearance' => Tab::make(__('tenant_admin_settings.tabs.appearance'))
                             ->icon('heroicon-o-paint-brush')
                             ->visible(fn (): bool => $tenant !== null)
                             ->schema([
@@ -343,6 +345,7 @@ class Settings extends Page
                                             ->columnSpanFull()
                                             ->helperText('Акцентные кнопки и ссылки на сайте.'),
                                         Grid::make(2)
+                                            ->extraAttributes(['data-setup-section' => 'branding_favicon', 'data-setup-target' => 'settings.favicon'])
                                             ->schema([
                                                 TenantPublicImagePicker::make('branding_favicon_path')
                                                     ->label('Иконка сайта (файл)')
@@ -372,7 +375,7 @@ class Settings extends Page
                                     ->columns(1),
                             ]),
 
-                        Tab::make(__('tenant_admin_settings.tabs.enrollment'))
+                        'enrollment' => Tab::make(__('tenant_admin_settings.tabs.enrollment'))
                             ->icon('heroicon-o-academic-cap')
                             ->visible(fn (): bool => $tenant !== null && in_array((string) ($tenant->theme_key ?? ''), ['expert_auto', 'advocate_editorial'], true))
                             ->schema([
@@ -404,7 +407,7 @@ class Settings extends Page
                                     ->columns(2),
                             ]),
 
-                        Tab::make(__('tenant_admin_settings.tabs.reviews'))
+                        'reviews' => Tab::make(__('tenant_admin_settings.tabs.reviews'))
                             ->icon('heroicon-o-chat-bubble-left-right')
                             ->visible(fn (): bool => $tenant !== null)
                             ->schema([
@@ -434,14 +437,14 @@ class Settings extends Page
                                     ->columns(2),
                             ]),
 
-                        Tab::make(__('tenant_admin_settings.tabs.analytics'))
+                        'analytics' => Tab::make(__('tenant_admin_settings.tabs.analytics'))
                             ->icon('heroicon-o-chart-bar')
                             ->visible(fn (): bool => $tenant !== null)
                             ->schema([
                                 TenantAnalyticsFormSchema::section(true),
                             ]),
 
-                        Tab::make(__('tenant_admin_settings.tabs.advanced'))
+                        'advanced' => Tab::make(__('tenant_admin_settings.tabs.advanced'))
                             ->icon('heroicon-o-wrench-screwdriver')
                             ->visible(fn (): bool => $tenant !== null)
                             ->schema($advancedSections),

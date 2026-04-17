@@ -4,8 +4,9 @@ namespace Tests\Feature\TenantSiteSetup;
 
 use App\Models\User;
 use App\Tenant\CurrentTenant;
-use App\TenantSiteSetup\SetupJourneyBuilder;
 use App\TenantSiteSetup\SetupItemStateService;
+use App\TenantSiteSetup\SetupJourneyBuilder;
+use App\TenantSiteSetup\SetupProfileRepository;
 use App\TenantSiteSetup\SetupSessionService;
 use App\TenantSiteSetup\TenantSiteSetupFeature;
 use Database\Seeders\RolePermissionSeeder;
@@ -93,17 +94,73 @@ class TenantSiteSetupSessionTest extends TestCase
         $this->actingAs($user);
 
         app(SetupSessionService::class)->startOrResume($tenant, $user);
-        $payload = app(SetupSessionService::class)->overlayPayload($tenant, $user);
+
+        $host = $this->tenancyHostForSlug('ts_pay');
+        $this->get('http://'.$host.'/admin/site-setup-profile');
+        $payload = app(SetupSessionService::class)->overlayPayload($tenant, $user, request());
         $this->assertIsArray($payload);
         $this->assertArrayHasKey('session_action_url', $payload);
         $this->assertStringContainsString('tenant-site-setup/session', (string) $payload['session_action_url']);
         $this->assertArrayHasKey('can_snooze', $payload);
+        $this->assertArrayHasKey('target_url', $payload);
+        $this->assertArrayHasKey('target_title', $payload);
+        $this->assertArrayHasKey('target_item_key', $payload);
+        $this->assertArrayHasKey('on_target_route', $payload);
+        $this->assertArrayHasKey('can_complete_here', $payload);
+        $this->assertArrayHasKey('primary_is_target_navigation', $payload);
+        $this->assertFalse($payload['on_target_route']);
+        $this->assertFalse($payload['can_complete_here']);
+        $this->assertNotEmpty($payload['primary_is_target_navigation']);
+    }
+
+    public function test_start_or_resume_reuses_active_session(): void
+    {
+        config(['features.tenant_site_setup_framework' => true]);
+        $tenant = $this->createTenantWithActiveDomain('ts_reuse', ['theme_key' => 'expert_auto']);
+        $user = User::factory()->create(['status' => 'active']);
+        $user->tenants()->attach($tenant->id, ['role' => 'tenant_owner', 'status' => 'active']);
+
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+        $domain = $tenant->domains()->where('is_primary', true)->first();
+        $this->app->instance(
+            CurrentTenant::class,
+            new CurrentTenant($tenant, $domain, false, $this->tenancyHostForSlug((string) $tenant->slug))
+        );
+        $this->actingAs($user);
+
+        $svc = app(SetupSessionService::class);
+        $first = $svc->startOrResume($tenant, $user);
+        $second = $svc->startOrResume($tenant, $user);
+        $this->assertSame((int) $first->id, (int) $second->id);
+    }
+
+    public function test_profile_page_with_active_session_shows_honest_overlay_copy(): void
+    {
+        config(['features.tenant_site_setup_framework' => true]);
+        $tenant = $this->createTenantWithActiveDomain('ts_copy', ['theme_key' => 'expert_auto']);
+        $user = User::factory()->create(['status' => 'active']);
+        $user->tenants()->attach($tenant->id, ['role' => 'tenant_owner', 'status' => 'active']);
+
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+        $domain = $tenant->domains()->where('is_primary', true)->first();
+        $this->app->instance(
+            CurrentTenant::class,
+            new CurrentTenant($tenant, $domain, false, $this->tenancyHostForSlug((string) $tenant->slug))
+        );
+        $this->actingAs($user);
+
+        app(SetupSessionService::class)->startOrResume($tenant, $user);
+        $host = $this->tenancyHostForSlug('ts_copy');
+        $response = $this->get('http://'.$host.'/admin/site-setup-profile');
+        $response->assertOk();
+        $response->assertSee('Быстрый запуск:', false);
+        $response->assertSee('Следующий шаг:', false);
     }
 
     public function test_profile_repository_merged_includes_defaults(): void
     {
         $tenant = $this->createTenantWithActiveDomain('ts_prof', ['theme_key' => 'expert_auto']);
-        $merged = app(\App\TenantSiteSetup\SetupProfileRepository::class)->getMerged($tenant->id);
+        $merged = app(SetupProfileRepository::class)->getMerged($tenant->id);
         $this->assertArrayHasKey('business_focus', $merged);
         $this->assertArrayHasKey('primary_goal', $merged);
         $this->assertSame(1, $merged['schema_version']);

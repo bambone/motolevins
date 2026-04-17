@@ -62,6 +62,9 @@ final class DomainTermKeys
 
     public const NAV_INFRASTRUCTURE = 'nav.infrastructure';
 
+    /** Запуск сайта: обзор, профиль, быстрый запуск (отдельно от общих настроек). */
+    public const NAV_SITE_LAUNCH = 'nav.site_launch';
+
     public const NAV_SETTINGS = 'nav.settings';
 
     /**
@@ -106,6 +109,7 @@ final class DomainTermKeys
             self::NAV_CONTENT,
             self::NAV_MARKETING,
             self::NAV_INFRASTRUCTURE,
+            self::NAV_SITE_LAUNCH,
             self::NAV_SETTINGS,
         ];
     }

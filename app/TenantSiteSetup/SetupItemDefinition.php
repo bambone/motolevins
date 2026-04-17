@@ -14,6 +14,8 @@ final readonly class SetupItemDefinition
      * @param  list<string>|null  $targetFallbackKeys  extra {@see data-setup-target} keys to try (first visible wins)
      * @param  list<string>|null  $pageBuilderFallbackSectionTypeIds  catalog tile {@see data-setup-section-type} ids when target DOM is missing
      * @param  string|null  $fallbackSetupAction  {@see data-setup-action} when section tiles are not enough (e.g. open «Блок»)
+     * @param  string|null  $settingsTabKey  значение query {@see Tabs::persistTabInQueryString()} (напр. {@see Settings}: `general`, `appearance`)
+     * @param  string|null  $settingsSectionId  {@see data-setup-section} на странице настроек для скролла
      */
     public function __construct(
         public string $key,
@@ -37,5 +39,8 @@ final readonly class SetupItemDefinition
         public ?array $targetFallbackKeys = null,
         public ?array $pageBuilderFallbackSectionTypeIds = null,
         public ?string $fallbackSetupAction = null,
+        public ?string $settingsTabKey = null,
+        public ?string $settingsSectionId = null,
+        public SetupReadinessTier $readinessTier = SetupReadinessTier::QuickLaunch,
     ) {}
 }

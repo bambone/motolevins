@@ -3,9 +3,11 @@
 namespace App\Filament\Tenant\Widgets;
 
 use App\Filament\Tenant\Pages\TenantSiteSetupCenterPage;
+use App\TenantSiteSetup\SetupLaunchCtaSpec;
 use App\TenantSiteSetup\SetupProgressService;
 use App\TenantSiteSetup\TenantSiteSetupFeature;
 use Filament\Widgets\Widget;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 
 class SiteReadinessWidget extends Widget
@@ -43,5 +45,25 @@ class SiteReadinessWidget extends Widget
     public function getCenterUrlProperty(): ?string
     {
         return TenantSiteSetupCenterPage::getUrl();
+    }
+
+    /**
+     * @return array{label: string, href: string}|null
+     */
+    public function getPrimaryCtaProperty(): ?array
+    {
+        $tenant = currentTenant();
+        $user = Auth::user();
+        $summary = $this->summary;
+        if ($tenant === null || $user === null || $summary === null) {
+            return null;
+        }
+
+        return app(SetupLaunchCtaSpec::class)->dashboardPrimary(
+            $tenant,
+            $user,
+            $summary,
+            TenantSiteSetupCenterPage::getUrl(),
+        );
     }
 }

@@ -33,7 +33,7 @@ class TenantSiteSetupProgressTest extends TestCase
 
         $summary = app(SetupProgressService::class)->computeSummary($tenant);
 
-        $this->assertSame(8, $summary['applicable_count']);
+        $this->assertSame(10, $summary['applicable_count']);
         $this->assertSame(0, $summary['completed_count']);
     }
 
@@ -44,7 +44,7 @@ class TenantSiteSetupProgressTest extends TestCase
 
         $summary = app(SetupProgressService::class)->computeSummary($tenant);
 
-        $this->assertSame(7, $summary['applicable_count']);
+        $this->assertSame(9, $summary['applicable_count']);
     }
 
     public function test_completed_only_from_data_site_name(): void

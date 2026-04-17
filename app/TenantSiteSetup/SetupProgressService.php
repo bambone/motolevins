@@ -39,6 +39,10 @@ final class SetupProgressService
         $launchCriticalCompleted = 0;
         $recommendedTotal = 0;
         $advancedTotal = 0;
+        $quickApplicable = 0;
+        $quickCompleted = 0;
+        $extendedApplicable = 0;
+        $extendedCompleted = 0;
         $nextPending = [];
         $completedWithSnapshots = [];
         $categorySummaries = [];
@@ -81,6 +85,18 @@ final class SetupProgressService
             }
 
             $isCompletedRow = $rowStatus === 'completed';
+
+            if ($def->readinessTier === SetupReadinessTier::QuickLaunch) {
+                $quickApplicable++;
+                if ($isCompletedRow) {
+                    $quickCompleted++;
+                }
+            } else {
+                $extendedApplicable++;
+                if ($isCompletedRow) {
+                    $extendedCompleted++;
+                }
+            }
             if ($isCompletedRow) {
                 $completedNumerator++;
                 $completedWithSnapshots[] = [
@@ -116,10 +132,21 @@ final class SetupProgressService
         $denom = max(1, $denominator);
         $pct = (int) round(($completedNumerator / $denom) * 100);
 
+        $quickDenom = max(1, $quickApplicable);
+        $quickPct = (int) round(($quickCompleted / $quickDenom) * 100);
+        $extDenom = max(1, $extendedApplicable);
+        $extPct = (int) round(($extendedCompleted / $extDenom) * 100);
+
         return [
             'applicable_count' => $denominator,
             'completed_count' => $completedNumerator,
             'completion_percent' => $pct,
+            'quick_launch_applicable' => $quickApplicable,
+            'quick_launch_completed' => $quickCompleted,
+            'quick_launch_percent' => $quickApplicable > 0 ? $quickPct : 0,
+            'extended_applicable' => $extendedApplicable,
+            'extended_completed' => $extendedCompleted,
+            'extended_percent' => $extendedApplicable > 0 ? $extPct : 0,
             'launch_critical_total' => $launchCriticalTotal,
             'launch_critical_completed' => $launchCriticalCompleted,
             'launch_critical_remaining' => max(0, $launchCriticalTotal - $launchCriticalCompleted),

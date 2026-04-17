@@ -45,6 +45,7 @@ final class DomainTermEmergencyLabels
             DomainTermKeys::NAV_CONTENT => 'Контент',
             DomainTermKeys::NAV_MARKETING => 'Маркетинг',
             DomainTermKeys::NAV_INFRASTRUCTURE => 'Инфраструктура',
+            DomainTermKeys::NAV_SITE_LAUNCH => 'Запуск сайта',
             DomainTermKeys::NAV_SETTINGS => 'Настройки',
         ];
     }

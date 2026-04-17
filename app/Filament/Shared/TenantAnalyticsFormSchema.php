@@ -45,6 +45,7 @@ final class TenantAnalyticsFormSchema
 
         return Section::make('Аналитика')
             ->description('Подключение счётчиков только по ID. Не вставляйте код целиком — только идентификаторы. У переключателей Метрики и GA4 есть иконка «i» со справкой.')
+            ->extraAttributes(['data-setup-target' => 'settings.analytics_yandex_ga'])
             ->visible($visibleClosure)
             ->headerActions([
                 Action::make('analytics_help_yandex')

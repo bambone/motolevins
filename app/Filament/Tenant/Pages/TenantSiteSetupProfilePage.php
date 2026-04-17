@@ -15,15 +15,15 @@ use UnitEnum;
 
 class TenantSiteSetupProfilePage extends Page
 {
-    protected static string|UnitEnum|null $navigationGroup = 'Settings';
+    protected static string|UnitEnum|null $navigationGroup = 'SiteLaunch';
 
-    protected static ?int $navigationSort = 5;
+    protected static ?int $navigationSort = 2;
 
-    protected static ?string $navigationLabel = 'Анкета настройки';
+    protected static ?string $navigationLabel = 'Профиль сайта';
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-clipboard-document-list';
 
-    protected static ?string $title = 'Анкета настройки сайта';
+    protected static ?string $title = 'Профиль сайта';
 
     protected static ?string $slug = 'site-setup-profile';
 
@@ -54,8 +54,8 @@ class TenantSiteSetupProfilePage extends Page
         return $schema
             ->statePath('data')
             ->components([
-                Section::make('Профиль')
-                    ->description('Ответы хранятся в настройке setup.profile и могут влиять на применимость шагов в будущих версиях мастера. Это не заменяет бизнес-данные сайта.')
+                Section::make('Профиль сайта')
+                    ->description('Цели и контекст проекта хранятся в настройке setup.profile и могут влиять на приоритизацию шагов в будущих версиях быстрого запуска. Это не заменяет бизнес-данные публичного сайта.')
                     ->schema([
                         Select::make('business_focus')
                             ->label('Фокус бизнеса')
@@ -102,7 +102,7 @@ class TenantSiteSetupProfilePage extends Page
         $repo->save($tenant->id, $merged);
 
         Notification::make()
-            ->title('Анкета сохранена')
+            ->title('Профиль сайта сохранён')
             ->success()
             ->send();
     }
