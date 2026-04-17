@@ -5,11 +5,14 @@ namespace App\Providers\Filament;
 use App\Filament\Tenant\Pages\TenantDashboard;
 use App\Filament\Tenant\Pages\TenantLogin;
 use App\Filament\Tenant\Pages\TenantProductChangelogPage;
+use App\Filament\Tenant\Widgets\SiteReadinessWidget;
 use App\Filament\Tenant\Widgets\StatsOverviewWidget;
 use App\Http\Controllers\Filament\TenantSpatieMediaStreamController;
 use App\Http\Controllers\Tenant\TenantNotificationBrowserController;
 use App\Http\Controllers\Tenant\TenantNotificationPushSubscriptionController;
 use App\Http\Controllers\Tenant\TenantOnesignalIdentityController;
+use App\Http\Controllers\Tenant\TenantSiteSetupRestoreItemController;
+use App\Http\Controllers\Tenant\TenantSiteSetupSessionController;
 use App\Http\Middleware\EnsureTenantContext;
 use App\Http\Middleware\EnsureTenantMembership;
 use App\Http\Middleware\FilamentTenantPanelAuthenticate;
@@ -18,6 +21,8 @@ use App\Http\Middleware\SetFilamentLocale;
 use App\Models\TenantSetting;
 use App\Terminology\DomainTermKeys;
 use App\Terminology\TenantTerminologyService;
+use App\TenantSiteSetup\SetupSessionService;
+use App\TenantSiteSetup\TenantSiteSetupFeature;
 use Closure;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
@@ -33,6 +38,7 @@ use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\AuthenticateSession;
 use Illuminate\Session\Middleware\StartSession;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\View;
@@ -49,8 +55,24 @@ class AdminPanelProvider extends PanelProvider
             ->renderHook(
                 PanelsRenderHook::HEAD_END,
                 fn (): string => Blade::render(
-                    "@vite(['resources/css/tenant-admin.css', 'resources/js/service-program-cover-focal-editor.js', 'resources/js/tenant-admin-onesignal.js'])",
+                    "@vite(['resources/css/tenant-admin.css', 'resources/js/service-program-cover-focal-editor.js', 'resources/js/tenant-admin-onesignal.js', 'resources/js/tenant-admin-site-setup.js'])",
                 ).View::make('components.tenant-admin-onesignal-config')->render(),
+            )
+            ->renderHook(
+                PanelsRenderHook::BODY_END,
+                function (): string {
+                    if (! TenantSiteSetupFeature::enabled()) {
+                        return '';
+                    }
+                    $tenant = currentTenant();
+                    $user = Auth::user();
+                    $payload = app(SetupSessionService::class)->overlayPayload($tenant, $user);
+                    if ($payload === null) {
+                        return '';
+                    }
+
+                    return View::make('components.tenant-site-setup-overlay', ['payload' => $payload])->render();
+                },
             );
 
         return $panel
@@ -137,6 +159,7 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->discoverWidgets(in: app_path('Filament/Tenant/Widgets'), for: 'App\\Filament\\Tenant\\Widgets')
             ->widgets([
+                SiteReadinessWidget::class,
                 StatsOverviewWidget::class,
             ])
             ->middleware([
@@ -172,6 +195,11 @@ class AdminPanelProvider extends PanelProvider
                     ->name('notification-push.onesignal.identity.store');
                 Route::delete('/notification-push/onesignal/identity', [TenantOnesignalIdentityController::class, 'destroy'])
                     ->name('notification-push.onesignal.identity.destroy');
+
+                Route::post('/tenant-site-setup/session', TenantSiteSetupSessionController::class)
+                    ->name('tenant-site-setup.session');
+                Route::post('/tenant-site-setup/items/restore', TenantSiteSetupRestoreItemController::class)
+                    ->name('tenant-site-setup.items.restore');
 
                 Route::prefix('notification-browser')->name('notification-browser.')->group(function (): void {
                     Route::get('vapid-public', [TenantNotificationBrowserController::class, 'vapidPublic'])->name('vapid-public');

@@ -1,0 +1,109 @@
+<?php
+
+namespace App\Filament\Tenant\Pages;
+
+use App\TenantSiteSetup\SetupProfileRepository;
+use App\TenantSiteSetup\TenantSiteSetupFeature;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
+use Filament\Notifications\Notification;
+use Filament\Pages\Page;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Schema;
+use Illuminate\Support\Facades\Gate;
+use UnitEnum;
+
+class TenantSiteSetupProfilePage extends Page
+{
+    protected static string|UnitEnum|null $navigationGroup = 'Settings';
+
+    protected static ?int $navigationSort = 5;
+
+    protected static ?string $navigationLabel = 'Анкета настройки';
+
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-clipboard-document-list';
+
+    protected static ?string $title = 'Анкета настройки сайта';
+
+    protected static ?string $slug = 'site-setup-profile';
+
+    protected string $view = 'filament.tenant.pages.tenant-site-setup-profile';
+
+    public ?array $data = [];
+
+    public static function canAccess(): bool
+    {
+        if (! TenantSiteSetupFeature::enabled()) {
+            return false;
+        }
+
+        return Gate::allows('manage_settings') && currentTenant() !== null;
+    }
+
+    public function mount(): void
+    {
+        abort_unless(Gate::allows('manage_settings'), 403);
+        $tenant = currentTenant();
+        abort_if($tenant === null, 404);
+
+        $this->data = app(SetupProfileRepository::class)->getMerged($tenant->id);
+    }
+
+    public function form(Schema $schema): Schema
+    {
+        return $schema
+            ->statePath('data')
+            ->components([
+                Section::make('Профиль')
+                    ->description('Ответы хранятся в настройке setup.profile и могут влиять на применимость шагов в будущих версиях мастера. Это не заменяет бизнес-данные сайта.')
+                    ->schema([
+                        Select::make('business_focus')
+                            ->label('Фокус бизнеса')
+                            ->native(true)
+                            ->nullable()
+                            ->placeholder('— не выбрано —')
+                            ->options([
+                                'services' => 'Услуги / консультации',
+                                'education' => 'Обучение / программы',
+                                'retail' => 'Товары / каталог',
+                                'mixed' => 'Смешанная модель',
+                            ]),
+                        Select::make('primary_goal')
+                            ->label('Главная цель сайта сейчас')
+                            ->native(true)
+                            ->nullable()
+                            ->placeholder('— не выбрано —')
+                            ->options([
+                                'leads' => 'Заявки и звонки',
+                                'info' => 'Информация и доверие',
+                                'booking' => 'Запись / бронирование',
+                                'catalog' => 'Показать каталог / программы',
+                            ]),
+                        Textarea::make('additional_notes')
+                            ->label('Комментарий для команды')
+                            ->rows(3)
+                            ->columnSpanFull(),
+                    ])
+                    ->columns(2),
+            ]);
+    }
+
+    public function save(): void
+    {
+        $tenant = currentTenant();
+        if ($tenant === null) {
+            return;
+        }
+
+        $state = $this->getSchema('form')->getState();
+        $repo = app(SetupProfileRepository::class);
+        $merged = array_merge($repo->getMerged($tenant->id), $state);
+        $merged['schema_version'] = $repo->schemaVersion();
+        $repo->save($tenant->id, $merged);
+
+        Notification::make()
+            ->title('Анкета сохранена')
+            ->success()
+            ->send();
+    }
+}

@@ -326,6 +326,63 @@ final class AflyatunovExpertBootstrap
     }
 
     /**
+     * Краткое описание для настроек сайта (совпадает по смыслу с подзаголовком hero в конструкторе).
+     */
+    private static function defaultShortDescription(): string
+    {
+        return (string) (self::expertHeroCinematicCore()['subheading'] ?? '');
+    }
+
+    /**
+     * Пробует привязать логотип из уже загруженных в {@code site/brand/} файлов (как в других bootstrap-сидерах).
+     */
+    private static function syncLogoFromBrandFilesIfPresent(int $tenantId, bool $force): void
+    {
+        $ts = TenantStorage::forTrusted($tenantId);
+        $candidates = [
+            'logo-header.png',
+            'logo-mark.png',
+            'logo.png',
+            'logo-header.jpg',
+            'logo.jpg',
+        ];
+
+        $logoUrl = trim((string) TenantSetting::getForTenant($tenantId, 'branding.logo', ''));
+        $logoPath = trim((string) TenantSetting::getForTenant($tenantId, 'branding.logo_path', ''));
+        if (! $force && ($logoUrl !== '' || $logoPath !== '')) {
+            return;
+        }
+
+        foreach ($candidates as $rel) {
+            if (! $ts->existsPublic('site/brand/'.$rel)) {
+                continue;
+            }
+            TenantSetting::setForTenant($tenantId, 'branding.logo_path', $ts->publicPath('site/brand/'.$rel), 'string');
+            TenantSetting::setForTenant($tenantId, 'branding.logo', $ts->publicUrl('site/brand/'.$rel), 'string');
+
+            return;
+        }
+    }
+
+    /**
+     * Прокидывает в {@see TenantSetting} краткое описание и логотип, если в конструкторе/медиа уже есть данные.
+     *
+     * @param  bool  $force  true — перезаписать описание и лого; false — только пустые поля.
+     */
+    private static function syncTaglineAndLogoFromKnownContent(int $tenantId, bool $force): void
+    {
+        $tagline = self::defaultShortDescription();
+        if ($tagline !== '') {
+            $current = trim((string) TenantSetting::getForTenant($tenantId, 'general.short_description', ''));
+            if ($force || $current === '') {
+                TenantSetting::setForTenant($tenantId, 'general.short_description', $tagline, 'string');
+            }
+        }
+
+        self::syncLogoFromBrandFilesIfPresent($tenantId, $force);
+    }
+
+    /**
      * @param  bool  $force  true — перезаписать (миграция «приведи к шаблону»); false — только если пусто (новый тенант).
      */
     private static function applyExpertPublicBrandingDefaults(int $tenantId, bool $force): void
@@ -341,6 +398,7 @@ final class AflyatunovExpertBootstrap
                 'branding.primary_color',
                 '#c9a87c',
             );
+            self::syncTaglineAndLogoFromKnownContent($tenantId, true);
 
             return;
         }
@@ -357,6 +415,7 @@ final class AflyatunovExpertBootstrap
         if (! is_string($pc) || trim($pc) === '') {
             TenantSetting::setForTenant($tenantId, 'branding.primary_color', '#c9a87c');
         }
+        self::syncTaglineAndLogoFromKnownContent($tenantId, false);
     }
 
     /**

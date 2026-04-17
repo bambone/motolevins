@@ -22,6 +22,7 @@ export default defineConfig({
                 'resources/js/service-program-cover-focal-editor.js',
                 'resources/js/tenant-public-push.js',
                 'resources/js/tenant-admin-onesignal.js',
+                'resources/js/tenant-admin-site-setup.js',
             ],
             refresh: true,
         }),

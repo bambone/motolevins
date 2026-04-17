@@ -51,7 +51,8 @@ final class CtaBlueprint extends AbstractPageSectionBlueprint
             TextInput::make('data_json.heading')
                 ->label('Заголовок')
                 ->maxLength(255)
-                ->columnSpanFull(),
+                ->columnSpanFull()
+                ->extraAttributes(['data-setup-target' => 'pages.home.hero_cta_or_contact_block']),
             Textarea::make('data_json.body')
                 ->label('Текст')
                 ->rows(4)

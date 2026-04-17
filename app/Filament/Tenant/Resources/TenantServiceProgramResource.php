@@ -55,6 +55,7 @@ class TenantServiceProgramResource extends Resource
             ->components([
                 Section::make('Основное')
                     ->description('Данные карточек блока «Программы обучения» на сайте. Состав страниц и порядок секций — в «Страницы» (конструктор).')
+                    ->extraAttributes(['data-setup-target' => 'programs.program_form'])
                     ->schema([
                         TextInput::make('slug')
                             ->label('URL-идентификатор')

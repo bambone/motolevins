@@ -52,6 +52,7 @@ class Settings extends Page
      */
     private const FORM_FIELD_TO_SETTING_KEY = [
         'general_site_name' => 'general.site_name',
+        'general_short_description' => 'general.short_description',
         'general_domain' => 'general.domain',
         'branding_logo' => 'branding.logo',
         'branding_logo_path' => 'branding.logo_path',
@@ -110,6 +111,7 @@ class Settings extends Page
         if ($tenant) {
             return [
                 'general_site_name' => TenantSetting::getForTenant($tenant->id, 'general.site_name', $tenant->defaultPublicSiteName()),
+                'general_short_description' => TenantSetting::getForTenant($tenant->id, 'general.short_description', ''),
                 'general_domain' => $this->resolvedGeneralDomainFormValue($tenant),
                 'branding_logo' => TenantSetting::getForTenant($tenant->id, 'branding.logo', ''),
                 'branding_logo_path' => TenantSetting::getForTenant($tenant->id, 'branding.logo_path', ''),
@@ -190,7 +192,15 @@ class Settings extends Page
             TextInput::make('general_site_name')
                 ->label('Название сайта')
                 ->helperText('Показывается в шапке, заголовках и письмах, если тема не задаёт иначе.')
-                ->placeholder('Например: MotoLevins Сочи'),
+                ->placeholder('Например: MotoLevins Сочи')
+                ->extraAttributes(['data-setup-target' => 'settings.site_name']),
+            Textarea::make('general_short_description')
+                ->label('Краткое описание / оффер')
+                ->rows(3)
+                ->maxLength(2000)
+                ->helperText('Коротко о том, что предлагаете посетителю. Используется в готовности сайта и подсказках.')
+                ->visible(fn (): bool => $tenant !== null)
+                ->extraAttributes(['data-setup-target' => 'settings.tagline_or_short_description']),
         ];
         if ($tenant === null) {
             $siteIdentityFields[] = TextInput::make('general_domain')
@@ -288,7 +298,8 @@ class Settings extends Page
                                             ->mask('+7 (999) 999-99-99')
                                             ->placeholder('+7 (___) ___-__-__')
                                             ->rules([new OptionalRussianPhone])
-                                            ->helperText('Маска для российского номера. После сохранения в базе хранится в виде +7XXXXXXXXXX.'),
+                                            ->helperText('Маска для российского номера. После сохранения в базе хранится в виде +7XXXXXXXXXX.')
+                                            ->extraAttributes(['data-setup-target' => 'contact_channels.primary_phone']),
                                         TextInput::make('contacts_phone_alt')
                                             ->label('Дополнительный телефон')
                                             ->mask('+7 (999) 999-99-99')
@@ -313,6 +324,7 @@ class Settings extends Page
                                     ->description('Логотип и цвета для публичного сайта. Удобнее загрузить файл слева; справа — запасная ссылка, если файл не используете. Загруженный файл важнее ссылки.')
                                     ->schema([
                                         Grid::make(2)
+                                            ->extraAttributes(['data-setup-target' => 'settings.logo'])
                                             ->schema([
                                                 TenantPublicImagePicker::make('branding_logo_path')
                                                     ->label('Логотип (файл)')

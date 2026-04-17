@@ -86,7 +86,8 @@ final class ExpertLeadFormBlueprint extends ExpertSectionBlueprint
     public function formComponents(): array
     {
         return [
-            TextInput::make('data_json.heading')->label('Заголовок')->maxLength(255)->columnSpanFull(),
+            TextInput::make('data_json.heading')->label('Заголовок')->maxLength(255)->columnSpanFull()
+                ->extraAttributes(['data-setup-target' => 'pages.home.hero_cta_or_contact_block']),
             TextInput::make('data_json.subheading')->label('Подзаголовок')->maxLength(500)->columnSpanFull(),
             TextInput::make('data_json.form_key')
                 ->label('Ключ form_configs')

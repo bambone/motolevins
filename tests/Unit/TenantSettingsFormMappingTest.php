@@ -18,6 +18,7 @@ class TenantSettingsFormMappingTest extends TestCase
     {
         $expected = [
             'general_site_name' => 'general.site_name',
+            'general_short_description' => 'general.short_description',
             'general_domain' => 'general.domain',
             'branding_logo' => 'branding.logo',
             'branding_logo_path' => 'branding.logo_path',

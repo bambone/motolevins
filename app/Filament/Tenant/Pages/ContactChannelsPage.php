@@ -89,6 +89,7 @@ class ContactChannelsPage extends Page
                         ->visible(function () use ($k): bool {
                             return $k !== ContactChannelType::Phone->value;
                         })
+                        ->extraAttributes(['data-setup-target' => 'contact_channels.preferred_contact_channel'])
                         ->helperText('Посетитель сможет выбрать этот канал в модалке и checkout.'),
                     TextInput::make($k.'_business_value')
                         ->label('Контакт бизнеса (для сайта / справки)')

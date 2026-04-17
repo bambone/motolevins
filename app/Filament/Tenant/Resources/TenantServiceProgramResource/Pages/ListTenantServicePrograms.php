@@ -13,7 +13,8 @@ class ListTenantServicePrograms extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            CreateAction::make(),
+            CreateAction::make()
+                ->extraAttributes(['data-setup-action' => 'programs.create_action']),
         ];
     }
 }

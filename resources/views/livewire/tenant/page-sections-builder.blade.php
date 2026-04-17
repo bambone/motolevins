@@ -54,7 +54,14 @@
                         Сайт ↗
                     </a>
                 @endif
-                <button type="button" wire:click="startAddToEnd" class="fi-btn fi-btn-color-primary inline-flex min-h-9 items-center justify-center rounded-lg px-3 py-1.5 text-xs font-semibold text-white">
+                <button
+                    type="button"
+                    wire:click="startAddToEnd"
+                    @if(($record->slug ?? null) === 'home')
+                        data-setup-action="pages.home.add_block"
+                    @endif
+                    class="fi-btn fi-btn-color-primary inline-flex min-h-9 items-center justify-center rounded-lg px-3 py-1.5 text-xs font-semibold text-white"
+                >
                     Блок
                 </button>
                 <a href="{{ $contentTabUrl }}" wire:navigate class="psb-btn-secondary !w-auto px-3 py-2 text-xs">
@@ -423,7 +430,14 @@
 
         @if($sectionCount > 0)
             <div class="mt-3">
-                <button type="button" wire:click="startAddToEnd" class="fi-btn fi-btn-color-primary inline-flex min-h-9 items-center justify-center rounded-lg px-4 py-2 text-xs font-semibold text-white">
+                <button
+                    type="button"
+                    wire:click="startAddToEnd"
+                    @if(($record->slug ?? null) === 'home')
+                        data-setup-action="pages.home.add_block"
+                    @endif
+                    class="fi-btn fi-btn-color-primary inline-flex min-h-9 items-center justify-center rounded-lg px-4 py-2 text-xs font-semibold text-white"
+                >
                     Блок в конец
                 </button>
             </div>
@@ -464,6 +478,10 @@
                                     type="button"
                                     wire:click="startAdd('{{ $item['id'] }}', {{ $insertAfterId === null ? 'null' : $insertAfterId }})"
                                     x-show="(() => { const qq = q.trim().toLowerCase(); if (!qq) return true; const blob = @js(mb_strtolower($item['label'].' '.$item['description'].' '.$group['label'])); return blob.includes(qq); })()"
+                                    @if(($record->slug ?? null) === 'home')
+                                        data-setup-section-type="{{ $item['id'] }}"
+                                        data-setup-action="pages.home.add_section"
+                                    @endif
                                     class="psb-catalog-tile group flex min-h-0 w-full items-center gap-2.5 p-2.5 text-left sm:gap-3 sm:p-3"
                                 >
                                     <span class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-primary-600/10 text-primary-700 dark:bg-primary-500/15 dark:text-primary-300">
