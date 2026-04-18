@@ -60,6 +60,10 @@ final class SetupProgressService
             }
 
             $dataComplete = $this->completion->isComplete($tenant, $def);
+            if ($rowStatus === 'completed' && ! $dataComplete) {
+                $this->itemStates->demoteCompletedWhenDataRegressed($tenant, $def, $dataComplete);
+                $rowStatus = 'pending';
+            }
             if ($dataComplete && $rowStatus !== 'completed' && $rowStatus !== 'not_needed') {
                 $snap = ['value' => $this->snapshots->snapshot($tenant, $def)];
                 $this->itemStates->markCompletedBySystem(

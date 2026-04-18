@@ -7,6 +7,8 @@
 | Документ | Содержание |
 |----------|------------|
 | [setup-access-deploy.md](operations/setup-access-deploy.md) | URL админок (platform vs tenant), домены, установка, hosts/OSPanel, деплой, права на `storage`, типовые ошибки БД/миграций, кастомные домены; **команда клиента** и **матрица прав кабинета** (только Platform Console); **чейнджлог продукта** только в кабинете клиента (`/admin/.../whats-new`), данные в central БД, правки в Platform Console |
+| [guide-onboarding-booking-notifications-questionnaire.md](operations/guide-onboarding-booking-notifications-questionnaire.md) | Анкета для гида: бриф клиента по **записи/расписанию** и **уведомлениям** (slug `rentbase-appointment-notifications-v1`, приложения A–C) |
+| [guide-onboarding-booking-notifications-mapping.md](operations/guide-onboarding-booking-notifications-mapping.md) | Шпаргалка: ответы анкеты → разделы кабинета и сущности; UI: `/admin/site-setup-booking-notifications` (бриф + автоприменение) |
 | [security-and-golive.md](operations/security-and-golive.md) | Роли, зоны доступа, матрица, чеклист перед релизом |
 
 ## Архитектура

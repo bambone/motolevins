@@ -20,6 +20,9 @@ final class SetupLaunchUiGroupMapper
 
     public static function uiGroupForItemKey(string $itemKey): string
     {
+        if ($itemKey === 'setup.booking_notifications_brief') {
+            return self::LAUNCH_POLISH;
+        }
         if (in_array($itemKey, ['settings.favicon', 'settings.analytics_counters', 'settings.public_canonical_url'], true)) {
             return self::LAUNCH_POLISH;
         }

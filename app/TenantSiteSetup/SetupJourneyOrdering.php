@@ -77,6 +77,9 @@ final class SetupJourneyOrdering
         };
 
         $best = 0;
+        if ($goal === 'booking' && $key === 'setup.booking_notifications_brief') {
+            $best = min($best, -55);
+        }
         foreach ($rules as [$prefix, $penalty]) {
             if (str_starts_with($key, $prefix)) {
                 $best = min($best, $penalty);

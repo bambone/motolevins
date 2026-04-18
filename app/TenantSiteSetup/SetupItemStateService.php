@@ -101,6 +101,34 @@ final class SetupItemStateService
         SetupProgressCache::forget((int) $tenant->id);
     }
 
+    /**
+     * Если данные перестали удовлетворять completion rule, снимаем автоматическое «выполнено».
+     */
+    public function demoteCompletedWhenDataRegressed(Tenant $tenant, SetupItemDefinition $def, bool $dataComplete): void
+    {
+        if ($dataComplete) {
+            return;
+        }
+
+        $state = $this->findState((int) $tenant->id, $def->key);
+        if ($state === null || $state->current_status !== 'completed') {
+            return;
+        }
+
+        TenantSetupItemState::query()
+            ->where('tenant_id', $tenant->id)
+            ->where('item_key', $def->key)
+            ->update([
+                'current_status' => 'pending',
+                'completed_at' => null,
+                'completed_value_json' => null,
+                'completion_source' => null,
+                'last_completion_result_json' => ['ok' => false, 'reason' => 'data_regressed'],
+                'last_evaluated_at' => now(),
+            ]);
+        SetupProgressCache::forget((int) $tenant->id);
+    }
+
     public function restoreToPending(Tenant $tenant, User $user, string $itemKey): void
     {
         $this->assertManageSettings();

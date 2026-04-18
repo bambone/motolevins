@@ -10,6 +10,8 @@ use App\Models\TenantServiceProgram;
 use App\Models\TenantSetting;
 use App\Services\Analytics\AnalyticsSettingsPersistence;
 use App\Support\RussianPhone;
+use App\TenantSiteSetup\BookingNotificationsBriefingWizardMarkers;
+use App\TenantSiteSetup\BookingNotificationsQuestionnaireRepository;
 
 final class SetupValueSnapshotResolver
 {
@@ -35,8 +37,25 @@ final class SetupValueSnapshotResolver
             'settings.branding_hero_social_image' => $this->brandingHeroSnapshot($tenant),
             'programs.two_visible_programs' => $this->twoProgramsSnapshot($tenant),
             'settings.public_canonical_url' => $this->canonicalUrlSnapshot($tenant),
+            'setup.booking_notifications_brief' => $this->bookingNotificationsBriefSnapshot($tenant),
             default => '—',
         };
+    }
+
+    private function bookingNotificationsBriefSnapshot(Tenant $tenant): string
+    {
+        $live = BookingNotificationsBriefingWizardMarkers::snapshotLine($tenant);
+        $applied = app(BookingNotificationsQuestionnaireRepository::class)->appliedAt((int) $tenant->id);
+
+        if (! BookingNotificationsBriefingWizardMarkers::hasAnyWizardArtifact($tenant)) {
+            if ($applied !== null) {
+                return 'применение было; данные мастера удалены';
+            }
+
+            return $live;
+        }
+
+        return $live;
     }
 
     private function logoComplete(Tenant $tenant): bool

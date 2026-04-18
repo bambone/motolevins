@@ -38,9 +38,9 @@ class TenantSiteSetupProgressTiersAndCopyTest extends TestCase
 
         $summary = app(SetupProgressService::class)->computeSummary($tenant);
 
-        $this->assertSame(13, $summary['applicable_count']);
+        $this->assertSame(14, $summary['applicable_count']);
         $this->assertSame(10, $summary['quick_launch_applicable']);
-        $this->assertSame(3, $summary['extended_applicable']);
+        $this->assertSame(4, $summary['extended_applicable']);
         $this->assertSame(0, $summary['quick_launch_completed']);
         $this->assertSame(0, $summary['extended_completed']);
         $this->assertSame(0, $summary['quick_launch_percent']);

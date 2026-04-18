@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace App\TenantSiteSetup;
 
+use App\Auth\TenantPivotPermissions;
 use App\Models\Tenant;
+use App\Models\User;
+use Illuminate\Support\Facades\Auth;
 
 final class SetupApplicabilityEvaluator
 {
@@ -26,6 +29,23 @@ final class SetupApplicabilityEvaluator
         if ($def->featureConstraints !== null) {
             foreach ($def->featureConstraints as $flag => $expected) {
                 if ($flag === 'scheduling_module_enabled' && (bool) $tenant->scheduling_module_enabled !== (bool) $expected) {
+                    return 'not_applicable_by_system';
+                }
+            }
+        }
+
+        if ($def->key === 'setup.booking_notifications_brief') {
+            $user = Auth::user();
+            if ($user instanceof User) {
+                $pivotRole = $user->tenants()->where('tenants.id', $tenant->id)->first()?->pivot?->role;
+                if (! is_string($pivotRole)) {
+                    return 'not_applicable_by_system';
+                }
+                $canSurface = ($tenant->scheduling_module_enabled && TenantPivotPermissions::pivotRoleAllows($pivotRole, 'manage_scheduling'))
+                    || TenantPivotPermissions::pivotRoleAllows($pivotRole, 'manage_notifications')
+                    || TenantPivotPermissions::pivotRoleAllows($pivotRole, 'manage_notification_destinations')
+                    || TenantPivotPermissions::pivotRoleAllows($pivotRole, 'manage_notification_subscriptions');
+                if (! $canSurface) {
                     return 'not_applicable_by_system';
                 }
             }

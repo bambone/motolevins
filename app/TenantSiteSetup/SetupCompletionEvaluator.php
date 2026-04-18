@@ -11,6 +11,7 @@ use App\Models\TenantSetting;
 use App\Services\Analytics\AnalyticsSettingsPersistence;
 use App\Support\Analytics\AnalyticsSettingsData;
 use App\Support\RussianPhone;
+use App\TenantSiteSetup\BookingNotificationsBriefingWizardMarkers;
 
 final class SetupCompletionEvaluator
 {
@@ -38,8 +39,18 @@ final class SetupCompletionEvaluator
             'settings.branding_hero_social_image' => $this->brandingHeroSocialComplete($tenant),
             'programs.two_visible_programs' => $this->twoVisibleProgramsComplete($tenant),
             'settings.public_canonical_url' => $this->publicCanonicalUrlComplete($tenant),
+            'setup.booking_notifications_brief' => $this->bookingNotificationsBriefComplete($tenant),
             default => false,
         };
+    }
+
+    /**
+     * Шаг закрывается по **актуальным** артефактам мастера (пресет/получатели/правила с маркером),
+     * а не только по факту «когда-то нажали Применить».
+     */
+    private function bookingNotificationsBriefComplete(Tenant $tenant): bool
+    {
+        return BookingNotificationsBriefingWizardMarkers::hasAnyWizardArtifact($tenant);
     }
 
     private function siteNameComplete(Tenant $tenant): bool
