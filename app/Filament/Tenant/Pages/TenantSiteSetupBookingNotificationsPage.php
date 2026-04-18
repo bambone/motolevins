@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Filament\Tenant\Pages;
 
 use App\NotificationCenter\NotificationEventRegistry;
+use App\Filament\Shared\TimezoneSelect;
+use App\Validation\TelegramBriefChatIdRule;
 use App\TenantSiteSetup\BookingNotificationsBriefingApplier;
 use App\TenantSiteSetup\BookingNotificationsQuestionnaireRepository;
 use App\TenantSiteSetup\TenantSiteSetupFeature;
@@ -18,6 +20,7 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\HtmlString;
 use UnitEnum;
 
 class TenantSiteSetupBookingNotificationsPage extends Page
@@ -89,10 +92,7 @@ class TenantSiteSetupBookingNotificationsPage extends Page
                         TextInput::make('meta_brand_name')
                             ->label('Бренд / название на сайте')
                             ->maxLength(255),
-                        TextInput::make('meta_timezone')
-                            ->label('Часовой пояс')
-                            ->placeholder('Europe/Moscow')
-                            ->maxLength(64),
+                        TimezoneSelect::make('meta_timezone'),
                     ])
                     ->columns(2),
                 Section::make('Параметры записи (пресет)')
@@ -129,17 +129,24 @@ class TenantSiteSetupBookingNotificationsPage extends Page
                             ->default(true),
                     ])
                     ->columns(2),
-                Section::make('Получатели уведомлений')
-                    ->description('Создаются записи в разделе «Получатели уведомлений». Нужны права на получателей.')
+                Section::make('Куда слать уведомления (бриф)')
+                    ->description($this->recipientsSectionDescription())
                     ->schema([
                         TextInput::make('dest_email')
-                            ->label('Email')
+                            ->label('Email (один адрес)')
                             ->email()
-                            ->maxLength(255),
+                            ->maxLength(255)
+                            ->placeholder('name@example.com')
+                            ->helperText(
+                                'В рамках брифа задаётся один почтовый ящик; дополнительные адреса можно добавить позже в «Получатели уведомлений». '
+                                .'На этот адрес платформа отправит копии уведомлений (проверьте «Входящие» и спам при первой отправке).'
+                            ),
                         TextInput::make('dest_telegram_chat_id')
-                            ->label('Telegram chat_id')
-                            ->helperText('Идентификатор чата или канала для бота.')
-                            ->maxLength(128),
+                            ->label('Telegram (один chat_id или @канал)')
+                            ->placeholder('-1001234567890')
+                            ->maxLength(128)
+                            ->helperText($this->destTelegramHelperHtml())
+                            ->rules([new TelegramBriefChatIdRule()]),
                     ])
                     ->columns(2),
                 Section::make('События для правил')
@@ -209,4 +216,34 @@ class TenantSiteSetupBookingNotificationsPage extends Page
                 ->action('applyNow'),
         ];
     }
+
+    private function recipientsSectionDescription(): string
+    {
+        return 'Здесь не больше одного адреса на канал: один email и один Telegram-чат. Это два разных способа доставки; при необходимости заполните оба — правила ниже будут отправлять уведомления на все указанные каналы. '
+            .'Несколько почтовых ящиков или чатов в одном брифе не задаются: остальных получателей добавьте вручную в разделе «Получатели уведомлений» после применения. '
+            .'Сообщения в Telegram идут через сервисного бота платформы (токен в консоли: «Провайдеры уведомлений»), не через контакт «Связь» на сайте. '
+            .'После «Применить к кабинету» появятся соответствующие записи-получатели (нужны права).';
+    }
+
+    private function destTelegramHelperHtml(): HtmlString
+    {
+        return new HtmlString(
+            '<div class="space-y-2 text-sm text-gray-600 dark:text-gray-400">'
+            .'<p><span class="font-medium text-gray-800 dark:text-gray-200">Какой бот:</span> нужен чат с '
+            .'сервисным ботом платформы — тем же ботом, через который RentBase шлёт уведомления (токен задаётся в консоли платформы: «Провайдеры уведомлений», блок Telegram). '
+            .'Имя @… бота в Telegram подскажет команда платформы; это не бот вашего бренда и не переписка с клиентами.</p>'
+            .'<p><span class="font-medium text-gray-800 dark:text-gray-200">Какой диалог:</span> '
+            .'ЛС — с аккаунта, куда нужны уведомления, откройте личный чат с этим ботом платформы и отправьте /start или сообщение, чтобы диалог существовал. '
+            .'Группа — в группу добавлен тот же бот платформы, ему разрешено писать. '
+            .'Канал — тот же бот добавлен администратором. Во всех случаях пишет именно бот платформы, а не произвольный контакт.</p>'
+            .'<p><span class="font-medium text-gray-800 dark:text-gray-200">Формат поля:</span> числовой chat_id '
+            .'(<code class="rounded bg-gray-100 px-1 py-0.5 text-xs dark:bg-white/10">123456789</code> для ЛС, '
+            .'<code class="rounded bg-gray-100 px-1 py-0.5 text-xs dark:bg-white/10">-100…</code> для каналов и супергрупп) '
+            .'или публичный <code class="rounded bg-gray-100 px-1 py-0.5 text-xs dark:bg-white/10">@username</code> канала.</p>'
+            .'<p><span class="font-medium text-gray-800 dark:text-gray-200">Где взять id:</span> после того как чат с ботом платформы настроен — в карточке получателя в кабинете («Получатели уведомлений»). '
+            .'Сторонние боты вроде @userinfobot / @getidsbot — это отдельные сервисы Telegram для просмотра id пользователя или чата; к боту платформы не относятся, используйте только чтобы скопировать цифры.</p>'
+            .'</div>'
+        );
+    }
+
 }

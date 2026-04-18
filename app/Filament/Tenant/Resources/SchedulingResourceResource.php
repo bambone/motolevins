@@ -3,6 +3,7 @@
 namespace App\Filament\Tenant\Resources;
 
 use App\Filament\Shared\Lifecycle\AdminFilamentDelete;
+use App\Filament\Shared\TimezoneSelect;
 use App\Filament\Tenant\Resources\SchedulingResourceResource\Pages;
 use App\Models\SchedulingResource;
 use App\Models\SchedulingResourceTypeLabel;
@@ -247,13 +248,9 @@ class SchedulingResourceResource extends Resource
                 Section::make('Часовой пояс')
                     ->description('Используется для правил доступности и отображения времени для этого ресурса.')
                     ->schema([
-                        Select::make('timezone')
-                            ->label('Часовой пояс')
+                        TimezoneSelect::make('timezone')
                             ->required()
-                            ->default('Europe/Moscow')
-                            ->searchable()
-                            ->options(fn () => SchedulingTimezoneOptions::all())
-                            ->helperText('Всегда выбирайте из списка. В поиске можно ввести город, регион или цифры смещения: например «2» найдёт UTC+02:00, UTC−02:00 и зоны вроде +02:30.'),
+                            ->default(SchedulingTimezoneOptions::DEFAULT_IDENTIFIER),
                     ]),
                 Section::make('Занятость и заявки')
                     ->description('Настройки ниже влияют на то, как внешний календарь и внутренние заявки закрывают слоты.')

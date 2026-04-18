@@ -5,6 +5,7 @@ namespace App\Filament\Platform\Pages;
 use App\Filament\Platform\Pages\Concerns\GrantsPlatformPageAccess;
 use App\Filament\Platform\TenantPlanCreationNotifications;
 use App\Filament\Platform\Resources\TenantResource;
+use App\Filament\Shared\TimezoneSelect;
 use App\Filament\Support\FilamentInlineMarkdown;
 use App\Models\DomainLocalizationPreset;
 use App\Models\Plan;
@@ -12,6 +13,7 @@ use App\Models\TemplatePreset;
 use App\Models\Tenant;
 use App\Models\TenantSetting;
 use App\Services\Tenancy\TenantProvisioningService;
+use App\Scheduling\SchedulingTimezoneOptions;
 use App\Support\RussianPhone;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -46,7 +48,7 @@ class OnboardingWizard extends Page
     public function mount(): void
     {
         $this->getSchema('form')->fill([
-            'timezone' => 'Europe/Moscow',
+            'timezone' => SchedulingTimezoneOptions::DEFAULT_IDENTIFIER,
             'locale' => 'ru',
             'currency' => 'RUB',
             'primary_color' => '#E85D04',
@@ -80,10 +82,8 @@ class OnboardingWizard extends Page
                                             ->required()
                                             ->unique('tenants', 'slug')
                                             ->helperText('Используется в адресе технического поддомена. Латиница, цифры и дефис.'),
-                                        TextInput::make('timezone')
-                                            ->label('Часовой пояс')
-                                            ->default('Europe/Moscow')
-                                            ->helperText('Для бронирований, писем и отображения времени.'),
+                                        TimezoneSelect::make('timezone')
+                                            ->default(SchedulingTimezoneOptions::DEFAULT_IDENTIFIER),
                                         TextInput::make('locale')
                                             ->label('Локаль')
                                             ->default('ru')
@@ -207,7 +207,7 @@ class OnboardingWizard extends Page
                 'brand_name' => $data['brand_name'] ?? null,
                 'status' => 'trial',
                 'plan_id' => $defaultPlanId,
-                'timezone' => $data['timezone'] ?? 'Europe/Moscow',
+                'timezone' => $data['timezone'] ?? SchedulingTimezoneOptions::DEFAULT_IDENTIFIER,
                 'locale' => $data['locale'] ?? 'ru',
                 'currency' => $data['currency'] ?? 'RUB',
                 'domain_localization_preset_id' => $data['domain_localization_preset_id']

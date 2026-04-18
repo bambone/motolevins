@@ -8,6 +8,7 @@ use App\Filament\Platform\Resources\TenantResource\RelationManagers\TenantMailLo
 use App\Filament\Platform\Resources\TenantResource\RelationManagers\TenantStorageQuotaEventsRelationManager;
 use App\Filament\Platform\Resources\TenantResource\RelationManagers\TenantUsersRelationManager;
 use App\Filament\Shared\Lifecycle\AdminFilamentDelete;
+use App\Filament\Shared\TimezoneSelect;
 use App\Filament\Shared\TenantAnalyticsFormSchema;
 use App\Filament\Support\TenantPushPlatformFormSchema;
 use App\Models\DomainLocalizationPreset;
@@ -17,6 +18,7 @@ use App\Models\Tenant;
 use App\Models\TenantStorageQuota;
 use App\Models\User;
 use App\Providers\Filament\PlatformPanelProvider;
+use App\Scheduling\SchedulingTimezoneOptions;
 use App\Support\Storage\MediaDeliveryMode;
 use App\Support\Storage\MediaWriteMode;
 use Filament\Actions\BulkAction;
@@ -195,11 +197,8 @@ class TenantResource extends Resource
                 Section::make('Регион и валюта')
                     ->description('Влияет на время, формат и отображение цен в кабинете и на сайте.')
                     ->schema([
-                        TextInput::make('timezone')
-                            ->label('Часовой пояс')
-                            ->default('Europe/Moscow')
-                            ->maxLength(50)
-                            ->helperText('Например: Europe/Moscow — для календаря и бронирований.'),
+                        TimezoneSelect::make('timezone')
+                            ->default(SchedulingTimezoneOptions::DEFAULT_IDENTIFIER),
                         TextInput::make('locale')
                             ->label('Локаль')
                             ->default('ru')

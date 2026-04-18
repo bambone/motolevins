@@ -2,6 +2,7 @@
 
 namespace App\Filament\Tenant\Resources\CalendarConnectionResource\RelationManagers;
 
+use App\Filament\Shared\TimezoneSelect;
 use App\Models\CalendarSubscription;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
@@ -30,7 +31,7 @@ class CalendarSubscriptionsRelationManager extends RelationManager
                     ->schema([
                         TextInput::make('external_calendar_id')->label('Внешний ID календаря')->required()->maxLength(255),
                         TextInput::make('title')->label('Заголовок')->maxLength(255),
-                        TextInput::make('timezone')->label('Часовой пояс')->maxLength(64),
+                        TimezoneSelect::make('timezone')->nullable(),
                         Toggle::make('use_for_busy')->label('Учитывать busy')->default(true),
                         Toggle::make('use_for_write')->label('Писать события')->default(false),
                         Toggle::make('is_active')->label('Активно')->default(true),
