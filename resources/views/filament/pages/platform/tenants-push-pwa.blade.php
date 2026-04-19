@@ -3,7 +3,7 @@
         <span class="font-medium">Доступ</span> — entitlement (тариф, коммерция, оверрайд, канал платформы).
         Колонка <span class="font-medium">Причина</span> — почему нет доступа к функции.
         <span class="font-medium">Кабинет</span> — может ли клиент <span class="font-medium">сохранять</span> настройки; при доступе без сохранения смотрите примечание (часто самообслуживание выключено платформой).
-        <span class="font-medium">Push</span> и <span class="font-medium">PWA</span> — переключатели в кабинете.
+        Колонка <span class="font-medium">Расширенный PWA / Push</span> — переключатель расширенного сценария в кабинете; <span class="font-medium">Push</span> — отправка web push.
         Тариф: <span class="font-medium">Платформа → Тарифы</span>; оверрайд: карточка клиента → «Push и PWA (платформа)» или действия в таблице.
     </p>
     <p class="mb-3 text-xs text-gray-500 dark:text-gray-400">
@@ -22,7 +22,7 @@
                     <th class="px-3 py-2 font-medium">Провайдер</th>
                     <th class="px-3 py-2 font-medium">Подписки (CRM)</th>
                     <th class="px-3 py-2 font-medium">Push</th>
-                    <th class="px-3 py-2 font-medium">PWA</th>
+                    <th class="px-3 py-2 font-medium">Расширенный PWA / Push</th>
                     <th class="px-3 py-2 font-medium w-48">Действия</th>
                 </tr>
             </thead>

@@ -73,13 +73,9 @@
         <link rel="icon" href="{{ $tenantFavicon }}" type="{{ $tenantFaviconMime }}">
     @endif
 
-    @php
-        $__t = tenant();
-        $__push = $__t ? $__t->pushSettings : null;
-        $__manifestHref = ($__push && $__push->is_pwa_enabled) ? route('tenant.pwa.manifest') : asset('manifest.json');
-    @endphp
-    <link rel="manifest" href="{{ $__manifestHref }}">
-    <meta name="theme-color" content="{{ tenant() && tenant()->themeKey() === 'advocate_editorial' ? '#f4f1eb' : '#0c0c0e' }}">
+    {{-- Всегда tenant manifest: статический public/manifest.json — демо «Moto Levins» и ломает имя PWA на других клиентах. --}}
+    <link rel="manifest" href="{{ route('tenant.pwa.manifest') }}">
+    <meta name="theme-color" content="{{ \App\Support\TenantPwaChromeColors::themeColor(tenant()) }}">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">

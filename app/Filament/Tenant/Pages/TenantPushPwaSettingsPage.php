@@ -2,19 +2,19 @@
 
 namespace App\Filament\Tenant\Pages;
 
-use App\Filament\Tenant\Support\TenantPanelHintHeaderAction;
 use App\Auth\AccessRoles;
+use App\Filament\Tenant\Support\TenantPanelHintHeaderAction;
 use App\Models\TenantDomain;
 use App\Models\TenantPushEventPreference;
 use App\TenantPush\OneSignalExternalUserId;
-use App\TenantPush\TenantPushFeatureGate;
-use App\TenantPush\TenantPushNotificationBindingSync;
+use App\TenantPush\TenantPushCrmRequestRecipientResolver;
 use App\TenantPush\TenantPushDiagnosticCode;
 use App\TenantPush\TenantPushDiagnosticsService;
+use App\TenantPush\TenantPushFeatureGate;
+use App\TenantPush\TenantPushNotificationBindingSync;
 use App\TenantPush\TenantPushOnesignalClient;
 use App\TenantPush\TenantPushProviderStatus;
 use App\TenantPush\TenantPushRecipientScope;
-use App\TenantPush\TenantPushCrmRequestRecipientResolver;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
@@ -185,7 +185,10 @@ class TenantPushPwaSettingsPage extends Page
                     ]),
                 Section::make('PWA')
                     ->schema([
-                        Toggle::make('is_pwa_enabled')->label('Включить динамический manifest')->disabled(! $editable),
+                        Toggle::make('is_pwa_enabled')
+                            ->label('Расширенный сценарий PWA / push')
+                            ->helperText('Базовый manifest сайта (имя, цвета темы) отдаётся всегда. Флаг отмечает, что клиент осознанно подключает сценарий с кастомными полями ниже и связанными проверками; он не «выключает» manifest в браузере.')
+                            ->disabled(! $editable),
                     ]),
                 Section::make('События: новая заявка')
                     ->schema([
@@ -468,5 +471,4 @@ class TenantPushPwaSettingsPage extends Page
 
         return $actions;
     }
-
 }
