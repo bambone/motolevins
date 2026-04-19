@@ -431,10 +431,10 @@ class TenantResource extends Resource
                         };
                     }),
             ])
-            ->actions([
+            ->recordActions([
                 EditAction::make(),
             ])
-            ->bulkActions([
+            ->toolbarActions([
                 BulkActionGroup::make([
                     BulkAction::make('setMediaWriteOverride')
                         ->label('Задать режим записи медиа')

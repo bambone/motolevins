@@ -99,7 +99,7 @@ class PlatformUserResource extends Resource
                         $record->roles->whereIn('name', AccessRoles::platformRoles())->pluck('name')->all()
                     )),
             ])
-            ->actions([EditAction::make()])
+            ->recordActions([EditAction::make()])
             ->emptyStateHeading('Сотрудников пока нет')
             ->emptyStateDescription(FilamentInlineMarkdown::toHtml(
                 'Здесь только пользователи с ролями консоли платформы. '.

@@ -79,7 +79,7 @@ class CalendarSubscriptionsRelationManager extends RelationManager
                         });
                     }),
             ])
-            ->actions([
+            ->recordActions([
                 EditAction::make()
                     ->using(function (CalendarSubscription $record, array $data): CalendarSubscription {
                         return DB::transaction(function () use ($record, $data): CalendarSubscription {

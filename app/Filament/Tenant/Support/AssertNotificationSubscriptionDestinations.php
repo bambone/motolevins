@@ -1,8 +1,11 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Filament\Tenant\Support;
 
 use App\Models\NotificationDestination;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
@@ -14,7 +17,7 @@ final class AssertNotificationSubscriptionDestinations
      */
     public static function forTenantForm(array $ids): void
     {
-        $ids = array_values(array_unique(array_map('intval', $ids)));
+        $ids = AssertTenantOwnedIds::normalizePositiveIntIds($ids);
         if ($ids === []) {
             return;
         }
@@ -26,18 +29,17 @@ final class AssertNotificationSubscriptionDestinations
             ]);
         }
 
-        $q = NotificationDestination::query()
-            ->where('tenant_id', $tenant->id)
-            ->whereIn('id', $ids);
-
-        if (! Gate::allows('manage_notifications')) {
-            $q->where('user_id', Auth::id());
-        }
-
-        if ($q->count() !== count($ids)) {
-            throw ValidationException::withMessages([
-                'destination_ids' => 'Некорректные получатели.',
-            ]);
-        }
+        AssertTenantOwnedIds::assertIntIdsBelongToScopedQuery(
+            NotificationDestination::class,
+            $ids,
+            function (Builder $q) use ($tenant): void {
+                $q->where('tenant_id', $tenant->id);
+                if (! Gate::allows('manage_notifications')) {
+                    $q->where('user_id', Auth::id());
+                }
+            },
+            'destination_ids',
+            'Некорректные получатели.',
+        );
     }
 }

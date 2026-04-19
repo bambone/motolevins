@@ -124,7 +124,7 @@ class NotificationDestinationResource extends Resource
                 TextColumn::make('type')->label('Тип')->badge(),
                 TextColumn::make('status')->label('Статус')->badge(),
             ])
-            ->actions([
+            ->recordActions([
                 EditAction::make(),
                 AdminFilamentDelete::configureTableDeleteAction(
                     DeleteAction::make(),

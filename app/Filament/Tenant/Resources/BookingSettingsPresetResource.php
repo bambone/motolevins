@@ -202,8 +202,8 @@ class BookingSettingsPresetResource extends Resource
                 TextColumn::make('description')->label('Описание')->limit(40)->toggleable(),
                 TextColumn::make('updated_at')->label('Обновлено')->dateTime()->sortable(),
             ])
-            ->actions([EditAction::make()])
-            ->bulkActions([
+            ->recordActions([EditAction::make()])
+            ->toolbarActions([
                 BulkActionGroup::make([
                     AdminFilamentDelete::makeBulkDeleteAction(),
                 ]),

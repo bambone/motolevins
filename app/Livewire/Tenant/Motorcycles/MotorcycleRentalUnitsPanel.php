@@ -200,7 +200,7 @@ class MotorcycleRentalUnitsPanel extends Component implements HasActions, HasTab
                         $this->resetTable();
                     }),
             ])
-            ->actions([
+            ->recordActions([
                 EditAction::make()
                     ->schema(fn (Schema $schema): Schema => $schema->components([
                         Section::make('Единица парка')

@@ -215,8 +215,8 @@ class CalendarOccupancyMappingResource extends Resource
                                 : '—';
                         }),
                 ])
-                ->actions([EditAction::make()])
-                ->bulkActions([
+                ->recordActions([EditAction::make()])
+                ->toolbarActions([
                     BulkActionGroup::make([
                         AdminFilamentDelete::makeBulkDeleteAction(),
                     ]),

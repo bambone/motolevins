@@ -172,7 +172,7 @@ class RentalUnitResource extends Resource
                     }),
             ])
             ->defaultSort('id')
-            ->actions([
+            ->recordActions([
                 EditAction::make(),
             ])
             ->emptyStateHeading('Единиц парка пока нет')

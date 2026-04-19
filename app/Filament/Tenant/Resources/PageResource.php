@@ -158,7 +158,7 @@ class PageResource extends Resource
                     ->label('Статус')
                     ->options(Page::statuses()),
             ])
-            ->actions([
+            ->recordActions([
                 EditAction::make(),
                 AdminFilamentDelete::configureTableDeleteAction(
                     DeleteAction::make()
@@ -169,7 +169,7 @@ class PageResource extends Resource
                     ['entry' => 'filament.tenant.page.table'],
                 ),
             ])
-            ->bulkActions([
+            ->toolbarActions([
                 BulkActionGroup::make([
                     AdminFilamentDelete::makeBulkDeleteAction(['entry' => 'filament.tenant.page.bulk']),
                 ]),

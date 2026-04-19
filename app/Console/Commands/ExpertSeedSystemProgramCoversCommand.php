@@ -4,7 +4,6 @@ namespace App\Console\Commands;
 
 use App\Support\Storage\TenantStorage;
 use App\Support\Storage\TenantStorageDisks;
-use App\Tenant\Expert\ExpertAutoProgramCoverInstaller;
 use App\Tenant\Expert\ExpertAutoProgramCoverRegistry;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Storage;
@@ -108,7 +107,6 @@ class ExpertSeedSystemProgramCoversCommand extends Command
 
         ob_start();
         $ok = imagewebp($im, null, 88);
-        imagedestroy($im);
         $buf = ob_get_clean();
 
         return $ok && is_string($buf) && $buf !== '' ? $buf : null;

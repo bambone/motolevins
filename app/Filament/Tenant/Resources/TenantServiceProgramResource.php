@@ -400,7 +400,7 @@ class TenantServiceProgramResource extends Resource
                     ->sortable(),
             ])
             ->defaultSort('sort_order')
-            ->actions([EditAction::make()]);
+            ->recordActions([EditAction::make()]);
     }
 
     public static function getPages(): array

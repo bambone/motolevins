@@ -75,7 +75,7 @@ class RedirectResource extends Resource
                 IconColumn::make('is_active')->boolean(),
             ])
             ->defaultSort('id')
-            ->actions([
+            ->recordActions([
                 EditAction::make(),
             ]);
     }

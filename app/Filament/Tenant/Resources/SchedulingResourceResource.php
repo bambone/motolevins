@@ -322,8 +322,8 @@ class SchedulingResourceResource extends Resource
                     }),
                 TextColumn::make('timezone')->label('Часовой пояс'),
             ])
-            ->actions([EditAction::make()])
-            ->bulkActions([
+            ->recordActions([EditAction::make()])
+            ->toolbarActions([
                 BulkActionGroup::make([
                     AdminFilamentDelete::makeBulkDeleteAction(),
                 ]),

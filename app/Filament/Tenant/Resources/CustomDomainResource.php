@@ -17,6 +17,7 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
 use UnitEnum;
 
 class CustomDomainResource extends Resource
@@ -50,12 +51,16 @@ class CustomDomainResource extends Resource
 
     public static function canViewAny(): bool
     {
-        return Auth::check() && currentTenant() !== null;
+        return Auth::check()
+            && currentTenant() !== null
+            && Gate::allows('manage_settings');
     }
 
     public static function canCreate(): bool
     {
-        return Auth::check() && currentTenant() !== null;
+        return Auth::check()
+            && currentTenant() !== null
+            && Gate::allows('manage_settings');
     }
 
     public static function canEdit(Model $record): bool
@@ -63,7 +68,8 @@ class CustomDomainResource extends Resource
         return $record instanceof TenantDomain
             && $record->type === TenantDomain::TYPE_CUSTOM
             && currentTenant() !== null
-            && (int) $record->tenant_id === (int) currentTenant()->id;
+            && (int) $record->tenant_id === (int) currentTenant()->id
+            && Gate::allows('manage_settings');
     }
 
     public static function form(Schema $schema): Schema
@@ -120,7 +126,7 @@ class CustomDomainResource extends Resource
                         ->dateTime()
                         ->placeholder('—'),
                 ])
-                ->actions([
+                ->recordActions([
                     EditAction::make(),
                 ]),
             'Свой домен не подключён',

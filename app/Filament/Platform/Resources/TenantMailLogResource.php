@@ -185,7 +185,7 @@ class TenantMailLogResource extends Resource
                         }
                     }),
             ])
-            ->actions([
+            ->recordActions([
                 ViewAction::make(),
             ])
             ->paginated([25, 50, 100]);

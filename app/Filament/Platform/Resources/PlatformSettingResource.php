@@ -146,8 +146,8 @@ class PlatformSettingResource extends Resource
                     ->tooltip(fn (PlatformSetting $record): ?string => strlen((string) $record->value) > 50 ? (string) $record->value : null),
             ])
             ->defaultSort('key')
-            ->actions([EditAction::make()])
-            ->bulkActions([
+            ->recordActions([EditAction::make()])
+            ->toolbarActions([
                 BulkActionGroup::make([
                     AdminFilamentDelete::makeBulkDeleteAction()
                         ->modalHeading('Удалить выбранные параметры?')

@@ -91,7 +91,7 @@ class IntegrationResource extends Resource
                     ->label('Записей в журнале'),
             ])
             ->defaultSort('id')
-            ->actions([
+            ->recordActions([
                 EditAction::make(),
             ])
             ->emptyStateHeading('Интеграций нет')

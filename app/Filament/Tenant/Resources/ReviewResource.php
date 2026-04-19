@@ -224,7 +224,7 @@ class ReviewResource extends Resource
                     SelectFilter::make('status')->options(Review::statuses()),
                 ])
                 ->defaultSort('sort_order')
-                ->actions([
+                ->recordActions([
                     Action::make('approve')
                         ->label('Опубликовать')
                         ->icon('heroicon-o-check-badge')

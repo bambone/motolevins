@@ -99,8 +99,8 @@ class DomainLocalizationPresetResource extends Resource
                         ->label('Клиентов')
                         ->counts('tenants'),
                 ])
-                ->actions([EditAction::make()])
-                ->bulkActions([
+                ->recordActions([EditAction::make()])
+                ->toolbarActions([
                     BulkActionGroup::make([
                         AdminFilamentDelete::makeBulkDeleteAction()
                             ->modalHeading('Удалить пресеты?')

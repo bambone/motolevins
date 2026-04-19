@@ -25,7 +25,12 @@ use UnitEnum;
 
 class TenantSiteSetupCenterPage extends Page
 {
-    /** @var Collection<string, TenantSetupItemState>|null */
+    /**
+     * Кэш только на время запроса Livewire. Если позже появятся экшены, меняющие
+     * {@see TenantSetupItemState} без полного редиректа, вызовите {@see forgetSetupItemStatesCache()}.
+     *
+     * @var Collection<string, TenantSetupItemState>|null
+     */
     private ?Collection $setupItemStatesCache = null;
 
     protected static ?string $navigationLabel = 'Обзор запуска';
@@ -302,6 +307,11 @@ class TenantSiteSetupCenterPage extends Page
         }
 
         return array_values($sections);
+    }
+
+    private function forgetSetupItemStatesCache(): void
+    {
+        $this->setupItemStatesCache = null;
     }
 
     /**

@@ -121,8 +121,8 @@ class ManualBusyBlockResource extends Resource
                 TextColumn::make('starts_at_utc')->dateTime()->label('С'),
                 TextColumn::make('ends_at_utc')->dateTime()->label('По'),
             ])
-            ->actions([EditAction::make()])
-            ->bulkActions([
+            ->recordActions([EditAction::make()])
+            ->toolbarActions([
                 BulkActionGroup::make([
                     AdminFilamentDelete::makeBulkDeleteAction(),
                 ]),

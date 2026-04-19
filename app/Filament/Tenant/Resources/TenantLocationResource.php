@@ -79,7 +79,7 @@ class TenantLocationResource extends Resource
                 TextColumn::make('sort_order')->label('Порядок')->sortable(),
             ])
             ->defaultSort('sort_order')
-            ->actions([
+            ->recordActions([
                 EditAction::make(),
                 AdminFilamentDelete::configureTableDeleteAction(
                     DeleteAction::make(),

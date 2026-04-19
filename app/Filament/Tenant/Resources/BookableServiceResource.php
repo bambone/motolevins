@@ -245,8 +245,8 @@ class BookableServiceResource extends Resource
                     TextColumn::make('duration_minutes')->label('Длит., мин'),
                 ])
                 ->defaultSort('sort_weight')
-                ->actions([EditAction::make()])
-                ->bulkActions([
+                ->recordActions([EditAction::make()])
+                ->toolbarActions([
                     BulkActionGroup::make([
                         BulkAction::make('apply_booking_preset')
                             ->label('Применить группу настроек')

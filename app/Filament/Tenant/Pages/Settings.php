@@ -34,11 +34,13 @@ use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Schemas\Schema;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\HtmlString;
 use Illuminate\Validation\ValidationException;
 use Livewire\WithFileUploads;
+use Throwable;
 use UnitEnum;
 
 class Settings extends Page
@@ -488,12 +490,47 @@ class Settings extends Page
             }
         }
 
-        if ($tenant) {
+        if ($tenant !== null) {
             try {
-                $persistence = app(AnalyticsSettingsPersistence::class);
-                $before = $persistence->load((int) $tenant->id);
-                $new = AnalyticsSettingsFormMapper::toValidatedData($data);
-                $persistence->save((int) $tenant->id, $new, Auth::user(), $before);
+                // Аналитика, деньги и прочие tenant_settings — одна транзакция, без частичного коммита между блоками.
+                DB::transaction(function () use ($tenant, &$data): void {
+                    $persistence = app(AnalyticsSettingsPersistence::class);
+                    $before = $persistence->load((int) $tenant->id);
+                    $new = AnalyticsSettingsFormMapper::toValidatedData($data);
+                    $persistence->save((int) $tenant->id, $new, Auth::user(), $before);
+
+                    $this->persistMoneySettings($tenant, $data);
+
+                    if (array_key_exists('general_domain', $data)) {
+                        $raw = trim((string) ($data['general_domain'] ?? ''));
+                        if ($raw === '' || ! filter_var($raw, FILTER_VALIDATE_URL)) {
+                            TenantSetting::forgetForTenant((int) $tenant->id, 'general.domain');
+                        } else {
+                            TenantSetting::setForTenant((int) $tenant->id, 'general.domain', rtrim($raw, '/'));
+                        }
+                        unset($data['general_domain']);
+                    }
+
+                    foreach ($data as $field => $value) {
+                        if (! array_key_exists($field, self::FORM_FIELD_TO_SETTING_KEY)) {
+                            continue;
+                        }
+
+                        if (is_array($value)) {
+                            continue;
+                        }
+
+                        $settingKey = self::FORM_FIELD_TO_SETTING_KEY[$field];
+                        $stored = $value === null ? '' : (string) $value;
+
+                        if (in_array($field, ['contacts_phone', 'contacts_phone_alt'], true)) {
+                            $normalized = RussianPhone::normalize($stored);
+                            $stored = $normalized ?? '';
+                        }
+
+                        TenantSetting::setForTenant($tenant->id, $settingKey, $stored);
+                    }
+                });
             } catch (ValidationException $e) {
                 foreach ($e->errors() as $messages) {
                     Notification::make()
@@ -503,43 +540,34 @@ class Settings extends Page
                 }
 
                 return;
+            } catch (Throwable $e) {
+                report($e);
+                Notification::make()
+                    ->title('Не удалось сохранить настройки')
+                    ->body('Повторите попытку. Если ошибка повторяется, обратитесь в поддержку.')
+                    ->danger()
+                    ->send();
+
+                return;
             }
-        }
+        } else {
+            foreach ($data as $field => $value) {
+                if (! array_key_exists($field, self::FORM_FIELD_TO_SETTING_KEY)) {
+                    continue;
+                }
 
-        if ($tenant !== null) {
-            $this->persistMoneySettings($tenant, $data);
-        }
+                if (is_array($value)) {
+                    continue;
+                }
 
-        if ($tenant !== null && array_key_exists('general_domain', $data)) {
-            $raw = trim((string) ($data['general_domain'] ?? ''));
-            if ($raw === '' || ! filter_var($raw, FILTER_VALIDATE_URL)) {
-                TenantSetting::forgetForTenant((int) $tenant->id, 'general.domain');
-            } else {
-                TenantSetting::setForTenant((int) $tenant->id, 'general.domain', rtrim($raw, '/'));
-            }
-            unset($data['general_domain']);
-        }
+                $settingKey = self::FORM_FIELD_TO_SETTING_KEY[$field];
+                $stored = $value === null ? '' : (string) $value;
 
-        foreach ($data as $field => $value) {
-            if (! array_key_exists($field, self::FORM_FIELD_TO_SETTING_KEY)) {
-                continue;
-            }
+                if (in_array($field, ['contacts_phone', 'contacts_phone_alt'], true)) {
+                    $normalized = RussianPhone::normalize($stored);
+                    $stored = $normalized ?? '';
+                }
 
-            if (is_array($value)) {
-                continue;
-            }
-
-            $settingKey = self::FORM_FIELD_TO_SETTING_KEY[$field];
-            $stored = $value === null ? '' : (string) $value;
-
-            if (in_array($field, ['contacts_phone', 'contacts_phone_alt'], true)) {
-                $normalized = RussianPhone::normalize($stored);
-                $stored = $normalized ?? '';
-            }
-
-            if ($tenant) {
-                TenantSetting::setForTenant($tenant->id, $settingKey, $stored);
-            } else {
                 Setting::set($settingKey, $stored);
             }
         }
@@ -673,6 +701,17 @@ class Settings extends Page
             }
             $codes = array_values(array_unique($codes));
         }
+        if ($codes !== []) {
+            $registry = app(TenantMoneySettingsResolver::class)->platformCurrenciesByCode();
+            foreach ($codes as $c) {
+                $def = $registry[$c] ?? null;
+                if ($def === null || ! $def->active) {
+                    throw ValidationException::withMessages([
+                        'money_additional_currency_codes' => 'Недопустимый или отключённый код валюты: '.$c.'. Укажите код из списка активных валют платформы.',
+                    ]);
+                }
+            }
+        }
         TenantSetting::setForTenant($tid, 'money.additional_currency_codes', $codes, 'json');
 
         $tenant->currency = $base;
@@ -707,21 +746,32 @@ class Settings extends Page
         $disk = Storage::disk(TenantStorageDisks::publicDiskName());
         $before = $this->getSettingsData();
         $fields = ['branding_logo_path', 'branding_favicon_path', 'branding_hero_path'];
-        $deltaSum = 0;
+        $oldPaths = [];
+        $newPaths = [];
         foreach ($fields as $field) {
-            $new = isset($formData[$field]) ? (string) $formData[$field] : '';
-            $old = isset($before[$field]) ? (string) $before[$field] : '';
-            if ($new === $old) {
-                continue;
+            $new = isset($formData[$field]) ? trim((string) $formData[$field]) : '';
+            $old = isset($before[$field]) ? trim((string) $before[$field]) : '';
+            if ($new !== '') {
+                $newPaths[$new] = true;
             }
-
-            if ($new !== '' && ! $disk->exists($new)) {
-                continue;
+            if ($old !== '') {
+                $oldPaths[$old] = true;
             }
-
-            $newSize = ($new !== '') ? (int) $disk->size($new) : 0;
-            $oldSize = ($old !== '' && $disk->exists($old)) ? (int) $disk->size($old) : 0;
-            $deltaSum += $newSize - $oldSize;
+        }
+        $oldKeys = array_keys($oldPaths);
+        $newKeys = array_keys($newPaths);
+        $addedPaths = array_diff($newKeys, $oldKeys);
+        $removedPaths = array_diff($oldKeys, $newKeys);
+        $deltaSum = 0;
+        foreach ($addedPaths as $path) {
+            if ($path !== '' && $disk->exists($path)) {
+                $deltaSum += (int) $disk->size($path);
+            }
+        }
+        foreach ($removedPaths as $path) {
+            if ($path !== '' && $disk->exists($path)) {
+                $deltaSum -= (int) $disk->size($path);
+            }
         }
         if ($deltaSum > 0) {
             app(TenantStorageQuotaService::class)->assertCanStoreBytes($tenant, $deltaSum, 'branding_upload');

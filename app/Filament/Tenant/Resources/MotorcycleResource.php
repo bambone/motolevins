@@ -227,7 +227,7 @@ class MotorcycleResource extends Resource
                         return redirect(request()->header('Referer'));
                     }),
             ])
-            ->actions([
+            ->recordActions([
                 Action::make('quick_edit')
                     ->label('Быстрая правка')
                     ->icon('heroicon-o-bolt')
@@ -254,7 +254,7 @@ class MotorcycleResource extends Resource
                     ->color('gray'),
                 EditAction::make(),
             ])
-            ->bulkActions([
+            ->toolbarActions([
                 BulkActionGroup::make([
                     BulkAction::make('enable_online_booking_by_preset')
                         ->label('Включить онлайн-запись по группе')

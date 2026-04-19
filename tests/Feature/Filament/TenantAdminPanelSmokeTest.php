@@ -3,8 +3,20 @@
 namespace Tests\Feature\Filament;
 
 use App\Filament\Tenant\Pages\TenantLogin;
+use App\Filament\Tenant\Resources\CalendarOccupancyMappingResource;
+use App\Filament\Tenant\Resources\SchedulingTargetResource;
+use App\Models\CalendarConnection;
+use App\Models\CalendarSubscription;
+use App\Models\SchedulingResource;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Scheduling\Enums\CalendarAccessMode;
+use App\Scheduling\Enums\CalendarProviderType;
+use App\Scheduling\Enums\SchedulingResourceType;
+use App\Scheduling\Enums\SchedulingScope;
+use App\Scheduling\Enums\TentativeEventsPolicy;
+use App\Scheduling\Enums\UnconfirmedRequestsPolicy;
+use App\Scheduling\SchedulingTimezoneOptions;
 use App\Services\CurrentTenantManager;
 use Database\Seeders\RolePermissionSeeder;
 use Filament\Auth\Pages\Login;
@@ -27,6 +39,9 @@ use Tests\TestCase;
  * Failures accumulate for all URLs; one final assert. `$strictHtmlAssertions` disables the forbidden list only.
  *
  * Note: Edit/view routes that require a record are not enumerated here; extend with factories if needed.
+ *
+ * Gated create pages (scheduling prerequisites): см. {@see test_gated_scheduling_create_urls_redirect_without_prerequisites()}
+ * и {@see test_gated_scheduling_create_urls_return_200_with_prerequisites()}.
  */
 class TenantAdminPanelSmokeTest extends TestCase
 {
@@ -149,14 +164,157 @@ class TenantAdminPanelSmokeTest extends TestCase
         $this->assertSame([], [...$pageFailures, ...$logFailures], implode("\n\n", $messages));
     }
 
-    /**
-     * @return list<string>
-     */
-    private function collectTenantAdminPageFailures(TestResponse $response, string $label, string $path): array
+    public function test_gated_scheduling_create_urls_redirect_without_prerequisites(): void
     {
+        File::ensureDirectoryExists(dirname($this->logPath));
+        file_put_contents($this->logPath, '');
+
+        $tenant = $this->createTenantWithActiveDomain('smoke-gated-off', ['theme_key' => 'expert_auto']);
+        $host = $this->tenancyHostForSlug('smoke-gated-off');
+
+        $user = User::factory()->create(['status' => 'active']);
+        $user->tenants()->attach($tenant->id, ['role' => 'tenant_owner', 'status' => 'active']);
+
+        $this->actingAs($user);
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+
+        $pageFailures = [];
+        foreach ($this->gatedSchedulingCreateLabels() as $label) {
+            $resourceClass = str_replace('::create', '', $label);
+            app(CurrentTenantManager::class)->setTenant($tenant);
+            $path = parse_url($resourceClass::getUrl('create', [], false, 'admin'), PHP_URL_PATH) ?: '';
+            if ($path === '') {
+                $pageFailures[] = sprintf('%s → could not resolve create path', $label);
+
+                continue;
+            }
+            $response = $this->getWithHost($host, $path);
+            $indexPath = $this->gatedCreateIndexPathForLabel($tenant, $label);
+            $pageFailures = array_merge(
+                $pageFailures,
+                $this->collectTenantAdminPageFailures($response, $label, $path, true, $indexPath)
+            );
+        }
+
+        $logContent = is_file($this->logPath) ? (string) file_get_contents($this->logPath) : '';
+        file_put_contents($this->logPath, '');
+        $logFailures = $this->findLogSeverityIssues($logContent);
+
+        $messages = [];
+        if ($pageFailures !== []) {
+            $messages[] = "Page:\n".implode("\n", $pageFailures);
+        }
+        if ($logFailures !== []) {
+            $messages[] = "Log:\n".implode("\n", $logFailures);
+        }
+
+        $this->assertSame([], [...$pageFailures, ...$logFailures], implode("\n\n", $messages));
+    }
+
+    public function test_gated_scheduling_create_urls_return_200_with_prerequisites(): void
+    {
+        File::ensureDirectoryExists(dirname($this->logPath));
+        file_put_contents($this->logPath, '');
+
+        $tenant = $this->createTenantWithActiveDomain('smoke-gated-on', ['theme_key' => 'expert_auto']);
+        $host = $this->tenancyHostForSlug('smoke-gated-on');
+
+        $user = User::factory()->create(['status' => 'active']);
+        $user->tenants()->attach($tenant->id, ['role' => 'tenant_owner', 'status' => 'active']);
+
+        $this->actingAs($user);
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+
+        $this->seedSchedulingSmokePrerequisites($tenant);
+
+        $pageFailures = [];
+        foreach ($this->gatedSchedulingCreateLabels() as $label) {
+            $resourceClass = str_replace('::create', '', $label);
+            app(CurrentTenantManager::class)->setTenant($tenant);
+            $path = parse_url($resourceClass::getUrl('create', [], false, 'admin'), PHP_URL_PATH) ?: '';
+            if ($path === '') {
+                $pageFailures[] = sprintf('%s → could not resolve create path', $label);
+
+                continue;
+            }
+            $response = $this->getWithHost($host, $path);
+            $pageFailures = array_merge(
+                $pageFailures,
+                $this->collectTenantAdminPageFailures($response, $label, $path)
+            );
+        }
+
+        $logContent = is_file($this->logPath) ? (string) file_get_contents($this->logPath) : '';
+        file_put_contents($this->logPath, '');
+        $logFailures = $this->findLogSeverityIssues($logContent);
+
+        $messages = [];
+        if ($pageFailures !== []) {
+            $messages[] = "Page:\n".implode("\n", $pageFailures);
+        }
+        if ($logFailures !== []) {
+            $messages[] = "Log:\n".implode("\n", $logFailures);
+        }
+
+        $this->assertSame([], [...$pageFailures, ...$logFailures], implode("\n\n", $messages));
+    }
+
+    /**
+     * @param  non-empty-string|null  $gatedRedirectIndexPath  path-only, e.g. /admin/scheduling-targets
+     */
+    private function collectTenantAdminPageFailures(
+        TestResponse $response,
+        string $label,
+        string $path,
+        bool $allowGatedCreateRedirect = false,
+        ?string $gatedRedirectIndexPath = null,
+    ): array {
         $html = $response->getContent();
         $preview = $this->normalizedResponsePreview($html);
         $failures = [];
+
+        if ($allowGatedCreateRedirect && $gatedRedirectIndexPath !== null && $gatedRedirectIndexPath !== '') {
+            if ($response->status() === 200) {
+                $failures[] = sprintf(
+                    '%s %s → expected redirect to index without prerequisites, got HTTP 200 | preview: %s',
+                    $label,
+                    $path,
+                    $preview
+                );
+
+                return $failures;
+            }
+
+            if ($response->isRedirect()) {
+                $location = (string) $response->headers->get('Location', '');
+                $locPath = parse_url($location, PHP_URL_PATH) ?: '';
+
+                if ($locPath === $gatedRedirectIndexPath || str_ends_with($location, $gatedRedirectIndexPath)) {
+                    return [];
+                }
+
+                $failures[] = sprintf(
+                    '%s %s → expected redirect to %s, got Location %s | preview: %s',
+                    $label,
+                    $path,
+                    $gatedRedirectIndexPath,
+                    $location,
+                    $preview
+                );
+
+                return $failures;
+            }
+
+            $failures[] = sprintf(
+                '%s %s → expected redirect without prerequisites, got HTTP %s | preview: %s',
+                $label,
+                $path,
+                $response->status(),
+                $preview
+            );
+
+            return $failures;
+        }
 
         if ($response->status() !== 200) {
             $failures[] = sprintf('%s %s → HTTP %s | preview: %s', $label, $path, $response->status(), $preview);
@@ -300,7 +458,7 @@ class TenantAdminPanelSmokeTest extends TestCase
                     'path' => parse_url($resourceClass::getUrl(null, [], false, 'admin'), PHP_URL_PATH) ?: '/admin',
                 ];
 
-                if ($resourceClass::hasPage('create')) {
+                if ($this->tenantAdminSmokeShouldIncludeResourceCreate($resourceClass)) {
                     $items[] = [
                         'label' => $resourceClass.'::create',
                         'path' => parse_url($resourceClass::getUrl('create', [], false, 'admin'), PHP_URL_PATH) ?: '/admin',
@@ -314,6 +472,101 @@ class TenantAdminPanelSmokeTest extends TestCase
         usort($items, static fn (array $a, array $b): int => $a['path'] <=> $b['path']);
 
         return $items;
+    }
+
+    /**
+     * Create в smoke только если страница есть, Filament canCreate() (если false — пропуск) и выполнены
+     * контекстные предусловия для scheduling-ресурсов с осознанным redirect-контрактом.
+     */
+    private function tenantAdminSmokeShouldIncludeResourceCreate(string $resourceClass): bool
+    {
+        if (! $resourceClass::hasPage('create')) {
+            return false;
+        }
+
+        if (method_exists($resourceClass, 'canCreate') && $resourceClass::canCreate() === false) {
+            return false;
+        }
+
+        if ($resourceClass === SchedulingTargetResource::class) {
+            return SchedulingTargetResource::canStartCreatingTarget();
+        }
+
+        if ($resourceClass === CalendarOccupancyMappingResource::class) {
+            return CalendarOccupancyMappingResource::canStartCreatingMapping();
+        }
+
+        return true;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function gatedSchedulingCreateLabels(): array
+    {
+        return [
+            CalendarOccupancyMappingResource::class.'::create',
+            SchedulingTargetResource::class.'::create',
+        ];
+    }
+
+    private function gatedCreateIndexPathForLabel(Tenant $tenant, string $label): ?string
+    {
+        $map = [
+            CalendarOccupancyMappingResource::class.'::create' => CalendarOccupancyMappingResource::class,
+            SchedulingTargetResource::class.'::create' => SchedulingTargetResource::class,
+        ];
+        if (! isset($map[$label])) {
+            return null;
+        }
+        $resourceClass = $map[$label];
+        $tenantManager = app(CurrentTenantManager::class);
+        $previousTenant = $tenantManager->getTenant();
+        $tenantManager->setTenant($tenant);
+        try {
+            $p = parse_url($resourceClass::getUrl('index', [], false, 'admin'), PHP_URL_PATH);
+
+            return is_string($p) && $p !== '' ? $p : null;
+        } finally {
+            $tenantManager->setTenant($previousTenant);
+        }
+    }
+
+    private function seedSchedulingSmokePrerequisites(Tenant $tenant): void
+    {
+        $tenant->update([
+            'scheduling_module_enabled' => true,
+            'calendar_integrations_enabled' => true,
+        ]);
+
+        SchedulingResource::query()->create([
+            'scheduling_scope' => SchedulingScope::Tenant,
+            'tenant_id' => $tenant->id,
+            'resource_type' => SchedulingResourceType::Person->value,
+            'user_id' => null,
+            'label' => 'Smoke scheduling resource',
+            'timezone' => SchedulingTimezoneOptions::DEFAULT_IDENTIFIER,
+            'tentative_events_policy' => TentativeEventsPolicy::ProviderDefault,
+            'unconfirmed_requests_policy' => UnconfirmedRequestsPolicy::Ignore,
+            'is_active' => true,
+        ]);
+
+        $conn = CalendarConnection::query()->create([
+            'scheduling_scope' => SchedulingScope::Tenant,
+            'tenant_id' => $tenant->id,
+            'provider' => CalendarProviderType::Google,
+            'access_mode' => CalendarAccessMode::Oauth,
+            'display_name' => 'Smoke calendar',
+            'is_active' => true,
+        ]);
+        CalendarSubscription::query()->create([
+            'calendar_connection_id' => $conn->id,
+            'external_calendar_id' => 'primary',
+            'title' => 'Smoke subscription',
+            'use_for_busy' => true,
+            'use_for_write' => false,
+            'is_active' => true,
+        ]);
     }
 
     /**

@@ -73,7 +73,7 @@ class TenantMailLogsRelationManager extends RelationManager
                     ->label('Статус')
                     ->options(TenantMailLog::statusLabels()),
             ])
-            ->actions([
+            ->recordActions([
                 ViewAction::make()
                     ->url(fn (TenantMailLog $record): string => TenantMailLogResource::getUrl('view', ['record' => $record])),
             ])

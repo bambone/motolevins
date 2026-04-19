@@ -123,7 +123,7 @@ class NotificationSubscriptionResource extends Resource
                     TextColumn::make('event_key')->label('Событие')->badge(),
                     IconColumn::make('enabled')->label('Вкл.')->boolean(),
                 ])
-                ->actions([
+                ->recordActions([
                     EditAction::make(),
                     AdminFilamentDelete::configureTableDeleteAction(
                         DeleteAction::make(),

@@ -76,7 +76,7 @@ class SeoLandingPageResource extends Resource
                 TextColumn::make('sort_order')->sortable(),
             ])
             ->defaultSort('sort_order')
-            ->actions([EditAction::make()]);
+            ->recordActions([EditAction::make()]);
     }
 
     public static function getPages(): array

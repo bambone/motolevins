@@ -112,7 +112,7 @@ class UserResource extends Resource
             ->filters([
                 SelectFilter::make('status')->options(User::statuses()),
             ])
-            ->actions([
+            ->recordActions([
                 EditAction::make()
                     ->visible(function (User $record): bool {
                         $user = Auth::user();

@@ -123,8 +123,8 @@ class PlanResource extends Resource
                     ->label('Порядок')
                     ->sortable(),
             ])
-            ->actions([EditAction::make()])
-            ->bulkActions([
+            ->recordActions([EditAction::make()])
+            ->toolbarActions([
                 BulkActionGroup::make([
                     AdminFilamentDelete::makeBulkDeleteAction()
                         ->modalHeading('Удалить тарифы?')

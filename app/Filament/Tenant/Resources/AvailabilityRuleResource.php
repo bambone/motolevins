@@ -225,8 +225,8 @@ class AvailabilityRuleResource extends Resource
                     ->formatStateUsing(fn ($state): string => filter_var($state, FILTER_VALIDATE_BOOLEAN) ? 'Да' : 'Нет')
                     ->color(fn ($state): string => filter_var($state, FILTER_VALIDATE_BOOLEAN) ? 'success' : 'gray'),
             ])
-            ->actions([EditAction::make()])
-            ->bulkActions([
+            ->recordActions([EditAction::make()])
+            ->toolbarActions([
                 BulkActionGroup::make([
                     AdminFilamentDelete::makeBulkDeleteAction(),
                 ]),

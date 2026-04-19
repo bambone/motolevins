@@ -118,7 +118,7 @@ class SchedulingTargetResource extends Resource
             ->components([
                 Section::make('Цель')
                     ->description(FilamentInlineMarkdown::toHtml(
-                        '**Цель** — связка сущности (тип + ID) и **ресурсов расписания** для слотов. Чаще создаётся автоматически с услугей с записью.'
+                        '**Цель** — связка сущности (тип + ID) и **ресурсов расписания** для слотов. Чаще создаётся автоматически с услугой с записью.'
                     ))
                     ->schema([
                         TextInput::make('label')->label('Название')->required(),
@@ -173,8 +173,8 @@ class SchedulingTargetResource extends Resource
                     TextColumn::make('target_id')->label('ID'),
                     IconColumn::make('scheduling_enabled')->label('Слоты')->boolean(),
                 ])
-                ->actions([EditAction::make()])
-                ->bulkActions([
+                ->recordActions([EditAction::make()])
+                ->toolbarActions([
                     BulkActionGroup::make([
                         AdminFilamentDelete::makeBulkDeleteAction(),
                     ]),

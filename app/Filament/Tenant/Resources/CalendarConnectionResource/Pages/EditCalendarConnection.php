@@ -1,8 +1,11 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Filament\Tenant\Resources\CalendarConnectionResource\Pages;
 
 use App\Filament\Tenant\Resources\CalendarConnectionResource;
+use App\Filament\Tenant\Support\AssertTenantOwnedIds;
 use Filament\Resources\Pages\EditRecord;
 
 class EditCalendarConnection extends EditRecord
@@ -17,6 +20,10 @@ class EditCalendarConnection extends EditRecord
      */
     protected function mutateFormDataBeforeSave(array $data): array
     {
+        if (array_key_exists('scheduling_resource_id', $data)) {
+            AssertTenantOwnedIds::assertOptionalSchedulingResourceId($data['scheduling_resource_id'] ?? null);
+        }
+
         if (! array_key_exists('credentials_encrypted', $data)) {
             return $data;
         }

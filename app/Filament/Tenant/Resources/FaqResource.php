@@ -118,7 +118,7 @@ class FaqResource extends Resource
                     SelectFilter::make('status')->options(Faq::statuses()),
                 ])
                 ->defaultSort('sort_order')
-                ->actions([EditAction::make()]),
+                ->recordActions([EditAction::make()]),
             'Вопросов в базе пока нет',
             'Добавьте пункты FAQ — они появятся на странице /faq и в блоках конструктора.'
                 .AdminEmptyState::hintFiltersAndSearch(),

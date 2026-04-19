@@ -235,9 +235,9 @@ class TenantDomainResource extends Resource
                     ->searchable()
                     ->preload(),
             ])
-            ->recordAction(EditAction::class)
+            ->recordAction('edit')
             ->recordUrl(null)
-            ->actions([
+            ->recordActions([
                 Action::make('make_primary')
                     ->label('Сделать основным')
                     ->icon('heroicon-o-star')
@@ -266,7 +266,7 @@ class TenantDomainResource extends Resource
                     ['entry' => 'filament.platform.tenant_domain.table'],
                 ),
             ])
-            ->bulkActions([
+            ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make()
                         ->modalHeading('Удалить домены?')

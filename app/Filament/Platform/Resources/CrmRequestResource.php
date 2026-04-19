@@ -65,7 +65,7 @@ class CrmRequestResource extends Resource
                 ->recordAction('open')
                 ->recordUrl(null)
                 ->recordClasses(CrmSharedTable::recordClasses())
-                ->actions([
+                ->recordActions([
                     Action::make('open')
                         ->label('Открыть')
                         ->slideOver()

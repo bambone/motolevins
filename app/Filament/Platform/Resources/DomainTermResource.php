@@ -116,8 +116,8 @@ class DomainTermResource extends Resource
                         ->label('Клиент правит')
                         ->boolean(),
                 ])
-                ->actions([EditAction::make()])
-                ->bulkActions([
+                ->recordActions([EditAction::make()])
+                ->toolbarActions([
                     BulkActionGroup::make([
                         AdminFilamentDelete::makeBulkDeleteAction()
                             ->modalHeading('Удалить выбранные термины?')

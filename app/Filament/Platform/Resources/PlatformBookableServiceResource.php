@@ -166,8 +166,8 @@ class PlatformBookableServiceResource extends Resource
                     TextColumn::make('slug')->label('URL-идентификатор'),
                     IconColumn::make('is_active')->label('Активна')->boolean(),
                 ])
-                ->actions([EditAction::make()])
-                ->bulkActions([
+                ->recordActions([EditAction::make()])
+                ->toolbarActions([
                     BulkActionGroup::make([
                         AdminFilamentDelete::makeBulkDeleteAction(),
                     ]),

@@ -163,7 +163,6 @@ final class ExpertAutoProgramCoverInstaller
         $anchorY = 0.05 + ($this->stableIndex($slug.'#cy', 28) / 100.0);
         $desktop = $this->coverResizeToWebp($src, self::DESKTOP_W, self::DESKTOP_H, $anchorX, $anchorY);
         $mobile = $this->coverResizeToWebp($src, self::MOBILE_W, self::MOBILE_H, $anchorX, $anchorY);
-        imagedestroy($src);
         if ($desktop === null || $mobile === null) {
             return null;
         }
@@ -200,16 +199,12 @@ final class ExpertAutoProgramCoverInstaller
 
         $out = imagecreatetruecolor($tw, $th);
         if ($out === false) {
-            imagedestroy($scaled);
-
             return null;
         }
         imagecopy($out, $scaled, 0, 0, $x, $y, $tw, $th);
-        imagedestroy($scaled);
 
         ob_start();
         $ok = imagewebp($out, null, 88);
-        imagedestroy($out);
         $buf = ob_get_clean();
 
         return $ok && is_string($buf) && $buf !== '' ? $buf : null;

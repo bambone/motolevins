@@ -300,7 +300,7 @@ class CalendarConnectionResource extends Resource
                 TextColumn::make('account_email')->label('Аккаунт')->placeholder('—')->toggleable(isToggledHiddenByDefault: true),
                 IconColumn::make('is_active')->label('Вкл.')->boolean(),
             ])
-            ->actions([
+            ->recordActions([
                 Action::make('syncBusy')
                     ->label('Синхр. busy')
                     ->icon('heroicon-o-arrow-path')
@@ -321,7 +321,7 @@ class CalendarConnectionResource extends Resource
                     }),
                 EditAction::make(),
             ])
-            ->bulkActions([
+            ->toolbarActions([
                 BulkActionGroup::make([
                     AdminFilamentDelete::makeBulkDeleteAction(),
                 ]),

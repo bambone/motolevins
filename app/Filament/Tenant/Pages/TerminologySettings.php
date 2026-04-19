@@ -27,6 +27,13 @@ class TerminologySettings extends Page implements HasTable
 {
     use InteractsWithTable;
 
+    /**
+     * Кэш словаря на время запроса Livewire (таблица и экшены вызывают dictionary() многократно).
+     *
+     * @var array<string, array{label: string, short_label: ?string, source: string}>|null
+     */
+    private ?array $dictionaryCache = null;
+
     protected static ?string $navigationLabel = 'Терминология';
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-language';
@@ -103,12 +110,21 @@ class TerminologySettings extends Page implements HasTable
      */
     private function dictionary(): array
     {
-        $t = currentTenant();
-        if ($t === null) {
-            return [];
+        if ($this->dictionaryCache !== null) {
+            return $this->dictionaryCache;
         }
 
-        return app(TenantTerminologyService::class)->dictionary($t);
+        $t = currentTenant();
+        if ($t === null) {
+            return $this->dictionaryCache = [];
+        }
+
+        return $this->dictionaryCache = app(TenantTerminologyService::class)->dictionary($t);
+    }
+
+    private function forgetDictionaryCache(): void
+    {
+        $this->dictionaryCache = null;
     }
 
     public function table(Table $table): Table
@@ -162,7 +178,7 @@ class TerminologySettings extends Page implements HasTable
                         ->pluck('group', 'group')
                         ->all()),
             ])
-            ->actions([
+            ->recordActions([
                 Action::make('editLabel')
                     ->label('Изменить')
                     ->visible(fn (DomainTerm $record): bool => $record->is_editable_by_tenant)
@@ -199,6 +215,7 @@ class TerminologySettings extends Page implements HasTable
                             ]
                         );
                         app(TenantTerminologyService::class)->forgetTenant($tenant->id);
+                        $this->forgetDictionaryCache();
                         Notification::make()->title('Подпись сохранена')->success()->send();
                     }),
                 Action::make('resetOne')
@@ -217,6 +234,7 @@ class TerminologySettings extends Page implements HasTable
                             ->where('term_id', $record->id)
                             ->delete();
                         app(TenantTerminologyService::class)->forgetTenant($tenant->id);
+                        $this->forgetDictionaryCache();
                         Notification::make()->title('Сброшено')->success()->send();
                     }),
             ])
@@ -232,6 +250,7 @@ class TerminologySettings extends Page implements HasTable
                         abort_if($tenant === null, 403);
                         TenantTermOverride::query()->where('tenant_id', $tenant->id)->delete();
                         app(TenantTerminologyService::class)->forgetTenant($tenant->id);
+                        $this->forgetDictionaryCache();
                         Notification::make()->title('Все переименования сброшены')->success()->send();
                     }),
             ])
