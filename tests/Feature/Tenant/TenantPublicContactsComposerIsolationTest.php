@@ -6,6 +6,7 @@ namespace Tests\Feature\Tenant;
 
 use App\ContactChannels\ContactChannelType;
 use App\ContactChannels\TenantContactChannelsStore;
+use App\ContactChannels\TenantPublicSiteContactsService;
 use App\Models\Tenant;
 use App\Models\TenantSetting;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -16,7 +17,7 @@ use Tests\TestCase;
 
 /**
  * Публичные контакты в Blade ($contacts) привязаны к текущему тенанту по хосту: нельзя подмешать WA/TG/VK другого клиента.
- * Шаблоны общие (tenant.layouts.app); изоляция — в View::composer + {@see \App\ContactChannels\TenantPublicSiteContactsService}.
+ * Шаблоны общие (tenant.layouts.app); изоляция — в View::composer + {@see TenantPublicSiteContactsService}.
  */
 final class TenantPublicContactsComposerIsolationTest extends TestCase
 {

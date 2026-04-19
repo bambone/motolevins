@@ -2,6 +2,7 @@
 
 namespace App\Bookings\Calendar;
 
+use App\Bookings\BookingPricingTotals;
 use App\Filament\Tenant\Resources\BookingResource;
 use App\Filament\Tenant\Resources\CrmRequestResource;
 use App\Filament\Tenant\Resources\MotorcycleResource;
@@ -183,8 +184,8 @@ final class BookingCalendarEventPresenter
                 'client' => $client,
                 'phone' => $booking->phone ?: null,
                 'intervalHuman' => $intervalHuman,
-                'totalPrice' => $booking->total_price,
-                'deposit' => $booking->deposit_amount,
+                'totalPrice' => BookingPricingTotals::grandTotalMajor($booking),
+                'deposit' => BookingPricingTotals::depositMajor($booking),
                 'urls' => [
                     'booking' => $this->bookingUrl($booking),
                     'crm' => $this->crmUrl($booking),

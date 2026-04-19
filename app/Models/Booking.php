@@ -36,6 +36,13 @@ class Booking extends Model
         'price_per_day_snapshot',
         'total_price',
         'pricing_snapshot_json',
+        'pricing_snapshot_schema_version',
+        'currency',
+        'rental_total_minor',
+        'deposit_amount_minor',
+        'payable_now_minor',
+        'selected_tariff_id',
+        'selected_tariff_kind',
         'deposit_amount',
         'payment_status',
         'customer_name',
@@ -59,7 +66,11 @@ class Booking extends Model
         'total_price' => 'integer',
         'deposit_amount' => 'integer',
         'pricing_snapshot_json' => 'array',
+        'pricing_snapshot_schema_version' => 'integer',
         'visitor_contact_channels_json' => 'array',
+        'rental_total_minor' => 'integer',
+        'deposit_amount_minor' => 'integer',
+        'payable_now_minor' => 'integer',
     ];
 
     protected static function booted(): void

@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace App\TenantSiteSetup;
 
+use App\Filament\Tenant\Resources\PageResource;
 use App\Models\Page;
 use App\Models\Tenant;
+use Filament\Resources\Pages\Concerns\HasRelationManagers;
+use Filament\Resources\Pages\EditRecord;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -15,10 +18,10 @@ use Illuminate\Support\Facades\Route;
 final class SetupTargetContextResolver
 {
     /**
-     * Ключ вкладки relation manager на {@see \Filament\Resources\Pages\EditRecord} с combined tabs:
-     * первый менеджер из {@see \App\Filament\Tenant\Resources\PageResource::getRelations()} — индекс 0.
+     * Ключ вкладки relation manager на {@see EditRecord} с combined tabs:
+     * первый менеджер из {@see PageResource::getRelations()} — индекс 0.
      *
-     * @see \Filament\Resources\Pages\Concerns\HasRelationManagers::$activeRelationManager
+     * @see HasRelationManagers::$activeRelationManager
      */
     private const HOME_PAGE_SECTIONS_RELATION_TAB = '0';
 
@@ -163,7 +166,7 @@ final class SetupTargetContextResolver
     }
 
     /**
-     * Filament: {@see \Filament\Resources\Pages\Concerns\HasRelationManagers::$activeRelationManager} в query как `relation`.
+     * Filament: {@see HasRelationManagers::$activeRelationManager} в query как `relation`.
      */
     private function effectivePageEditRelationQuery(Request $request): ?string
     {

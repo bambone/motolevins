@@ -2,11 +2,11 @@
 
 namespace App\Filament\Tenant\Pages;
 
-use App\Filament\Tenant\Support\TenantPanelHintHeaderAction;
 use App\ContactChannels\ContactChannelRegistry;
 use App\ContactChannels\ContactChannelType;
 use App\ContactChannels\TenantContactChannelsStore;
 use App\ContactChannels\TenantPublicSiteContactsService;
+use App\Filament\Tenant\Support\TenantPanelHintHeaderAction;
 use App\Models\TenantSetting;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;

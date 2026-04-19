@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\MotorcycleLocationMode;
 use App\Models\Concerns\BelongsToTenant;
+use App\MotorcyclePricing\MotorcyclePricingProfileLegacyScalarSync;
 use App\Support\CatalogHighlightNormalizer;
 use App\Support\Storage\TenantPublicAssetResolver;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -59,6 +60,8 @@ class Motorcycle extends Model implements HasMedia
         'updated_by',
         'uses_fleet_units',
         'location_mode',
+        'pricing_profile_json',
+        'pricing_profile_schema_version',
     ];
 
     protected static function booted(): void
@@ -82,6 +85,12 @@ class Motorcycle extends Model implements HasMedia
                 $motorcycle->slug = $slug;
             }
         });
+
+        static::saved(function (Motorcycle $motorcycle): void {
+            if ($motorcycle->wasChanged('pricing_profile_json')) {
+                MotorcyclePricingProfileLegacyScalarSync::syncFromProfile($motorcycle);
+            }
+        });
     }
 
     protected $casts = [
@@ -101,6 +110,8 @@ class Motorcycle extends Model implements HasMedia
         'is_recommended' => 'boolean',
         'uses_fleet_units' => 'boolean',
         'location_mode' => MotorcycleLocationMode::class,
+        'pricing_profile_json' => 'array',
+        'pricing_profile_schema_version' => 'integer',
     ];
 
     public function category(): BelongsTo
@@ -230,7 +241,15 @@ class Motorcycle extends Model implements HasMedia
 
         $highlights = CatalogHighlightNormalizer::normalizeToLabels($highlights);
 
-        $priceNote = trim((string) ($this->catalog_price_note ?? ''));
+        $priceNote = '';
+        $profile = $this->pricing_profile_json;
+        if (is_array($profile)) {
+            $fin = is_array($profile['financial_terms'] ?? null) ? $profile['financial_terms'] : [];
+            $priceNote = trim((string) ($fin['catalog_price_note'] ?? ''));
+        }
+        if ($priceNote === '') {
+            $priceNote = trim((string) ($this->catalog_price_note ?? ''));
+        }
 
         return [
             'positioning' => $positioning,

@@ -2,18 +2,23 @@
 
 namespace App\Services;
 
+use App\Booking\PublicBookingMotorcyclePolicy;
 use App\DTO\BookingData;
 use App\Enums\BookingStatus;
 use App\Jobs\SendBookingTelegramNotification;
-use App\Models\Addon;
 use App\Models\Bike;
 use App\Models\Booking;
 use App\Models\BookingAddon;
 use App\Models\Motorcycle;
 use App\Models\RentalUnit;
 use App\Models\Tenant;
+use App\Models\TenantLocation;
+use App\MotorcyclePricing\BookingPricingHydrator;
+use App\MotorcyclePricing\MotorcycleBookingPricingPolicy;
+use App\MotorcyclePricing\RentalPricingDuration;
 use App\NotificationCenter\NotificationEventRecorder;
 use App\NotificationCenter\Presenters\BookingNotificationPresenter;
+use App\Services\Catalog\MotorcycleLocationCatalogService;
 use App\Support\PhoneNormalizer;
 use Carbon\Carbon;
 use Exception;
@@ -25,6 +30,10 @@ class BookingService
         protected AvailabilityService $availabilityService,
         protected NotificationEventRecorder $notificationRecorder,
         protected BookingNotificationPresenter $bookingNotifications,
+        protected BookingPricingHydrator $bookingPricingHydrator,
+        protected PricingService $pricingService,
+        protected MotorcycleBookingPricingPolicy $motorcycleBookingPricingPolicy,
+        protected MotorcycleLocationCatalogService $motorcycleLocationCatalog,
     ) {}
 
     /**
@@ -89,9 +98,9 @@ class BookingService
     /**
      * Create booking from public checkout flow.
      *
-     * Re-checks availability before insert (in addition to controller validation). Addon lines with
-     * quantity &gt; 0 must resolve to an addon for this tenant or an {@see \InvalidArgumentException} is thrown
-     * (avoids silent drops that desync line items vs the priced `pricing_snapshot` / total).
+     * Re-checks availability before insert (in addition to controller validation).
+     * {@see BookingAddon} rows are created only from {@see PricingService::calculatePrice} snapshot lines
+     * (active add-ons only), never from raw request maps alone — keeps totals / snapshot / lines consistent.
      */
     public function createPublicBooking(array $data): Booking
     {
@@ -101,20 +110,43 @@ class BookingService
         }
 
         $booking = DB::transaction(function () use ($data, $tenantId): Booking {
-            Motorcycle::query()
+            $motorcycle = Motorcycle::query()
                 ->where('tenant_id', $tenantId)
                 ->whereKey((int) $data['motorcycle_id'])
                 ->firstOrFail();
 
+            if (! PublicBookingMotorcyclePolicy::isAllowedForPublicBooking($motorcycle)) {
+                throw new \InvalidArgumentException(__('Эта модель недоступна для онлайн-бронирования.'));
+            }
+
             [$rangeStart, $rangeEnd] = $this->publicBookingRangeBounds($data);
 
-            if (! empty($data['rental_unit_id'])) {
+            $catalogLocation = null;
+            $catalogLocationId = (int) ($data['public_catalog_location_id'] ?? 0);
+            if ($catalogLocationId > 0) {
+                $catalogLocation = TenantLocation::query()
+                    ->where('tenant_id', $tenantId)
+                    ->whereKey($catalogLocationId)
+                    ->first();
+                if ($catalogLocation === null) {
+                    throw new \InvalidArgumentException(__('Указана недопустимая точка каталога для бронирования.'));
+                }
+            }
+
+            $unit = null;
+            if ($motorcycle->uses_fleet_units) {
+                if (empty($data['rental_unit_id']) || (int) $data['rental_unit_id'] < 1) {
+                    throw new \InvalidArgumentException(__('Для этой модели необходимо выбрать единицу парка.'));
+                }
                 $unit = RentalUnit::query()
                     ->where('tenant_id', $tenantId)
                     ->whereKey((int) $data['rental_unit_id'])
                     ->firstOrFail();
                 if ((int) $unit->motorcycle_id !== (int) $data['motorcycle_id']) {
                     throw new \InvalidArgumentException('Rental unit does not belong to the selected motorcycle.');
+                }
+                if (! $this->motorcycleLocationCatalog->rentalUnitIsEligibleForPublic($motorcycle, $unit, $catalogLocation)) {
+                    throw new \InvalidArgumentException(__('Единица парка недоступна для онлайн-бронирования.'));
                 }
                 if (! $this->availabilityService->isAvailable($unit, $rangeStart, $rangeEnd)) {
                     throw new Exception(__('The selected dates are no longer available for this vehicle.'));
@@ -123,22 +155,47 @@ class BookingService
                 throw new Exception(__('The selected dates are no longer available.'));
             }
 
-            $days = Carbon::parse($data['start_date'])->diffInDays(Carbon::parse($data['end_date'])) + 1;
-            $basePrice = $data['pricing_snapshot']['base_price'] ?? 0;
+            $startDay = $rangeStart->copy()->startOfDay();
+            $endDay = $rangeEnd->copy()->startOfDay();
+            $days = RentalPricingDuration::inclusiveCalendarDays($startDay, $endDay);
+
+            $this->motorcycleBookingPricingPolicy->assertPublicCheckoutPricingResolvable($motorcycle, $days);
+
+            $addonIds = [];
+            foreach ($data['addons'] ?? [] as $addonId => $qty) {
+                $qty = is_numeric($qty) ? (int) $qty : 0;
+                if ($qty > 0) {
+                    $addonIds[(int) $addonId] = $qty;
+                }
+            }
+
+            $target = $unit ?? $motorcycle;
+            $pricing = $this->pricingService->calculatePrice($target, $startDay, $endDay, 'daily', $addonIds);
+            $addonLines = is_array($pricing['addons'] ?? null) ? $pricing['addons'] : [];
+            $basePrice = (int) ($pricing['base_price'] ?? 0);
+
+            $v2 = $this->bookingPricingHydrator->bookingPricingAttributes($motorcycle, $days, $pricing, $addonLines);
 
             $booking = Booking::create([
                 'tenant_id' => $tenantId,
                 'motorcycle_id' => $data['motorcycle_id'],
-                'rental_unit_id' => $data['rental_unit_id'] ?? null,
+                'rental_unit_id' => $unit?->id,
                 'start_date' => $data['start_date'],
                 'end_date' => $data['end_date'],
                 'start_at' => $data['start_at'],
                 'end_at' => $data['end_at'],
                 'status' => BookingStatus::PENDING,
-                'price_per_day_snapshot' => $days > 0 ? (int) round($basePrice / $days) : 0,
-                'total_price' => $data['total_price'],
-                'pricing_snapshot_json' => $data['pricing_snapshot'] ?? null,
-                'deposit_amount' => $data['deposit_amount'] ?? 0,
+                'price_per_day_snapshot' => $days > 0 ? (int) round($basePrice / max(1, $days)) : 0,
+                'total_price' => (int) ($pricing['total'] ?? 0),
+                'pricing_snapshot_json' => $v2['pricing_snapshot_json'],
+                'pricing_snapshot_schema_version' => $v2['pricing_snapshot_schema_version'],
+                'currency' => $v2['currency'],
+                'rental_total_minor' => $v2['rental_total_minor'],
+                'deposit_amount_minor' => $v2['deposit_amount_minor'],
+                'payable_now_minor' => $v2['payable_now_minor'],
+                'selected_tariff_id' => $v2['selected_tariff_id'],
+                'selected_tariff_kind' => $v2['selected_tariff_kind'],
+                'deposit_amount' => (int) ($pricing['deposit'] ?? 0),
                 'payment_status' => 'pending',
                 'customer_name' => $data['customer_name'],
                 'phone' => $data['phone'],
@@ -150,23 +207,21 @@ class BookingService
                 'customer_comment' => $data['customer_comment'] ?? null,
             ]);
 
-            foreach ($data['addons'] ?? [] as $addonId => $qty) {
-                $qty = is_numeric($qty) ? (int) $qty : 0;
-                if ($qty <= 0) {
+            foreach ($addonLines as $line) {
+                if (! is_array($line)) {
                     continue;
                 }
-                $addon = Addon::query()
-                    ->where('tenant_id', $tenantId)
-                    ->whereKey((int) $addonId)
-                    ->first();
-                if ($addon === null) {
-                    throw new \InvalidArgumentException('Invalid or unavailable add-on for this booking.');
+                $addonId = (int) ($line['addon_id'] ?? 0);
+                $qty = (int) ($line['quantity'] ?? 0);
+                $unitPrice = (int) ($line['price'] ?? 0);
+                if ($addonId < 1 || $qty < 1) {
+                    continue;
                 }
                 BookingAddon::create([
                     'booking_id' => $booking->id,
-                    'addon_id' => $addon->id,
+                    'addon_id' => $addonId,
                     'quantity' => $qty,
-                    'price_snapshot' => $addon->price,
+                    'price_snapshot' => $unitPrice,
                 ]);
             }
 

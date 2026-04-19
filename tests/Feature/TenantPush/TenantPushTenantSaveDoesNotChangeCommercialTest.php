@@ -2,8 +2,8 @@
 
 namespace Tests\Feature\TenantPush;
 
+use App\Filament\Tenant\Pages\TenantPushPwaSettingsPage;
 use App\Models\TenantPushEventPreference;
-use App\Models\TenantPushSettings;
 use App\Models\User;
 use App\TenantPush\TenantPushFeatureGate;
 use App\TenantPush\TenantPushOverride;
@@ -77,7 +77,7 @@ class TenantPushTenantSaveDoesNotChangeCommercialTest extends TestCase
     }
 
     /**
-     * Подменённые в payload поля платформы не участвуют в fill tenant-страницы (как в {@see \App\Filament\Tenant\Pages\TenantPushPwaSettingsPage::save}).
+     * Подменённые в payload поля платформы не участвуют в fill tenant-страницы (как в {@see TenantPushPwaSettingsPage::save}).
      */
     public function test_simulated_save_does_not_apply_smuggled_platform_owned_fields(): void
     {

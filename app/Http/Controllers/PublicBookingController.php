@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Booking\PublicBookingMotorcyclePolicy;
 use App\ContactChannels\TenantContactChannelsStore;
 use App\ContactChannels\VisitorContactPayloadBuilder;
 use App\Http\Requests\StorePublicBookingCheckoutRequest;
@@ -39,9 +40,7 @@ class PublicBookingController extends Controller
      */
     public function index(): View
     {
-        $motorcyclesQuery = Motorcycle::query()
-            ->where('show_in_catalog', true)
-            ->where('status', 'available');
+        $motorcyclesQuery = PublicBookingMotorcyclePolicy::constrainEligibleForPublicBooking(Motorcycle::query());
         $selectedCatalogLocation = $this->catalogLocation->resolve();
         if ($selectedCatalogLocation !== null) {
             $this->motorcycleLocationCatalog->scopeMotorcyclesVisibleAtLocation($motorcyclesQuery, $selectedCatalogLocation);
@@ -61,16 +60,28 @@ class PublicBookingController extends Controller
      */
     public function show(string $slug): View
     {
-        $motorcycle = Motorcycle::where('slug', $slug)
-            ->where('show_in_catalog', true)
+        $tenant = currentTenant();
+        abort_if($tenant === null, 404);
+        $tenantId = (int) $tenant->id;
+
+        $motorcycle = Motorcycle::query()
+            ->where('tenant_id', $tenantId)
+            ->where('slug', $slug)
             ->firstOrFail();
+        if (! PublicBookingMotorcyclePolicy::isAllowedForPublicBooking($motorcycle)) {
+            abort(404);
+        }
 
         $selectedCatalogLocation = $this->catalogLocation->resolve();
         $visibleAtSelectedLocation = $selectedCatalogLocation === null
             || $this->motorcycleLocationCatalog->isMotorcycleVisibleAtLocation($motorcycle, $selectedCatalogLocation);
 
         $rentalUnits = $this->activeRentalUnitsForPublicBooking($motorcycle);
-        $addons = Addon::where('is_active', true)->orderBy('sort_order')->get();
+        $addons = Addon::query()
+            ->where('tenant_id', $tenantId)
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->get();
 
         return view('tenant.booking.show', [
             'motorcycle' => $motorcycle,
@@ -107,14 +118,16 @@ class PublicBookingController extends Controller
             return $response;
         }
 
+        $start = Carbon::parse($validated['start_date'])->startOfDay();
+        $end = Carbon::parse($validated['end_date'])->endOfDay();
+
         $rentalUnits = $this->activeRentalUnitsForPublicBooking($motorcycle);
-        $rentalUnit = $this->resolveRentalUnitForCalculateOrDraft($motorcycle, $rentalUnits, $validated['rental_unit_id'] ?? null);
+        $rentalUnitIdRaw = $validated['rental_unit_id'] ?? null;
+        $rentalUnitId = is_numeric($rentalUnitIdRaw) ? (int) $rentalUnitIdRaw : 0;
+        $rentalUnit = $this->resolveRentalUnitForCalculateOrDraft($motorcycle, $rentalUnits, $rentalUnitId > 0 ? $rentalUnitId : null, $start, $end);
         if ($rentalUnit instanceof JsonResponse) {
             return $rentalUnit;
         }
-
-        $start = Carbon::parse($validated['start_date'])->startOfDay();
-        $end = Carbon::parse($validated['end_date'])->endOfDay();
 
         $available = true;
         if ($rentalUnit) {
@@ -151,6 +164,7 @@ class PublicBookingController extends Controller
         return response()->json([
             'available' => true,
             'price' => $result,
+            'rental_unit_id' => $rentalUnit?->id,
         ]);
     }
 
@@ -179,6 +193,12 @@ class PublicBookingController extends Controller
             return redirect()->route('booking.index')->with('error', 'Транспорт не найден.');
         }
 
+        if (! PublicBookingMotorcyclePolicy::isAllowedForPublicBooking($motorcycle)) {
+            Session::forget('booking_draft');
+
+            return redirect()->route('booking.index')->with('error', 'Эта модель недоступна для бронирования.');
+        }
+
         $selectedCatalogLocation = $this->catalogLocation->resolve();
         if ($selectedCatalogLocation !== null
             && ! $this->motorcycleLocationCatalog->isMotorcycleVisibleAtLocation($motorcycle, $selectedCatalogLocation)) {
@@ -188,7 +208,12 @@ class PublicBookingController extends Controller
         }
 
         $allowedUnits = $this->activeRentalUnitsForPublicBooking($motorcycle);
-        if ($motorcycle->uses_fleet_units && ! empty($session['rental_unit_id'])) {
+        if ($motorcycle->uses_fleet_units && empty($session['rental_unit_id'])) {
+            Session::forget('booking_draft');
+
+            return redirect()->route('booking.index')->with('error', 'Сессия бронирования устарела: не выбрана единица парка. Выберите даты на странице модели ещё раз.');
+        }
+        if ($motorcycle->uses_fleet_units) {
             $sessionUnit = RentalUnit::query()
                 ->where('tenant_id', $tenantId)
                 ->whereKey((int) $session['rental_unit_id'])
@@ -205,6 +230,7 @@ class PublicBookingController extends Controller
             $addon = Addon::query()
                 ->where('tenant_id', $tenantId)
                 ->whereKey((int) $addonId)
+                ->where('is_active', true)
                 ->first();
             if ($addon && $qty > 0) {
                 $addons->push((object) ['addon' => $addon, 'quantity' => $qty]);
@@ -253,6 +279,12 @@ class PublicBookingController extends Controller
             return redirect()->route('booking.index')->with('error', 'Транспорт не найден. Оформите бронь заново.');
         }
 
+        if (! PublicBookingMotorcyclePolicy::isAllowedForPublicBooking($motorcycle)) {
+            Session::forget('booking_draft');
+
+            return redirect()->route('booking.index')->with('error', 'Эта модель недоступна для бронирования.');
+        }
+
         $selectedCatalogLocation = $this->catalogLocation->resolve();
         if ($selectedCatalogLocation !== null
             && ! $this->motorcycleLocationCatalog->isMotorcycleVisibleAtLocation($motorcycle, $selectedCatalogLocation)) {
@@ -262,18 +294,21 @@ class PublicBookingController extends Controller
         }
 
         $allowedUnits = $this->activeRentalUnitsForPublicBooking($motorcycle);
+        if ($motorcycle->uses_fleet_units && empty($session['rental_unit_id'])) {
+            Session::forget('booking_draft');
+
+            return redirect()->route('booking.index')->with('error', 'Сессия бронирования устарела: не выбрана единица парка. Выберите даты на странице модели ещё раз.');
+        }
         $rentalUnit = null;
-        if ($motorcycle->uses_fleet_units && isset($session['rental_unit_id'])) {
+        if ($motorcycle->uses_fleet_units) {
             $rentalUnit = RentalUnit::query()
                 ->where('tenant_id', $tenantId)
                 ->whereKey((int) $session['rental_unit_id'])
                 ->first();
-            if ($rentalUnit !== null) {
-                if ($rentalUnit->motorcycle_id !== $motorcycle->id || ! $allowedUnits->contains('id', $rentalUnit->id)) {
-                    Session::forget('booking_draft');
+            if ($rentalUnit === null || $rentalUnit->motorcycle_id !== $motorcycle->id || ! $allowedUnits->contains('id', $rentalUnit->id)) {
+                Session::forget('booking_draft');
 
-                    return redirect()->route('booking.index')->with('error', 'Единица парка недоступна в выбранной точке.');
-                }
+                return redirect()->route('booking.index')->with('error', 'Единица парка недоступна в выбранной точке.');
             }
         }
 
@@ -291,6 +326,14 @@ class PublicBookingController extends Controller
             return redirect()->route('booking.index')->with('error', 'Выбранные даты больше недоступны.');
         }
 
+        try {
+            $this->validatePublicBookingAddonsMap($tenantId, $session['addons'] ?? []);
+        } catch (ValidationException $e) {
+            Session::forget('booking_draft');
+
+            return redirect()->route('booking.index')->with('error', 'Черновик бронирования содержит недопустимые дополнения. Оформите бронь заново.');
+        }
+
         $addonIds = [];
         foreach ($session['addons'] ?? [] as $addonId => $qty) {
             if (is_numeric($qty) && $qty > 0) {
@@ -298,30 +341,29 @@ class PublicBookingController extends Controller
             }
         }
 
-        $target = $rentalUnit ?? $motorcycle;
-        $pricing = $this->pricingService->calculatePrice($target, $start, $end, 'daily', $addonIds);
-
-        $booking = $this->bookingService->createPublicBooking([
-            'tenant_id' => $tenant->id,
-            'motorcycle_id' => $motorcycle->id,
-            'rental_unit_id' => $rentalUnit?->id,
-            'start_date' => $session['start_date'],
-            'end_date' => $session['end_date'],
-            'start_at' => $start,
-            'end_at' => $end,
-            'customer_name' => $validated['customer_name'],
-            'phone' => $validated['phone'],
-            'preferred_contact_channel' => $contact['preferred_contact_channel'],
-            'preferred_contact_value' => $contact['preferred_contact_value'],
-            'visitor_contact_channels_json' => $contact['visitor_contact_channels_json'],
-            'email' => $validated['email'] ?? null,
-            'customer_comment' => $validated['customer_comment'] ?? null,
-            'source' => 'public_booking',
-            'pricing_snapshot' => $pricing['pricing_snapshot'] ?? $pricing,
-            'total_price' => $pricing['total'],
-            'deposit_amount' => $pricing['deposit'] ?? 0,
-            'addons' => $addonIds,
-        ]);
+        try {
+            $booking = $this->bookingService->createPublicBooking([
+                'tenant_id' => $tenant->id,
+                'motorcycle_id' => $motorcycle->id,
+                'rental_unit_id' => $rentalUnit?->id,
+                'public_catalog_location_id' => $selectedCatalogLocation?->id,
+                'start_date' => $session['start_date'],
+                'end_date' => $session['end_date'],
+                'start_at' => $start,
+                'end_at' => $end,
+                'customer_name' => $validated['customer_name'],
+                'phone' => $validated['phone'],
+                'preferred_contact_channel' => $contact['preferred_contact_channel'],
+                'preferred_contact_value' => $contact['preferred_contact_value'],
+                'visitor_contact_channels_json' => $contact['visitor_contact_channels_json'],
+                'email' => $validated['email'] ?? null,
+                'customer_comment' => $validated['customer_comment'] ?? null,
+                'source' => 'public_booking',
+                'addons' => $addonIds,
+            ]);
+        } catch (\InvalidArgumentException $e) {
+            return redirect()->route('booking.checkout')->with('error', $e->getMessage());
+        }
 
         Session::forget('booking_draft');
 
@@ -378,15 +420,17 @@ class PublicBookingController extends Controller
             return $response;
         }
 
+        $start = Carbon::parse($validated['start_date'])->startOfDay();
+        $end = Carbon::parse($validated['end_date'])->endOfDay();
+
         $rentalUnits = $this->activeRentalUnitsForPublicBooking($motorcycle);
-        $resolved = $this->resolveRentalUnitForCalculateOrDraft($motorcycle, $rentalUnits, $validated['rental_unit_id'] ?? null);
+        $rentalUnitIdRaw = $validated['rental_unit_id'] ?? null;
+        $rentalUnitId = is_numeric($rentalUnitIdRaw) ? (int) $rentalUnitIdRaw : 0;
+        $resolved = $this->resolveRentalUnitForCalculateOrDraft($motorcycle, $rentalUnits, $rentalUnitId > 0 ? $rentalUnitId : null, $start, $end);
         if ($resolved instanceof JsonResponse) {
             return $resolved;
         }
         $unit = $resolved;
-
-        $start = Carbon::parse($validated['start_date'])->startOfDay();
-        $end = Carbon::parse($validated['end_date'])->endOfDay();
 
         $available = true;
         if ($unit) {
@@ -404,7 +448,7 @@ class PublicBookingController extends Controller
 
         Session::put('booking_draft', [
             'motorcycle_id' => $validated['motorcycle_id'],
-            'rental_unit_id' => $motorcycle->uses_fleet_units ? ($validated['rental_unit_id'] ?? null) : null,
+            'rental_unit_id' => $motorcycle->uses_fleet_units ? $unit?->id : null,
             'start_date' => $validated['start_date'],
             'end_date' => $validated['end_date'],
             'addons' => $validated['addons'] ?? [],
@@ -443,9 +487,10 @@ class PublicBookingController extends Controller
             if (! Addon::query()
                 ->where('tenant_id', $tenantId)
                 ->whereKey($addonId)
+                ->where('is_active', true)
                 ->exists()) {
                 throw ValidationException::withMessages([
-                    'addons' => ['Выбрано неизвестное дополнение.'],
+                    'addons' => ['Выбрано недоступное или отключённое дополнение.'],
                 ]);
             }
 
@@ -479,6 +524,13 @@ class PublicBookingController extends Controller
 
     private function assertMotorcycleAllowedForPublicBooking(Motorcycle $motorcycle): ?JsonResponse
     {
+        if (! PublicBookingMotorcyclePolicy::isAllowedForPublicBooking($motorcycle)) {
+            return response()->json([
+                'available' => false,
+                'message' => 'Эта модель недоступна для онлайн-бронирования.',
+            ], 422);
+        }
+
         $loc = $this->catalogLocation->resolve();
         if ($loc !== null && ! $this->motorcycleLocationCatalog->isMotorcycleVisibleAtLocation($motorcycle, $loc)) {
             return response()->json([
@@ -493,7 +545,7 @@ class PublicBookingController extends Controller
     /**
      * @param  Collection<int, RentalUnit>  $allowedUnits
      */
-    private function resolveRentalUnitForCalculateOrDraft(Motorcycle $motorcycle, Collection $allowedUnits, mixed $rentalUnitId): RentalUnit|JsonResponse|null
+    private function resolveRentalUnitForCalculateOrDraft(Motorcycle $motorcycle, Collection $allowedUnits, ?int $rentalUnitId, Carbon $rangeStart, Carbon $rangeEnd): RentalUnit|JsonResponse|null
     {
         if (! $motorcycle->uses_fleet_units) {
             return null;
@@ -506,10 +558,10 @@ class PublicBookingController extends Controller
             ], 422);
         }
 
-        if ($rentalUnitId) {
+        if ($rentalUnitId !== null && $rentalUnitId > 0) {
             $rentalUnit = RentalUnit::query()
                 ->where('tenant_id', (int) $motorcycle->tenant_id)
-                ->whereKey((int) $rentalUnitId)
+                ->whereKey($rentalUnitId)
                 ->first();
             if (! $rentalUnit || $rentalUnit->motorcycle_id !== $motorcycle->id) {
                 return response()->json([
@@ -527,6 +579,15 @@ class PublicBookingController extends Controller
             return $rentalUnit;
         }
 
-        return $allowedUnits->first();
+        foreach ($allowedUnits as $candidate) {
+            if ($this->availabilityService->isAvailable($candidate, $rangeStart, $rangeEnd)) {
+                return $candidate;
+            }
+        }
+
+        return response()->json([
+            'available' => false,
+            'message' => 'Выбранные даты заняты. Попробуйте другие даты.',
+        ]);
     }
 }

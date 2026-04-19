@@ -2,12 +2,13 @@
 
 namespace App\Rules;
 
+use App\Support\Storage\TenantPublicAssetResolver;
 use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
 
 /**
  * Как {@see PublicAssetReference}, плюс короткие legacy-пути hero-видео, которые на сайте
- * обрабатывает {@see \App\Support\Storage\TenantPublicAssetResolver::resolveHeroVideo()}.
+ * обрабатывает {@see TenantPublicAssetResolver::resolveHeroVideo()}.
  */
 final class PublicHeroVideoAssetReference implements ValidationRule
 {

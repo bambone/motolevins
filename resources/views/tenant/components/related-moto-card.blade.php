@@ -1,6 +1,6 @@
 @props(['bike'])
 @php
-    use App\Money\MoneyBindingRegistry;
+    use App\MotorcyclePricing\MotorcyclePricingSummaryPresenter;
 
     $imageUrl = $bike->publicCoverUrl();
     $detailUrl = route('motorcycle.show', $bike->slug);
@@ -10,9 +10,12 @@
         $parts = array_filter([$card['scenario'] ?? '', $card['positioning'] ?? '']);
         $oneLine = implode(' · ', $parts);
     }
-    $priceDayFormatted = tenant() !== null
-        ? tenant_money_format((int) $bike->price_per_day, MoneyBindingRegistry::MOTORCYCLE_PRICE_PER_DAY)
-        : number_format((int) $bike->price_per_day, 0, ',', ' ').' '.chr(0xE2).chr(0x82).chr(0xBD);
+    $present = app(MotorcyclePricingSummaryPresenter::class)->present($bike, tenant());
+    $cardOnRequest = (bool) ($present['card_is_on_request'] ?? false);
+    $cardInvalid = (bool) ($present['card_profile_invalid'] ?? false);
+    $cardPriceText = trim((string) ($present['card_price_text'] ?? ''));
+    $cardPriceSuffix = trim((string) ($present['card_price_suffix'] ?? ''));
+    $cardShowFrom = (bool) ($present['card_show_leading_from'] ?? false);
 @endphp
 <article class="group/rel flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-carbon/90 shadow-lg shadow-black/30 transition-[border-color,box-shadow] duration-300 hover:border-white/18 hover:shadow-xl">
     <a href="{{ $detailUrl }}" class="relative block aspect-[16/10] shrink-0 overflow-hidden bg-[#0a0a0c] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moto-amber" aria-label="Фото: {{ $bike->name }}">
@@ -31,8 +34,19 @@
         </h3>
         <p class="mb-4 min-h-[1.25rem] line-clamp-1 text-sm leading-snug text-zinc-300">{{ $oneLine !== '' ? $oneLine : '—' }}</p>
         <p class="mb-4 text-lg font-extrabold tracking-tight text-white">
-            <span class="text-moto-amber">{{ $priceDayFormatted }}</span>
-            <span class="text-sm font-semibold text-zinc-300">/ сутки</span>
+            @if($cardInvalid || ($cardPriceText === '' && ! $cardOnRequest))
+                <span class="text-moto-amber">{{ $cardInvalid ? 'Стоимость уточняйте' : '—' }}</span>
+            @elseif($cardOnRequest)
+                <span class="text-moto-amber">{{ $cardPriceText !== '' ? $cardPriceText : 'По запросу' }}</span>
+            @else
+                @if($cardShowFrom)
+                    <span class="text-sm font-semibold text-zinc-400">от </span>
+                @endif
+                <span class="text-moto-amber">{{ $cardPriceText }}</span>
+                @if($cardPriceSuffix !== '')
+                    <span class="text-sm font-semibold text-zinc-300"> {{ $cardPriceSuffix }}</span>
+                @endif
+            @endif
         </p>
         <a href="{{ $detailUrl }}"
            class="tenant-btn-primary mt-auto w-full touch-manipulation">

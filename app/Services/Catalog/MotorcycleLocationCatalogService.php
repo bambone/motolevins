@@ -100,4 +100,19 @@ final class MotorcycleLocationCatalogService
 
         return $q->whereHas('tenantLocations', fn (Builder $lq) => $lq->whereKey($location->id));
     }
+
+    /**
+     * Единица парка допустима для публичного бронирования (активна + тот же набор, что и {@see rentalUnitsQueryForPublic}).
+     */
+    public function rentalUnitIsEligibleForPublic(Motorcycle $motorcycle, RentalUnit $unit, ?TenantLocation $location): bool
+    {
+        if ((int) $unit->motorcycle_id !== (int) $motorcycle->id) {
+            return false;
+        }
+        if ($unit->status !== 'active') {
+            return false;
+        }
+
+        return $this->rentalUnitsQueryForPublic($motorcycle, $location)->whereKey($unit->id)->exists();
+    }
 }

@@ -18,13 +18,14 @@ use App\Http\Controllers\RobotsController;
 use App\Http\Controllers\Scheduling\GoogleCalendarOAuthController;
 use App\Http\Controllers\SeoLandingPageController;
 use App\Http\Controllers\SitemapController;
+use App\Http\Controllers\Tenant\TenantOneSignalWorkerController;
+use App\Http\Controllers\Tenant\TenantPublicPwaManifestController;
 use App\Http\Controllers\Tenant\TenantPublicSchedulingController;
 use App\Http\Controllers\TenantLlmsTxtController;
+use App\Http\Controllers\TenantMotorcycleQuoteController;
 use App\Http\Controllers\TenantPublicBookingAvailabilityController;
 use App\Http\Controllers\TenantPublicFaqController;
 use App\Http\Controllers\TenantPublicMirrorFileController;
-use App\Http\Controllers\Tenant\TenantOneSignalWorkerController;
-use App\Http\Controllers\Tenant\TenantPublicPwaManifestController;
 use App\Http\Controllers\TenantPublicReviewsController;
 use App\Http\Controllers\TenantPublicReviewSubmitController;
 use App\Http\Controllers\TenantPublicStorageFileController;
@@ -154,6 +155,9 @@ Route::middleware([EnsureTenantContext::class, RememberTenantCatalogLocation::cl
     Route::post('/api/tenant/booking/motorcycle-calendar-hints', [TenantPublicBookingAvailabilityController::class, 'motorcycleCalendarHints'])
         ->middleware('throttle:120,1')
         ->name('api.tenant.booking.motorcycle-calendar-hints');
+    Route::post('/api/tenant/motorcycles/quote', TenantMotorcycleQuoteController::class)
+        ->middleware('throttle:120,1')
+        ->name('api.tenant.motorcycle-quote');
     Route::post('/api/bookings', [BookingController::class, 'store'])->name('api.bookings.store');
     Route::post('/api/leads', [LeadController::class, 'store'])->name('api.leads.store');
     Route::post('/api/tenant/expert-inquiry', [ExpertInquiryController::class, 'store'])

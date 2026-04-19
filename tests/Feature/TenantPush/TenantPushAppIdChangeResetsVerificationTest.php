@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\TenantPush;
 
+use App\Filament\Tenant\Pages\TenantPushPwaSettingsPage;
 use App\Models\TenantPushSettings;
 use App\TenantPush\TenantPushFeatureGate;
 use App\TenantPush\TenantPushProviderStatus;
@@ -11,7 +12,7 @@ use Tests\Support\CreatesTenantsWithDomains;
 use Tests\TestCase;
 
 /**
- * Смена App ID без нового ключа сбрасывает доверие к проверке ({@see \App\Filament\Tenant\Pages\TenantPushPwaSettingsPage::save}).
+ * Смена App ID без нового ключа сбрасывает доверие к проверке ({@see TenantPushPwaSettingsPage::save}).
  */
 class TenantPushAppIdChangeResetsVerificationTest extends TestCase
 {

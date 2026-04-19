@@ -7,6 +7,8 @@ use App\Models\LocationLandingPage;
 use App\Models\Motorcycle;
 use App\Models\SeoLandingPage;
 use App\Models\Tenant;
+use App\MotorcyclePricing\MotorcyclePricingSummaryPresenter;
+use App\MotorcyclePricing\PricingMinorMoney;
 use App\Support\Storage\TenantPublicAssetResolver;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
@@ -21,6 +23,7 @@ final class TenantSeoJsonLdFactory
         private FallbackSeoGenerator $fallback,
         private PublicBreadcrumbsBuilder $breadcrumbs,
         private TenantHomePublicFaqJsonLdEligibility $homeFaqEligibility,
+        private MotorcyclePricingSummaryPresenter $motorcyclePricingSummary,
     ) {}
 
     /**
@@ -319,14 +322,18 @@ final class TenantSeoJsonLdFactory
             $product['additionalProperty'] = $additional;
         }
 
-        $price = (int) ($m->price_per_day ?? 0);
+        $presented = $this->motorcyclePricingSummary->present($m, $tenant);
+        $seo = $presented['seo_offer_candidate'];
+        $priceMajor = is_array($seo) && (int) ($seo['minor'] ?? 0) > 0
+            ? PricingMinorMoney::minorToMajor((int) $seo['minor'])
+            : 0;
         $currency = $this->resolveOfferCurrencyCode($tenant);
-        if ($price > 0 && $currency !== null) {
+        if ($priceMajor > 0 && $currency !== null) {
             $availability = $this->schemaAvailabilityForMotorcycle($m);
             $offer = [
                 '@type' => 'Offer',
                 'priceCurrency' => $currency,
-                'price' => (string) $price,
+                'price' => (string) $priceMajor,
                 'url' => $canonicalUrl,
             ];
             if ($availability !== null) {

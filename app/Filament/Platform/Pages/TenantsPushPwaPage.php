@@ -6,6 +6,7 @@ use App\Filament\Platform\Pages\Concerns\GrantsPlatformPageAccess;
 use App\Models\Tenant;
 use App\Services\TenantPush\TenantPushPlatformOwnedSettingsService;
 use App\TenantPush\PlatformTenantPushTablePresenter;
+use App\TenantPush\PlatformTenantPushTableRow;
 use App\TenantPush\TenantPushCrmRequestRecipientResolver;
 use App\TenantPush\TenantPushFeatureGate;
 use App\TenantPush\TenantPushOverride;
@@ -33,7 +34,7 @@ class TenantsPushPwaPage extends Page
     protected string $view = 'filament.pages.platform.tenants-push-pwa';
 
     /**
-     * @return list<\App\TenantPush\PlatformTenantPushTableRow>
+     * @return list<PlatformTenantPushTableRow>
      */
     public function getTableRowsProperty(): array
     {

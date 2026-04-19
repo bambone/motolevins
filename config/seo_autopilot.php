@@ -1,10 +1,13 @@
 <?php
 
+use App\Services\Seo\TenantSeoLintService;
+use App\Services\Seo\TenantSeoRouteOverridesBuilder;
+
 /**
  * Tenant SEO Autopilot v1 — deterministic defaults (no Route::getRoutes scan).
  *
- * @see \App\Services\Seo\TenantSeoRouteOverridesBuilder
- * @see \App\Services\Seo\TenantSeoLintService
+ * @see TenantSeoRouteOverridesBuilder
+ * @see TenantSeoLintService
  */
 return [
     /*

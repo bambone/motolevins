@@ -11,6 +11,7 @@ use App\TenantSiteSetup\BookingNotificationsBriefingApplier;
 use App\TenantSiteSetup\BookingNotificationsBriefingWizardMarkers;
 use App\TenantSiteSetup\BookingNotificationsQuestionnaireRepository;
 use App\TenantSiteSetup\SetupCompletionEvaluator;
+use App\TenantSiteSetup\SetupItemRegistry;
 use App\TenantSiteSetup\SetupProfileRepository;
 use App\TenantSiteSetup\TenantOnboardingBranchId;
 use Database\Seeders\RolePermissionSeeder;
@@ -70,7 +71,7 @@ class BookingNotificationsBriefingApplierTest extends TestCase
         );
 
         $this->assertTrue(
-            app(SetupCompletionEvaluator::class)->isComplete($tenant, \App\TenantSiteSetup\SetupItemRegistry::definitions()['setup.booking_notifications_brief'])
+            app(SetupCompletionEvaluator::class)->isComplete($tenant, SetupItemRegistry::definitions()['setup.booking_notifications_brief'])
         );
     }
 

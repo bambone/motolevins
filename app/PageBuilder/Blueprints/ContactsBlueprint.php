@@ -9,7 +9,6 @@ use App\PageBuilder\Contacts\MapInputMode;
 use App\PageBuilder\Contacts\MapProvider;
 use App\PageBuilder\PageSectionCategory;
 use App\Support\RussianPhone;
-use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -198,7 +197,7 @@ final class ContactsBlueprint extends AbstractPageSectionBlueprint
                         ->visible(fn (Get $get): bool => (bool) ($get('data_json.map_enabled')) && ($get('data_json.map_provider') ?? MapProvider::None->value) !== MapProvider::None->value)
                         ->rules([
                             function (Get $get): \Closure {
-                                return function (string $attribute, mixed $value, \Closure $fail) use ($get): void {
+                                return function (string $attribute, mixed $value, \Closure $fail): void {
                                     $raw = trim((string) $value);
                                     if ($raw === '') {
                                         return;
@@ -226,7 +225,7 @@ final class ContactsBlueprint extends AbstractPageSectionBlueprint
                         ])
                         ->visible(fn (Get $get): bool => (bool) ($get('data_json.map_enabled')) && ($get('data_json.map_provider') ?? '') !== MapProvider::None->value)
                         ->columnSpanFull(),
-                Select::make('data_json.map_display_mode')
+                    Select::make('data_json.map_display_mode')
                         ->label('Как показывать')
                         ->options([
                             MapDisplayMode::ButtonOnly->value => 'Только ссылка (кнопка)',

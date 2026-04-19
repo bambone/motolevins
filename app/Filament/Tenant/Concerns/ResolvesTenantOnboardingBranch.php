@@ -6,6 +6,7 @@ namespace App\Filament\Tenant\Concerns;
 
 use App\Models\User;
 use App\TenantSiteSetup\SetupProfileRepository;
+use App\TenantSiteSetup\TenantOnboardingBranchId;
 use App\TenantSiteSetup\TenantOnboardingBranchResolution;
 use App\TenantSiteSetup\TenantOnboardingBranchResolver;
 use Illuminate\Support\Facades\Auth;
@@ -17,7 +18,7 @@ trait ResolvesTenantOnboardingBranch
         $tenant = currentTenant();
         if ($tenant === null) {
             return app(TenantOnboardingBranchResolver::class)->resolveBranches(
-                \App\TenantSiteSetup\TenantOnboardingBranchId::CrmOnly->value,
+                TenantOnboardingBranchId::CrmOnly->value,
                 false,
                 false,
             );

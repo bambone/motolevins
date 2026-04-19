@@ -28,8 +28,8 @@ class MotorcyclePublishingEditor extends Component implements HasSchemas
 
     /** @var list<string> */
     private const KEYS = [
-        'status', 'sort_order', 'category_id', 'price_per_day', 'price_2_3_days', 'price_week',
-        'show_on_home', 'show_in_catalog', 'is_recommended', 'catalog_price_note',
+        'status', 'sort_order', 'category_id',
+        'show_on_home', 'show_in_catalog', 'is_recommended',
     ];
 
     public string $initialSnapshot = '';
@@ -54,7 +54,7 @@ class MotorcyclePublishingEditor extends Component implements HasSchemas
     {
         return $schema->components([
             Section::make()
-                ->schema(MotorcycleFormFieldKit::publishingFields())
+                ->schema(MotorcycleFormFieldKit::publishingVisibilityFields())
                 ->columns(1),
         ]);
     }
@@ -71,13 +71,6 @@ class MotorcyclePublishingEditor extends Component implements HasSchemas
             $data['show_in_catalog'] = (bool) ($data['show_in_catalog'] ?? false);
             $data['is_recommended'] = (bool) ($data['is_recommended'] ?? false);
             $data['sort_order'] = (int) ($data['sort_order'] ?? 0);
-            $data['price_per_day'] = (int) ($data['price_per_day'] ?? 0);
-            $data['price_2_3_days'] = isset($data['price_2_3_days']) && $data['price_2_3_days'] !== ''
-                ? (int) $data['price_2_3_days']
-                : null;
-            $data['price_week'] = isset($data['price_week']) && $data['price_week'] !== ''
-                ? (int) $data['price_week']
-                : null;
             $data['category_id'] = $data['category_id'] !== null && $data['category_id'] !== ''
                 ? (int) $data['category_id']
                 : null;
@@ -85,7 +78,7 @@ class MotorcyclePublishingEditor extends Component implements HasSchemas
             $m = $this->resolveMotorcycle();
             $m->update($data);
             $this->initialSnapshot = $this->computeSnapshot();
-            Notification::make()->title('Публикация и цены сохранены')->success()->send();
+            Notification::make()->title('Публикация сохранена')->success()->send();
             MotorcycleBlockSaveLogger::log(
                 self::BLOCK.'_done',
                 self::BLOCK,

@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 namespace App\Filament\Shared;
 
+use App\Filament\Tenant\Resources\SchedulingResourceResource;
 use App\Scheduling\SchedulingTimezoneOptions;
 use Filament\Forms\Components\Select;
 
 /**
- * Единый UX выбора IANA-часового пояса (как у {@see \App\Filament\Tenant\Resources\SchedulingResourceResource}).
+ * Единый UX выбора IANA-часового пояса (как у {@see SchedulingResourceResource}).
  */
 final class TimezoneSelect
 {

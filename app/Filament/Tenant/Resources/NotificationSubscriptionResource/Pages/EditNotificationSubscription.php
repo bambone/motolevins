@@ -76,5 +76,4 @@ class EditNotificationSubscription extends EditRecord
         }
         $this->record->destinations()->sync($sync);
     }
-
 }

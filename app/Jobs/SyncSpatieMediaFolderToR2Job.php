@@ -2,9 +2,9 @@
 
 namespace App\Jobs;
 
-use App\Tenant\StorageQuota\TenantMediaStorageQuotaObserver;
 use App\Support\Storage\TenantPublicMediaWriter;
 use App\Support\Storage\TenantStorageDisks;
+use App\Tenant\StorageQuota\TenantMediaStorageQuotaObserver;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;

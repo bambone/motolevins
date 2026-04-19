@@ -1,20 +1,32 @@
 @props(['bike', 'badge' => null, 'useBookingContext' => true])
 @php
-    use App\Money\MoneyBindingRegistry;
+    use App\MotorcyclePricing\MotorcyclePricingSummaryPresenter;
+    use App\MotorcyclePricing\PricingMinorMoney;
 
     $card = $bike->catalogCardForView();
     $positioning = $card['positioning'];
     $scenario = $card['scenario'];
     $highlights = $card['highlights'];
     $priceNote = $card['price_note'];
+    $pricingPresent = app(MotorcyclePricingSummaryPresenter::class)->present($bike, tenant());
+    if (filled($pricingPresent['financial_note'] ?? null)) {
+        $priceNote = (string) $pricingPresent['financial_note'];
+    }
     $imageUrl = $bike->publicCoverUrl();
     $type = $bike->model ?? $bike->type ?? '';
     $engine = $bike->engine_cc ?? $bike->engine ?? 0;
     $detailUrl = route('motorcycle.show', $bike->slug);
     $detailLabel = 'О модели: ' . $bike->name;
-    $bikePriceDayFormatted = tenant() !== null
-        ? tenant_money_format((int) $bike->price_per_day, MoneyBindingRegistry::MOTORCYCLE_PRICE_PER_DAY)
-        : number_format((int) $bike->price_per_day, 0, ',', ' ').' '.chr(0xE2).chr(0x82).chr(0xBD);
+    $cardAmountMajor = $pricingPresent['card_price_minor'] !== null
+        ? PricingMinorMoney::minorToMajor((int) $pricingPresent['card_price_minor'])
+        : 0;
+    $fallbackPpd = $cardAmountMajor > 0 ? $cardAmountMajor : (int) $bike->price_per_day;
+    $cardOnRequest = (bool) ($pricingPresent['card_is_on_request'] ?? false);
+    $cardInvalid = (bool) ($pricingPresent['card_profile_invalid'] ?? false);
+    $cardPriceText = trim((string) ($pricingPresent['card_price_text'] ?? ''));
+    $cardPriceSuffix = trim((string) ($pricingPresent['card_price_suffix'] ?? ''));
+    $cardShowFrom = (bool) ($pricingPresent['card_show_leading_from'] ?? false);
+    $cardSecondary = trim((string) ($pricingPresent['card_secondary_text'] ?? ''));
 @endphp
 <article class="group/card relative flex h-full flex-col overflow-hidden rounded-2xl border border-white/5 bg-carbon shadow-lg shadow-black/30 transition-[border-color,box-shadow,transform] duration-300 hover:-translate-y-0.5 hover:border-white/10 hover:shadow-xl hover:shadow-black/40 focus-within:border-white/12 focus-within:shadow-xl [content-visibility:auto] [contain-intrinsic-size:auto_36rem]">
     <div class="pointer-events-none absolute inset-0 -z-10 rounded-2xl bg-white/[0.02] opacity-0 blur-2xl transition-opacity duration-300 group-hover/card:opacity-100"></div>
@@ -91,34 +103,64 @@
         </div>
 
         {{-- 5. Цена --}}
-        <div class="mb-4 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-3 sm:px-3.5">
+        <div class="mb-4 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-3 sm:px-3.5"
+             @if($useBookingContext) x-data="bikeCardPeriodPrice({ motorcycleId: {{ (int) $bike->id }}, fallbackPricePerDay: {{ (int) $fallbackPpd }} })" @endif>
             @if($useBookingContext)
                 <div x-show="!$store.tenantBooking.filters.start_date || !$store.tenantBooking.filters.end_date" class="min-w-0">
-                    <span class="mb-0.5 block text-[10px] font-semibold uppercase tracking-wider text-zinc-500">от</span>
-                    <div class="flex flex-wrap items-baseline gap-x-1.5 gap-y-0">
-                        <span class="text-[1.65rem] font-extrabold leading-none tracking-tight text-white sm:text-[2rem]">{{ $bikePriceDayFormatted }}</span>
-                        <span class="text-[11px] font-medium uppercase tracking-wide text-zinc-500">/ сутки</span>
-                    </div>
+                    <span class="mb-0.5 block text-[10px] font-semibold uppercase tracking-wider text-zinc-500">стоимость</span>
+                    @if($cardInvalid || ($cardPriceText === '' && ! $cardOnRequest))
+                        <p class="text-lg font-bold text-white sm:text-xl">{{ $cardInvalid ? 'Стоимость уточняйте' : '—' }}</p>
+                    @elseif($cardOnRequest)
+                        <p class="text-lg font-bold text-white sm:text-xl">{{ $cardPriceText !== '' ? $cardPriceText : 'По запросу' }}</p>
+                    @else
+                        @if($cardShowFrom)
+                            <span class="mb-0.5 block text-[10px] font-semibold uppercase tracking-wider text-zinc-500">от</span>
+                        @endif
+                        <div class="flex flex-wrap items-baseline gap-x-1.5 gap-y-0">
+                            <span class="text-[1.65rem] font-extrabold leading-none tracking-tight text-white sm:text-[2rem]">{{ $cardPriceText }}</span>
+                            @if($cardPriceSuffix !== '')
+                                <span class="text-[11px] font-medium uppercase tracking-wide text-zinc-500">{{ $cardPriceSuffix }}</span>
+                            @endif
+                        </div>
+                    @endif
+                    @if($cardSecondary !== '')
+                        <p class="mt-1 text-xs leading-tight text-zinc-400">{{ $cardSecondary }}</p>
+                    @endif
                     @if($priceNote !== '')
                         <p class="mt-1.5 line-clamp-1 text-xs leading-tight text-zinc-400">{{ $priceNote }}</p>
                     @endif
                 </div>
                 <div class="min-w-0" x-show="$store.tenantBooking.filters.start_date && $store.tenantBooking.filters.end_date" x-cloak>
                     <span class="mb-0.5 block text-[10px] font-semibold uppercase tracking-wide text-zinc-500" x-text="`${$store.tenantBooking.rentalDayCount()} дней аренды`"></span>
-                    <div class="flex flex-wrap items-baseline gap-x-1.5">
-                        <span class="text-[1.65rem] font-extrabold leading-none tracking-tight text-moto-amber sm:text-[2rem]"><span x-text="$store.tenantBooking.formatPrice($store.tenantBooking.calculateCardTotalPrice({{ (int) $bike->price_per_day }}))"></span></span>
+                    <div class="flex flex-wrap items-baseline gap-x-1.5" x-show="showAmount()">
+                        <span class="text-[1.65rem] font-extrabold leading-none tracking-tight text-moto-amber sm:text-[2rem]"><span x-text="$store.tenantBooking.formatPrice(totalMajor)"></span></span>
                     </div>
+                    <p class="text-base font-semibold leading-snug text-moto-amber" x-show="!showAmount() && summaryText" x-text="summaryText"></p>
                     @if($priceNote !== '')
                         <p class="mt-1.5 line-clamp-1 text-xs text-zinc-400">{{ $priceNote }}</p>
                     @endif
                 </div>
             @else
                 <div class="min-w-0">
-                    <span class="mb-0.5 block text-[10px] font-semibold uppercase tracking-wider text-zinc-500">от</span>
-                    <div class="flex flex-wrap items-baseline gap-x-1.5 gap-y-0">
-                        <span class="text-[1.65rem] font-extrabold leading-none tracking-tight text-white sm:text-[2rem]">{{ $bikePriceDayFormatted }}</span>
-                        <span class="text-[11px] font-medium uppercase tracking-wide text-zinc-500">/ сутки</span>
-                    </div>
+                    <span class="mb-0.5 block text-[10px] font-semibold uppercase tracking-wider text-zinc-500">стоимость</span>
+                    @if($cardInvalid || ($cardPriceText === '' && ! $cardOnRequest))
+                        <p class="text-lg font-bold text-white sm:text-xl">{{ $cardInvalid ? 'Стоимость уточняйте' : '—' }}</p>
+                    @elseif($cardOnRequest)
+                        <p class="text-lg font-bold text-white sm:text-xl">{{ $cardPriceText !== '' ? $cardPriceText : 'По запросу' }}</p>
+                    @else
+                        @if($cardShowFrom)
+                            <span class="mb-0.5 block text-[10px] font-semibold uppercase tracking-wider text-zinc-500">от</span>
+                        @endif
+                        <div class="flex flex-wrap items-baseline gap-x-1.5 gap-y-0">
+                            <span class="text-[1.65rem] font-extrabold leading-none tracking-tight text-white sm:text-[2rem]">{{ $cardPriceText }}</span>
+                            @if($cardPriceSuffix !== '')
+                                <span class="text-[11px] font-medium uppercase tracking-wide text-zinc-500">{{ $cardPriceSuffix }}</span>
+                            @endif
+                        </div>
+                    @endif
+                    @if($cardSecondary !== '')
+                        <p class="mt-1 text-xs leading-tight text-zinc-400">{{ $cardSecondary }}</p>
+                    @endif
                     @if($priceNote !== '')
                         <p class="mt-1.5 line-clamp-1 text-xs leading-tight text-zinc-400">{{ $priceNote }}</p>
                     @endif
@@ -136,14 +178,14 @@
                 {{-- Весь PHP-пейлоад через @js (безопасно в двойных кавычках); даты из Alpine через Object.assign. Нельзя оборачивать весь @click в '…' — апостроф в названии байка рвёт атрибут. --}}
                 <button type="button"
                         class="tenant-btn-primary w-full flex-1 gap-2 sm:w-auto touch-manipulation"
-                        @click.stop="$dispatch('open-booking-modal', Object.assign({}, @js(['id' => $bike->id, 'name' => $bike->name, 'price' => $bike->price_per_day]), { start: $store.tenantBooking.filters.start_date, end: $store.tenantBooking.filters.end_date }))">
+                        @click.stop="$dispatch('open-booking-modal', Object.assign({}, @js(['id' => $bike->id, 'name' => $bike->name, 'price' => $fallbackPpd]), { start: $store.tenantBooking.filters.start_date, end: $store.tenantBooking.filters.end_date }))">
                     Забронировать
                     <svg class="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
                 </button>
             @else
                 <button type="button"
                         class="tenant-btn-primary w-full flex-1 gap-2 sm:w-auto touch-manipulation"
-                        @click.stop="$dispatch('open-booking-modal', @js(['id' => $bike->id, 'name' => $bike->name, 'price' => $bike->price_per_day, 'start' => '', 'end' => '']))">
+                        @click.stop="$dispatch('open-booking-modal', @js(['id' => $bike->id, 'name' => $bike->name, 'price' => $fallbackPpd, 'start' => '', 'end' => '']))">
                     Забронировать
                     <svg class="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
                 </button>

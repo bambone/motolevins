@@ -20,12 +20,13 @@ use App\Product\CRM\DTO\PublicInboundContext;
 use App\Product\CRM\DTO\PublicInboundSubmission;
 use App\Services\CurrentTenantManager;
 use App\TenantPush\TenantPushAccessDenialCode;
+use App\TenantPush\TenantPushCrmRequestRecipientResolver;
 use App\TenantPush\TenantPushDiagnosticCode;
 use App\TenantPush\TenantPushFeatureGate;
+use App\TenantPush\TenantPushNotificationBindingSync;
 use App\TenantPush\TenantPushOnesignalClient;
 use App\TenantPush\TenantPushOverride;
 use App\TenantPush\TenantPushProviderStatus;
-use App\TenantPush\TenantPushNotificationBindingSync;
 use App\TenantPush\TenantPushSettingsView;
 use Database\Seeders\PlanSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -109,7 +110,7 @@ class TenantPushAcceptanceScenariosTest extends TestCase
             ],
         );
 
-        $view = TenantPushSettingsView::make($tenant, $gate, app(\App\TenantPush\TenantPushCrmRequestRecipientResolver::class));
+        $view = TenantPushSettingsView::make($tenant, $gate, app(TenantPushCrmRequestRecipientResolver::class));
 
         $this->assertFalse($view->readyForEventDelivery);
         $this->assertStringContainsString('Провайдер проверен', $view->readinessHint());

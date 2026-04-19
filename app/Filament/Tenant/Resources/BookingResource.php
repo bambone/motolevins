@@ -2,6 +2,7 @@
 
 namespace App\Filament\Tenant\Resources;
 
+use App\Bookings\BookingPricingTotals;
 use App\Bookings\Calendar\BookingStatusPresentation;
 use App\ContactChannels\ContactChannelRegistry;
 use App\Enums\BookingStatus;
@@ -100,11 +101,12 @@ class BookingResource extends Resource
                             ->label('Сумма')
                             ->formatStateUsing(function ($state, Booking $record): string {
                                 $t = $record->tenant ?? currentTenant();
+                                $major = BookingPricingTotals::grandTotalMajor($record);
                                 if ($t === null) {
-                                    return (string) $state;
+                                    return (string) $major;
                                 }
 
-                                return tenant_money_format((int) $state, MoneyBindingRegistry::BOOKING_TOTAL_PRICE, $t);
+                                return tenant_money_format($major, MoneyBindingRegistry::BOOKING_TOTAL_PRICE, $t);
                             }),
                         TextEntry::make('created_at')
                             ->label('Создано')
@@ -161,11 +163,12 @@ class BookingResource extends Resource
                     ->label('Сумма')
                     ->formatStateUsing(function ($state, Booking $record): string {
                         $t = $record->tenant ?? currentTenant();
+                        $major = BookingPricingTotals::grandTotalMajor($record);
                         if ($t === null) {
-                            return (string) $state;
+                            return (string) $major;
                         }
 
-                        return tenant_money_format((int) $state, MoneyBindingRegistry::BOOKING_TOTAL_PRICE, $t);
+                        return tenant_money_format($major, MoneyBindingRegistry::BOOKING_TOTAL_PRICE, $t);
                     })
                     ->sortable(),
             ])

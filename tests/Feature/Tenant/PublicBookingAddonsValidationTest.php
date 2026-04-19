@@ -104,6 +104,68 @@ final class PublicBookingAddonsValidationTest extends TestCase
         $response->assertJsonValidationErrors(['addons']);
     }
 
+    public function test_calculate_rejects_inactive_addon(): void
+    {
+        $this->withoutMiddleware(VerifyCsrfToken::class);
+
+        $tenant = $this->createTenantWithActiveDomain('addon_val_inactive');
+        $host = $this->tenancyHostForSlug('addon_val_inactive');
+        $bike = $this->makeAvailableBike($tenant->id);
+        $inactive = Addon::query()->create([
+            'tenant_id' => $tenant->id,
+            'name' => 'Off',
+            'type' => 'optional',
+            'price' => 100,
+            'is_active' => false,
+            'sort_order' => 0,
+        ]);
+
+        $start = now()->addDays(23)->format('Y-m-d');
+        $end = now()->addDays(24)->format('Y-m-d');
+
+        $response = $this->postTenantJson($host, '/booking/calculate', [
+            'motorcycle_id' => $bike->id,
+            'rental_unit_id' => null,
+            'start_date' => $start,
+            'end_date' => $end,
+            'addons' => [(string) $inactive->id => 1],
+        ]);
+
+        $response->assertUnprocessable();
+        $response->assertJsonValidationErrors(['addons']);
+    }
+
+    public function test_store_draft_rejects_inactive_addon(): void
+    {
+        $this->withoutMiddleware(VerifyCsrfToken::class);
+
+        $tenant = $this->createTenantWithActiveDomain('addon_draft_inactive');
+        $host = $this->tenancyHostForSlug('addon_draft_inactive');
+        $bike = $this->makeAvailableBike($tenant->id);
+        $inactive = Addon::query()->create([
+            'tenant_id' => $tenant->id,
+            'name' => 'OffDraft',
+            'type' => 'optional',
+            'price' => 100,
+            'is_active' => false,
+            'sort_order' => 0,
+        ]);
+
+        $start = now()->addDays(24)->format('Y-m-d');
+        $end = now()->addDays(25)->format('Y-m-d');
+
+        $response = $this->postTenantJson($host, '/booking/draft', [
+            'motorcycle_id' => $bike->id,
+            'rental_unit_id' => null,
+            'start_date' => $start,
+            'end_date' => $end,
+            'addons' => [$inactive->id => 1],
+        ]);
+
+        $response->assertUnprocessable();
+        $response->assertJsonValidationErrors(['addons']);
+    }
+
     public function test_store_draft_rejects_addon_belonging_to_another_tenant(): void
     {
         $this->withoutMiddleware(VerifyCsrfToken::class);

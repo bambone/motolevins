@@ -32,7 +32,7 @@ final class FramingCoverFocalEditor
         return ViewField::make($name)
             ->hiddenLabel()
             ->view('filament.forms.components.service-program-cover-preview')
-            ->viewData(function (Get $get) use ($slotId, $profile, $wirePathPrefix, $presentationStateKey, $resolveDesktopImageUrl, $resolveMobileImageUrl, $resolveSyncDefault): array {
+            ->viewData(function (Get $get) use ($profile, $wirePathPrefix, $presentationStateKey, $resolveDesktopImageUrl, $resolveMobileImageUrl, $resolveSyncDefault): array {
                 $t = currentTenant();
                 $frames = $profile->previewFrames();
                 $safeArea = $profile->safeAreaBottomBand();

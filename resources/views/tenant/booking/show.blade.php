@@ -2,11 +2,18 @@
 
 @php
     use App\Money\MoneyBindingRegistry;
+    use App\MotorcyclePricing\MotorcyclePricingSummaryPresenter;
 @endphp
 
 @section('content')
 @php
     $visibleAtSelectedLocation = $visibleAtSelectedLocation ?? true;
+    $bp = app(MotorcyclePricingSummaryPresenter::class)->present($motorcycle, tenant());
+    $bOnReq = (bool) ($bp['card_is_on_request'] ?? false);
+    $bInvalid = (bool) ($bp['card_profile_invalid'] ?? false);
+    $bText = trim((string) ($bp['card_price_text'] ?? ''));
+    $bSuf = trim((string) ($bp['card_price_suffix'] ?? ''));
+    $bShowFrom = (bool) ($bp['card_show_leading_from'] ?? false);
 @endphp
 <section class="mx-auto max-w-4xl px-3 pb-12 pt-24 sm:px-4 sm:pb-16 sm:pt-28 md:px-8">
     <a href="{{ route('booking.index') }}" class="mb-6 inline-flex min-h-10 items-center gap-2 text-sm text-silver transition-colors hover:text-white sm:mb-8 sm:text-base focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moto-amber">
@@ -35,11 +42,25 @@
         <div class="min-w-0">
             <h1 class="mb-2 text-balance text-xl font-bold text-white sm:text-2xl">{{ ($resolvedSeo ?? null)?->h1 ?? $motorcycle->name }}</h1>
             <p class="mb-6 text-sm leading-relaxed text-silver sm:text-base">{{ $motorcycle->short_description }}</p>
-            <div class="break-words text-lg font-bold text-moto-amber sm:text-xl">{{ tenant_money_format((int) ($motorcycle->price_per_day ?? 0), MoneyBindingRegistry::MOTORCYCLE_PRICE_PER_DAY) }} / сутки</div>
+            <div class="break-words text-lg font-bold text-moto-amber sm:text-xl">
+                @if($bInvalid || ($bText === '' && ! $bOnReq))
+                    {{ $bInvalid ? 'Стоимость уточняйте' : '—' }}
+                @elseif($bOnReq)
+                    {{ $bText !== '' ? $bText : 'По запросу' }}
+                @else
+                    @if($bShowFrom)
+                        <span class="text-sm font-semibold text-silver">от </span>
+                    @endif
+                    {{ $bText }}
+                    @if($bSuf !== '')
+                        <span class="text-sm font-semibold text-silver"> {{ $bSuf }}</span>
+                    @endif
+                @endif
+            </div>
         </div>
     </div>
 
-    <div class="glass rounded-2xl p-4 sm:p-6 md:p-8" x-data="bookingForm({{ $motorcycle->id }}, {{ $rentalUnits->first()?->id ?? 'null' }}, @js($addons->map(fn($a) => ['id' => $a->id])->values()->all()), {{ $visibleAtSelectedLocation ? 'false' : 'true' }})">
+    <div class="glass rounded-2xl p-4 sm:p-6 md:p-8" x-data="bookingForm({{ $motorcycle->id }}, @js(($motorcycle->uses_fleet_units && $rentalUnits->count() > 1) ? '' : null), @js($addons->map(fn($a) => ['id' => $a->id])->values()->all()), {{ $visibleAtSelectedLocation ? 'false' : 'true' }}, {{ $motorcycle->uses_fleet_units ? 'true' : 'false' }})">
         <h2 class="mb-5 text-lg font-bold text-white sm:mb-6 sm:text-xl">Выберите даты</h2>
 
         <div class="mb-6 grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2">
@@ -54,6 +75,19 @@
                     class="h-12 w-full rounded-xl border border-white/10 bg-black/50 px-4 py-3 text-base text-white outline-none focus:border-moto-amber focus:ring-1 focus:ring-moto-amber [color-scheme:dark]">
             </div>
         </div>
+
+        @if($motorcycle->uses_fleet_units && $rentalUnits->count() > 1)
+            <div class="mb-6 min-w-0">
+                <label class="mb-2 block text-sm text-silver" for="booking-rental-unit">Единица парка</label>
+                <select id="booking-rental-unit" name="rental_unit_id" x-model="rentalUnitSelection" @change="calculatePrice"
+                    class="h-12 w-full rounded-xl border border-white/10 bg-black/50 px-4 py-3 text-base text-white outline-none focus:border-moto-amber focus:ring-1 focus:ring-moto-amber">
+                    <option value="">Авто: первая свободная по датам</option>
+                    @foreach($rentalUnits as $ru)
+                        <option value="{{ $ru->id }}">{{ $ru->unit_label !== null && $ru->unit_label !== '' ? $ru->unit_label : 'Единица #'.$ru->id }}</option>
+                    @endforeach
+                </select>
+            </div>
+        @endif
 
         @if($addons->isNotEmpty())
             <div class="mb-6">
@@ -105,9 +139,13 @@
 
 <script>
 document.addEventListener('alpine:init', () => {
-    Alpine.data('bookingForm', (motorcycleId, rentalUnitId, addonsList, locationBlocked = false) => ({
+    Alpine.data('bookingForm', (motorcycleId, rentalUnitSelection, addonsList, locationBlocked = false, usesFleetUnits = false) => ({
         motorcycleId,
-        rentalUnitId,
+        /** Пустая строка | null = авто-подбор; иначе id, выбранный пользователем в селекте */
+        rentalUnitSelection: rentalUnitSelection === undefined ? null : rentalUnitSelection,
+        /** Единица, согласованная с сервером для текущего успешного quote (для авто-режима и одиночного флота) */
+        resolvedRentalUnitId: null,
+        usesFleetUnits,
         locationBlocked,
         startDate: '',
         endDate: '',
@@ -118,7 +156,11 @@ document.addEventListener('alpine:init', () => {
 
         get canProceed() {
             if (this.locationBlocked) return false;
-            return this.startDate && this.endDate && this.priceResult?.available;
+            if (!this.startDate || !this.endDate || !this.priceResult?.available) return false;
+            if (this.usesFleetUnits && this.isAutoRentalUnit() && (this.resolvedRentalUnitId === null || this.resolvedRentalUnitId === undefined)) {
+                return false;
+            }
+            return true;
         },
 
         formatMoney(n, bindingKey) {
@@ -128,9 +170,30 @@ document.addEventListener('alpine:init', () => {
             return new Intl.NumberFormat('ru-RU').format(n);
         },
 
+        isAutoRentalUnit() {
+            return this.rentalUnitSelection === '' || this.rentalUnitSelection === null || this.rentalUnitSelection === undefined;
+        },
+
+        rentalUnitIdForCalculate() {
+            if (this.isAutoRentalUnit()) return null;
+            const n = Number(this.rentalUnitSelection);
+            return Number.isFinite(n) && n > 0 ? n : null;
+        },
+
+        rentalUnitIdForDraft() {
+            if (this.isAutoRentalUnit()) {
+                return this.resolvedRentalUnitId;
+            }
+            const n = Number(this.rentalUnitSelection);
+            return Number.isFinite(n) && n > 0 ? n : null;
+        },
+
         async calculatePrice() {
             if (this.locationBlocked) return;
             if (!this.startDate || !this.endDate) return;
+            if (this.isAutoRentalUnit()) {
+                this.resolvedRentalUnitId = null;
+            }
             this.loading = true;
             try {
                 const addonsPayload = {};
@@ -146,7 +209,7 @@ document.addEventListener('alpine:init', () => {
                     },
                     body: JSON.stringify({
                         motorcycle_id: this.motorcycleId,
-                        rental_unit_id: this.rentalUnitId,
+                        rental_unit_id: this.rentalUnitIdForCalculate(),
                         start_date: this.startDate,
                         end_date: this.endDate,
                         addons: addonsPayload
@@ -154,8 +217,14 @@ document.addEventListener('alpine:init', () => {
                 });
                 const data = await r.json();
                 this.priceResult = data;
+                if (data.available) {
+                    this.resolvedRentalUnitId = data.rental_unit_id ?? null;
+                } else {
+                    this.resolvedRentalUnitId = null;
+                }
             } catch (e) {
                 this.priceResult = { available: false, message: 'Ошибка расчёта' };
+                this.resolvedRentalUnitId = null;
             } finally {
                 this.loading = false;
             }
@@ -178,7 +247,7 @@ document.addEventListener('alpine:init', () => {
                     },
                     body: JSON.stringify({
                         motorcycle_id: this.motorcycleId,
-                        rental_unit_id: this.rentalUnitId,
+                        rental_unit_id: this.rentalUnitIdForDraft(),
                         start_date: this.startDate,
                         end_date: this.endDate,
                         addons: addonsPayload

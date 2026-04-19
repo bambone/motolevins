@@ -4,6 +4,7 @@ namespace Tests\Unit\Money;
 
 use App\Models\Tenant;
 use App\Models\TenantSetting;
+use App\Money\Exceptions\UnknownMoneyBindingException;
 use App\Money\MoneyBindingRegistry;
 use App\Money\MoneyFormatter;
 use App\Money\MoneyParser;
@@ -68,7 +69,7 @@ class MoneyLayerTest extends TestCase
         $tenant = $this->makeTenantRub();
         $formatter = app(MoneyFormatter::class);
 
-        $this->expectException(\App\Money\Exceptions\UnknownMoneyBindingException::class);
+        $this->expectException(UnknownMoneyBindingException::class);
         $formatter->formatStorageInt(1, 'no.such.binding.key', $tenant);
     }
 }

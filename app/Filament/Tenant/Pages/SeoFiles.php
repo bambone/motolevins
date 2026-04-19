@@ -319,11 +319,11 @@ class SeoFiles extends Page
                         return $this->streamBackupDownload($tenant, $this->robotsRow()?->backup_storage_path);
                     }),
             ])
-            ->label('robots.txt')
-            ->icon('heroicon-s-document-text')
-            ->color('gray')
-            ->button()
-            ->dropdownWidth('fi-seo-files-fit-dropdown'),
+                ->label('robots.txt')
+                ->icon('heroicon-s-document-text')
+                ->color('gray')
+                ->button()
+                ->dropdownWidth('fi-seo-files-fit-dropdown'),
 
             ActionGroup::make([
                 Action::make('previewSitemap')
@@ -377,11 +377,11 @@ class SeoFiles extends Page
                         return $this->streamBackupDownload($tenant, $this->sitemapRow()?->backup_storage_path);
                     }),
             ])
-            ->label('sitemap.xml')
-            ->icon('heroicon-s-map')
-            ->color('gray')
-            ->button()
-            ->dropdownWidth('fi-seo-files-fit-dropdown'),
+                ->label('sitemap.xml')
+                ->icon('heroicon-s-map')
+                ->color('gray')
+                ->button()
+                ->dropdownWidth('fi-seo-files-fit-dropdown'),
 
             ActionGroup::make([
                 Action::make('seoAutopilotBootstrap')
@@ -429,11 +429,11 @@ class SeoFiles extends Page
                     })
                     ->modalSubmitAction(false),
             ])
-            ->label('Утилиты')
-            ->icon('heroicon-s-wrench-screwdriver')
-            ->color('primary')
-            ->button()
-            ->dropdownWidth('fi-seo-files-fit-dropdown'),
+                ->label('Утилиты')
+                ->icon('heroicon-s-wrench-screwdriver')
+                ->color('primary')
+                ->button()
+                ->dropdownWidth('fi-seo-files-fit-dropdown'),
         ];
     }
 

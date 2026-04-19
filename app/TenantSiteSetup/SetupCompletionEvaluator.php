@@ -11,7 +11,6 @@ use App\Models\TenantSetting;
 use App\Services\Analytics\AnalyticsSettingsPersistence;
 use App\Support\Analytics\AnalyticsSettingsData;
 use App\Support\RussianPhone;
-use App\TenantSiteSetup\BookingNotificationsBriefingWizardMarkers;
 
 final class SetupCompletionEvaluator
 {

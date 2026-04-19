@@ -7,10 +7,9 @@ use App\Filament\Tenant\Concerns\ResolvesDomainTermLabels;
 use App\Filament\Tenant\Forms\LinkedBookableSchedulingForm;
 use App\Filament\Tenant\Resources\MotorcycleResource\Form\MotorcycleFormFieldKit;
 use App\Filament\Tenant\Resources\MotorcycleResource\Pages;
-use App\Filament\Tenant\Support\TenantMoneyForms;
 use App\Models\BookingSettingsPreset;
 use App\Models\Motorcycle;
-use App\Money\MoneyBindingRegistry;
+use App\MotorcyclePricing\MotorcyclePricingSummaryPresenter;
 use App\Scheduling\BookableServiceBulkService;
 use App\Scheduling\Enums\BookableServiceSettingsApplyMode;
 use App\Support\FilamentMotorcycleThumbnail;
@@ -125,9 +124,10 @@ class MotorcycleResource extends Resource
                                             ->columnSpan(['default' => 12, 'lg' => 8]),
 
                                         Section::make('Управление карточкой')
-                                            ->description('Публикация, цены и медиа')
+                                            ->description('Публикация, тарифы и медиа')
                                             ->schema([
-                                                ...MotorcycleFormFieldKit::publishingFields(),
+                                                ...MotorcycleFormFieldKit::publishingVisibilityFields(),
+                                                ...MotorcycleFormFieldKit::pricingProfileFields(),
                                                 Section::make('Режим учёта и локации')
                                                     ->description('Единицы парка настраиваются после первого сохранения карточки. Локации — справочник «Инфраструктура → Локации».')
                                                     ->schema(MotorcycleFormFieldKit::fleetAndLocationCardFields())
@@ -183,17 +183,27 @@ class MotorcycleResource extends Resource
                 TextColumn::make('category.name')
                     ->label('Категория')
                     ->sortable(),
-                TextColumn::make('price_per_day')
-                    ->label('Цена / сутки')
-                    ->formatStateUsing(function ($state, Motorcycle $record): string {
+                TextColumn::make('pricing_catalog_line')
+                    ->label('Цена в каталоге')
+                    ->getStateUsing(function (Motorcycle $record): string {
                         $t = $record->tenant ?? currentTenant();
-                        if ($t === null) {
-                            return (string) $state;
+                        $p = app(MotorcyclePricingSummaryPresenter::class)->present($record, $t);
+                        if ($p['card_profile_invalid'] ?? false) {
+                            return 'Профиль тарифов: проверьте настройки';
+                        }
+                        if ($p['card_is_on_request'] ?? false) {
+                            return trim((string) ($p['card_price_text'] ?? '')) !== ''
+                                ? (string) $p['card_price_text']
+                                : 'По запросу';
+                        }
+                        $main = trim((string) ($p['card_price_text'] ?? ''));
+                        $suf = trim((string) ($p['card_price_suffix'] ?? ''));
+                        if ($main === '') {
+                            return '—';
                         }
 
-                        return tenant_money_format((int) $state, MoneyBindingRegistry::MOTORCYCLE_PRICE_PER_DAY, $t);
-                    })
-                    ->sortable(),
+                        return $suf !== '' ? $main.' '.$suf : $main;
+                    }),
                 TextColumn::make('status')
                     ->label('Статус')
                     ->badge()
@@ -234,7 +244,6 @@ class MotorcycleResource extends Resource
                     ->slideOver()
                     ->fillForm(fn (Motorcycle $record): array => [
                         'status' => $record->status,
-                        'price_per_day' => $record->price_per_day,
                         'sort_order' => $record->sort_order,
                     ])
                     ->form([
@@ -242,11 +251,11 @@ class MotorcycleResource extends Resource
                             ->label('Статус')
                             ->options(Motorcycle::statuses())
                             ->required(),
-                        TenantMoneyForms::moneyTextInput('price_per_day', MoneyBindingRegistry::MOTORCYCLE_PRICE_PER_DAY, 'Цена за сутки', required: true),
                         TextInput::make('sort_order')
                             ->label('Сортировка')
                             ->numeric(),
                     ])
+                    ->modalDescription('Тарифы и цены редактируются в карточке модели (блок «Тарифы и условия»).')
                     ->action(function (Motorcycle $record, array $data): void {
                         $record->update($data);
                         Notification::make()->title('Обновлено')->success()->send();

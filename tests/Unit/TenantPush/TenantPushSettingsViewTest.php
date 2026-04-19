@@ -6,6 +6,7 @@ use App\Models\Plan;
 use App\Models\TenantOnesignalPushIdentity;
 use App\Models\TenantPushEventPreference;
 use App\Models\User;
+use App\TenantPush\TenantPushCrmRequestRecipientResolver;
 use App\TenantPush\TenantPushFeatureGate;
 use App\TenantPush\TenantPushProviderStatus;
 use App\TenantPush\TenantPushSettingsView;
@@ -52,7 +53,7 @@ class TenantPushSettingsViewTest extends TestCase
             ],
         );
 
-        $viewBefore = TenantPushSettingsView::make($tenant, $gate, app(\App\TenantPush\TenantPushCrmRequestRecipientResolver::class));
+        $viewBefore = TenantPushSettingsView::make($tenant, $gate, app(TenantPushCrmRequestRecipientResolver::class));
         $this->assertFalse($viewBefore->readyForEventDelivery);
         $this->assertSame(TenantPushSubscriptionAggregate::None, $viewBefore->subscriptionAggregate);
 
@@ -64,7 +65,7 @@ class TenantPushSettingsViewTest extends TestCase
             'last_seen_at' => now(),
         ]);
 
-        $viewAfter = TenantPushSettingsView::make($tenant, $gate, app(\App\TenantPush\TenantPushCrmRequestRecipientResolver::class));
+        $viewAfter = TenantPushSettingsView::make($tenant, $gate, app(TenantPushCrmRequestRecipientResolver::class));
         $this->assertTrue($viewAfter->readyForEventDelivery);
         $this->assertSame(TenantPushSubscriptionAggregate::Active, $viewAfter->subscriptionAggregate);
     }

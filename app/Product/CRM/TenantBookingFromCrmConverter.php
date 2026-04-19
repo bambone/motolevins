@@ -9,7 +9,11 @@ use App\Models\Lead;
 use App\Models\Motorcycle;
 use App\Models\RentalUnit;
 use App\Models\Tenant;
+use App\MotorcyclePricing\BookingPricingHydrator;
+use App\MotorcyclePricing\MotorcycleBookingPricingPolicy;
+use App\MotorcyclePricing\RentalPricingDuration;
 use App\Services\AvailabilityService;
+use App\Services\PricingService;
 use App\Support\PhoneNormalizer;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
@@ -23,6 +27,9 @@ final class TenantBookingFromCrmConverter
 {
     public function __construct(
         private readonly AvailabilityService $availabilityService,
+        private readonly PricingService $pricingService,
+        private readonly BookingPricingHydrator $bookingPricingHydrator,
+        private readonly MotorcycleBookingPricingPolicy $motorcycleBookingPricingPolicy,
     ) {}
 
     /**
@@ -182,11 +189,32 @@ final class TenantBookingFromCrmConverter
             ->orderBy('id')
             ->first();
 
-        $ppd = (int) $motorcycle->price_per_day;
         $startDay = Carbon::parse($startDate, $tz)->startOfDay();
         $endDay = Carbon::parse($endDate, $tz)->startOfDay();
-        $days = max(1, (int) $startDay->diffInDays($endDay) + 1);
-        $total = $days * $ppd;
+        $days = RentalPricingDuration::inclusiveCalendarDays($startDay, $endDay);
+
+        if (! $this->motorcycleBookingPricingPolicy->canMaterializeConfirmedBookingWithEngineTotal($motorcycle, $days)) {
+            Log::warning('Booking materialize: skipped — motorcycle quote is not ok (on_request, invalid profile, etc.)', [
+                'lead_id' => $lead->id,
+                'motorcycle_id' => $motorcycle->id,
+                'days' => $days,
+            ]);
+
+            return [null, false];
+        }
+
+        $target = $unit ?? $motorcycle;
+        $pricing = $this->pricingService->calculatePrice(
+            $target,
+            $startAt->copy()->startOfDay(),
+            $endAt->copy()->startOfDay(),
+            'daily',
+            [],
+        );
+        $addonLines = is_array($pricing['addons'] ?? null) ? $pricing['addons'] : [];
+        $v2 = $this->bookingPricingHydrator->bookingPricingAttributes($motorcycle, $days, $pricing, $addonLines);
+        $basePrice = (int) ($pricing['base_price'] ?? 0);
+        $ppdSnap = $days > 0 ? (int) round($basePrice / $days) : 0;
 
         $phone = $lead->phone ?: ($crm?->phone ?? '');
         $name = $lead->name ?: ($crm?->name ?? '') ?: '';
@@ -203,8 +231,17 @@ final class TenantBookingFromCrmConverter
             'start_at' => $startAt,
             'end_at' => $endAt,
             'status' => BookingStatus::CONFIRMED,
-            'price_per_day_snapshot' => $ppd,
-            'total_price' => $total,
+            'price_per_day_snapshot' => $ppdSnap,
+            'total_price' => (int) ($pricing['total'] ?? 0),
+            'pricing_snapshot_json' => $v2['pricing_snapshot_json'],
+            'pricing_snapshot_schema_version' => $v2['pricing_snapshot_schema_version'],
+            'currency' => $v2['currency'],
+            'rental_total_minor' => $v2['rental_total_minor'],
+            'deposit_amount_minor' => $v2['deposit_amount_minor'],
+            'payable_now_minor' => $v2['payable_now_minor'],
+            'selected_tariff_id' => $v2['selected_tariff_id'],
+            'selected_tariff_kind' => $v2['selected_tariff_kind'],
+            'deposit_amount' => (int) ($pricing['deposit'] ?? 0),
             'customer_name' => $name,
             'phone' => $phone,
             'phone_normalized' => PhoneNormalizer::normalize($phone),

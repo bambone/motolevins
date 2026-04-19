@@ -4,16 +4,16 @@ declare(strict_types=1);
 
 namespace App\Filament\Tenant\Pages;
 
+use App\Filament\Shared\TimezoneSelect;
 use App\Filament\Tenant\Concerns\ResolvesTenantOnboardingBranch;
 use App\Filament\Tenant\Support\TenantPanelHintHeaderAction;
 use App\Models\Tenant;
 use App\NotificationCenter\NotificationEventRegistry;
-use App\Filament\Shared\TimezoneSelect;
-use App\Validation\TelegramBriefChatIdRule;
 use App\TenantSiteSetup\BookingNotificationsBriefingApplier;
 use App\TenantSiteSetup\BookingNotificationsQuestionnaireRepository;
 use App\TenantSiteSetup\SetupProductSignalsRepository;
 use App\TenantSiteSetup\TenantSiteSetupFeature;
+use App\Validation\TelegramBriefChatIdRule;
 use Filament\Actions\Action;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\Select;
@@ -206,7 +206,7 @@ class TenantSiteSetupBookingNotificationsPage extends Page
                             ->placeholder('-1001234567890')
                             ->maxLength(128)
                             ->helperText($this->destTelegramHelperHtml())
-                            ->rules([new TelegramBriefChatIdRule()]),
+                            ->rules([new TelegramBriefChatIdRule]),
                     ])
                     ->columns(2),
                 Section::make('События для правил')
@@ -466,5 +466,4 @@ class TenantSiteSetupBookingNotificationsPage extends Page
             .'</div>'
         );
     }
-
 }

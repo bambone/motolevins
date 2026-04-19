@@ -97,7 +97,7 @@ class WindowsSafeFilesystem extends Filesystem
                     $result = @hash_file($algorithm, $path);
 
                     return $result === false ? false : $result;
-                } catch (\Throwable) {
+                } catch (Throwable) {
                     return false;
                 }
             }

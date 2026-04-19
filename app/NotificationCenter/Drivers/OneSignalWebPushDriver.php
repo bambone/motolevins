@@ -128,9 +128,6 @@ final class OneSignalWebPushDriver implements NotificationChannelDriver
         );
     }
 
-    /**
-     * @return ChannelSendResult
-     */
     private function skipped(string $code, string $message): ChannelSendResult
     {
         return new ChannelSendResult(

@@ -32,7 +32,7 @@ class TelegramBriefChatIdRuleTest extends TestCase
 
     private function assertValidated(string $value, bool $expectOk): void
     {
-        $rule = new TelegramBriefChatIdRule();
+        $rule = new TelegramBriefChatIdRule;
         $failed = false;
         $rule->validate('dest_telegram_chat_id', $value, function () use (&$failed): void {
             $failed = true;

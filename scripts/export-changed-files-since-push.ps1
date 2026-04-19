@@ -42,15 +42,34 @@ $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $root = Split-Path -Parent $scriptDir
 Set-Location -LiteralPath $root
 
+# Git writes line-ending hints to stderr; with $ErrorActionPreference = 'Stop' PowerShell treats that as terminating.
+function Invoke-GitTextOutput {
+    param([Parameter(Mandatory)][string[]]$GitArguments)
+    $prev = $ErrorActionPreference
+    $ErrorActionPreference = 'SilentlyContinue'
+    try {
+        & git @GitArguments 2>&1 | ForEach-Object {
+            if ($_ -is [string]) { $_ }
+        }
+    } finally {
+        $ErrorActionPreference = $prev
+    }
+}
+
+function Get-GitNonEmptyLines {
+    param([Parameter(Mandatory)][string[]]$GitArguments)
+    @(Invoke-GitTextOutput -GitArguments $GitArguments | Where-Object { $_ -and $_.Trim() -ne '' })
+}
+
 if ($Fetch) {
-    git fetch --quiet 2>$null
+    $null = Invoke-GitTextOutput -GitArguments @('fetch', '--quiet')
 }
 
 function Resolve-BaseRef {
     param([string] $Explicit)
 
     if ($Explicit) {
-        $hash = git rev-parse -q --verify $Explicit 2>$null
+        $hash = @(Get-GitNonEmptyLines -GitArguments @('rev-parse', '-q', '--verify', $Explicit))[0]
         if ($LASTEXITCODE -ne 0 -or -not $hash) {
             Write-Error "Invalid or missing BaseRef: $Explicit"
         }
@@ -58,18 +77,18 @@ function Resolve-BaseRef {
     }
 
     $u = '@{u}'
-    $upHash = git rev-parse -q --verify $u 2>$null
+    $upHash = @(Get-GitNonEmptyLines -GitArguments @('rev-parse', '-q', '--verify', $u))[0]
     if ($LASTEXITCODE -eq 0 -and $upHash) {
         return $u
     }
 
-    $branch = git rev-parse --abbrev-ref HEAD 2>$null
+    $branch = @(Get-GitNonEmptyLines -GitArguments @('rev-parse', '--abbrev-ref', 'HEAD'))[0]
     if (-not $branch -or $branch -eq 'HEAD') {
         Write-Error 'Cannot determine current branch. Pass -BaseRef (e.g. origin/main).'
     }
 
     $originBranch = "origin/$branch"
-    $obHash = git rev-parse -q --verify $originBranch 2>$null
+    $obHash = @(Get-GitNonEmptyLines -GitArguments @('rev-parse', '-q', '--verify', $originBranch))[0]
     if ($LASTEXITCODE -eq 0 -and $obHash) {
         Write-Warning "No upstream (@{u}). Using $originBranch. Set upstream: git push -u origin $branch"
         return $originBranch
@@ -96,12 +115,12 @@ if ($outDir -and -not (Test-Path -LiteralPath $outDir)) {
 }
 
 # Tracked: working tree + index vs base (everything after remote state).
-$tracked = @(git diff --name-only $base 2>$null | Where-Object { $_ -and $_.Trim() -ne '' })
+$tracked = @(Get-GitNonEmptyLines -GitArguments @('diff', '--name-only', $base))
 if ($null -eq $tracked) { $tracked = @() }
 
 $untracked = @()
 if ($IncludeUntracked) {
-    $untracked = @(git ls-files -o --exclude-standard 2>$null | Where-Object { $_ -and $_.Trim() -ne '' })
+    $untracked = @(Get-GitNonEmptyLines -GitArguments @('ls-files', '-o', '--exclude-standard'))
 }
 
 $allFiles = @($tracked + $untracked | Sort-Object -Unique)
@@ -109,7 +128,8 @@ $allFiles = @($tracked + $untracked | Sort-Object -Unique)
 $sb = New-Object System.Text.StringBuilder
 $null = $sb.AppendLine('# export-changed-files-since-push')
 $null = $sb.AppendLine("# repo: $root")
-$null = $sb.AppendLine("# base: $base ($(git rev-parse -q --verify $base 2>$null))")
+$baseHashForHeader = @(Get-GitNonEmptyLines -GitArguments @('rev-parse', '-q', '--verify', $base))[0]
+$null = $sb.AppendLine("# base: $base ($baseHashForHeader)")
 $null = $sb.AppendLine("# generated: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')")
 $null = $sb.AppendLine('')
 
@@ -139,8 +159,9 @@ foreach ($rel in $allFiles) {
     } else {
         # Deleted or only in git: try last committed blob at HEAD.
         $gitPath = $rel -replace '\\', '/'
-        $fromHead = git show "HEAD:$gitPath" 2>$null
-        if ($LASTEXITCODE -eq 0 -and $null -ne $fromHead) {
+        $fromHeadLines = @(Invoke-GitTextOutput -GitArguments @('show', "HEAD:$gitPath"))
+        if ($LASTEXITCODE -eq 0 -and $fromHeadLines.Count -gt 0) {
+            $fromHead = $fromHeadLines -join "`n"
             $null = $sb.AppendLine('[file missing on disk; last committed version from HEAD below]')
             $null = $sb.AppendLine($fromHead)
         } else {

@@ -12,6 +12,8 @@ use App\Models\Lead;
 use App\Models\Motorcycle;
 use App\Models\RentalUnit;
 use App\Money\MoneyBindingRegistry;
+use App\MotorcyclePricing\MotorcyclePricingSummaryPresenter;
+use App\MotorcyclePricing\PricingMinorMoney;
 use App\Services\BookingService;
 use App\Services\TenantPublicBookingAvailabilityService;
 use Carbon\Carbon;
@@ -27,6 +29,7 @@ final class CrmRequestBookingWorkspaceAssembler
     public function __construct(
         private readonly BookingService $bookingService,
         private readonly TenantPublicBookingAvailabilityService $tenantPublicBookingAvailabilityService,
+        private readonly MotorcyclePricingSummaryPresenter $motorcyclePricingSummary,
     ) {}
 
     public function assemble(CrmRequest $crm): CrmRequestBookingWorkspaceData
@@ -109,9 +112,18 @@ final class CrmRequestBookingWorkspaceAssembler
         $motorcycleImageUrl = $motorcycle?->cover_url;
         $motorcycleDescriptor = $this->buildMotorcycleDescriptor($motorcycle);
         $motorcycleStatusLabel = $motorcycle !== null ? (Motorcycle::statuses()[$motorcycle->status] ?? $motorcycle->status) : null;
-        $priceLabel = $motorcycle !== null && $motorcycle->price_per_day && $tenant !== null
-            ? tenant_money_format((int) $motorcycle->price_per_day, MoneyBindingRegistry::MOTORCYCLE_PRICE_PER_DAY, $tenant).' / сутки'
-            : null;
+        $priceLabel = null;
+        if ($motorcycle !== null && $tenant !== null) {
+            $p = $this->motorcyclePricingSummary->present($motorcycle, $tenant);
+            $minor = $p['card_price_minor'];
+            if (! $p['card_profile_invalid'] && ! $p['card_is_on_request'] && $minor !== null && (int) $minor > 0) {
+                $priceLabel = tenant_money_format(
+                    PricingMinorMoney::minorToMajor((int) $minor),
+                    MoneyBindingRegistry::MOTORCYCLE_PRICE_PER_DAY,
+                    $tenant,
+                ).' / сутки';
+            }
+        }
 
         $availabilityState = BookingWorkspaceAvailabilityState::Unknown;
         $timelineSegments = [];

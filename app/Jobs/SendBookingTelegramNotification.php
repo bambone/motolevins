@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Bookings\BookingPricingTotals;
 use App\Models\Booking;
 use App\Money\MoneyBindingRegistry;
 use App\Services\CurrentTenantManager;
@@ -47,12 +48,14 @@ class SendBookingTelegramNotification implements ShouldQueue
 
         $vehicleName = $this->booking->bike?->name ?? $this->booking->motorcycle?->name ?? 'Неизвестный транспорт';
         $days = Carbon::parse($this->booking->start_date)->diffInDays(Carbon::parse($this->booking->end_date)) + 1;
+        $totalMajor = BookingPricingTotals::grandTotalMajor($this->booking);
+        $ppdMajor = BookingPricingTotals::pricePerDaySnapshotMajor($this->booking);
         $formattedPrice = $tenant !== null
-            ? tenant_money_format((int) $this->booking->total_price, MoneyBindingRegistry::BOOKING_TOTAL_PRICE, $tenant)
-            : number_format((int) $this->booking->total_price, 0, ',', ' ').' '.chr(0xE2).chr(0x82).chr(0xBD);
+            ? tenant_money_format($totalMajor, MoneyBindingRegistry::BOOKING_TOTAL_PRICE, $tenant)
+            : number_format($totalMajor, 0, ',', ' ').' '.chr(0xE2).chr(0x82).chr(0xBD);
         $formattedSnapshot = $tenant !== null
-            ? tenant_money_format((int) $this->booking->price_per_day_snapshot, MoneyBindingRegistry::BOOKING_PRICE_PER_DAY_SNAPSHOT, $tenant)
-            : number_format((int) $this->booking->price_per_day_snapshot, 0, ',', ' ').' '.chr(0xE2).chr(0x82).chr(0xBD);
+            ? tenant_money_format($ppdMajor, MoneyBindingRegistry::BOOKING_PRICE_PER_DAY_SNAPSHOT, $tenant)
+            : number_format($ppdMajor, 0, ',', ' ').' '.chr(0xE2).chr(0x82).chr(0xBD);
 
         $message = "📅 *Новое {$bookingLabel}*\n\n"
             ."{$resourceLabel}: {$vehicleName}\n"

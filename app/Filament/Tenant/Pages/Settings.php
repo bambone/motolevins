@@ -2,9 +2,9 @@
 
 namespace App\Filament\Tenant\Pages;
 
-use App\Filament\Tenant\Support\TenantPanelHintHeaderAction;
 use App\Filament\Forms\Components\TenantPublicImagePicker;
 use App\Filament\Shared\TenantAnalyticsFormSchema;
+use App\Filament\Tenant\Support\TenantPanelHintHeaderAction;
 use App\Livewire\Concerns\InteractsWithTenantPublicFilePicker;
 use App\Models\PlatformSetting;
 use App\Models\Setting;

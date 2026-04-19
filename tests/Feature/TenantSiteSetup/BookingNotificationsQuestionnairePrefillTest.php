@@ -185,7 +185,7 @@ class BookingNotificationsQuestionnairePrefillTest extends TestCase
      * intent: не кастомизировал события. Подписки мастера дают дополнительный lead.* — getMerged() должен
      * брать ключи из подписок, а не отбрасывать их из‑за сравнения с глобальным default анкеты.
      */
-    public function test_getMerged_prefers_wizard_event_keys_when_list_matches_tenant_effective_default(): void
+    public function test_get_merged_prefers_wizard_event_keys_when_list_matches_tenant_effective_default(): void
     {
         $tenant = $this->createTenantWithActiveDomain('bn_merge_wizard_effective', [
             'scheduling_module_enabled' => false,

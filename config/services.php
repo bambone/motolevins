@@ -1,5 +1,7 @@
 <?php
 
+use App\Support\NominatimContactIdentifier;
+
 return [
 
     /*
@@ -43,7 +45,7 @@ return [
         'enabled' => env('NOMINATIM_ENABLED', true),
         'base_url' => env('NOMINATIM_BASE_URL', 'https://nominatim.openstreetmap.org'),
         'contact' => env('NOMINATIM_CONTACT')
-            ?: \App\Support\NominatimContactIdentifier::resolveForUserAgent(),
+            ?: NominatimContactIdentifier::resolveForUserAgent(),
         'timeout' => (int) env('NOMINATIM_TIMEOUT', 8),
         'search_cache_ttl' => (int) env('NOMINATIM_SEARCH_CACHE_TTL', 86400),
         'pick_cache_ttl' => (int) env('NOMINATIM_PICK_CACHE_TTL', 86400),

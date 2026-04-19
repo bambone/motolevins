@@ -160,9 +160,16 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css">
 
     @if (tenant())
-        <script id="rb-tenant-money-config" type="application/json">{!! json_encode(tenant_money_public_config(tenant()), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR) !!}</script>
+        <script id="rb-tenant-money-config" type="application/json">{!! json_encode(array_merge(
+            tenant_money_public_config(tenant()),
+            ['pricing_legacy_scalar_card_fallback' => (bool) config('pricing.legacy_scalar_price_fallback', true)],
+        ), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR) !!}</script>
         <script>
-            window.__tenantMoneyConfig = JSON.parse(document.getElementById('rb-tenant-money-config').textContent);
+            (function () {
+                var cfg = JSON.parse(document.getElementById('rb-tenant-money-config').textContent);
+                window.__tenantMoneyConfig = cfg;
+                window.__pricingLegacyCardFallback = cfg.pricing_legacy_scalar_card_fallback !== false;
+            })();
         </script>
     @endif
 
@@ -170,6 +177,9 @@
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.3/dist/cdn.min.js"></script>
     <script>
         document.addEventListener('alpine:init', () => {
+            if (typeof window.__pricingLegacyCardFallback === 'undefined') {
+                window.__pricingLegacyCardFallback = true;
+            }
             if (window.__tenantBookingStoreRegistered) {
                 return;
             }
@@ -363,6 +373,112 @@
                     return new Intl.NumberFormat('ru-RU').format(amount);
                 },
             });
+
+            Alpine.data('bikeCardPeriodPrice', ({ motorcycleId, fallbackPricePerDay }) => ({
+                status: 'idle',
+                totalMajor: 0,
+                summaryText: '',
+                isOnRequest: false,
+                showAmount() {
+                    return this.status === 'ok' || this.status === 'fallback_legacy';
+                },
+                async init() {
+                    this.$watch(
+                        () => [
+                            Alpine.store('tenantBooking').filters.start_date,
+                            Alpine.store('tenantBooking').filters.end_date,
+                            motorcycleId,
+                        ],
+                        () => {
+                            void this.refresh();
+                        },
+                    );
+                    await this.refresh();
+                },
+                async refresh() {
+                    const store = Alpine.store('tenantBooking');
+                    const start = store.filters.start_date;
+                    const end = store.filters.end_date;
+                    const fb = Number(fallbackPricePerDay) || 0;
+                    if (! start || ! end) {
+                        this.status = 'idle';
+                        this.totalMajor = 0;
+                        this.summaryText = '';
+                        this.isOnRequest = false;
+
+                        return;
+                    }
+                    this.status = 'loading';
+                    this.summaryText = '';
+                    this.isOnRequest = false;
+                    try {
+                        const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+                        const res = await fetch('/api/tenant/motorcycles/quote', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                Accept: 'application/json',
+                                ...(csrf ? { 'X-CSRF-TOKEN': csrf } : {}),
+                            },
+                            body: JSON.stringify({
+                                motorcycle_id: motorcycleId,
+                                start_date: start,
+                                end_date: end,
+                            }),
+                        });
+                        const data = await res.json().catch(() => ({}));
+                        if (! res.ok) {
+                            this.status = 'network_error';
+                            this.applyDegradedFallback(store, fb);
+
+                            return;
+                        }
+                        const st = data && data.status;
+                        if (st === 'ok' && data.totals && data.totals.rental_total_minor != null) {
+                            this.status = 'ok';
+                            this.totalMajor = Math.floor(Number(data.totals.rental_total_minor) / 100);
+
+                            return;
+                        }
+                        if (st === 'on_request') {
+                            this.status = 'on_request';
+                            this.totalMajor = 0;
+                            this.summaryText = (data.presentation && data.presentation.summary_text)
+                                ? String(data.presentation.summary_text)
+                                : 'Цена рассчитывается по запросу';
+                            this.isOnRequest = true;
+
+                            return;
+                        }
+                        if (st === 'invalid_profile') {
+                            this.status = 'invalid_profile';
+                            this.totalMajor = 0;
+                            this.summaryText = (data.presentation && data.presentation.summary_text)
+                                ? String(data.presentation.summary_text)
+                                : 'Требуется настройка тарифов';
+
+                            return;
+                        }
+                        this.status = 'invalid_profile';
+                        this.applyDegradedFallback(store, fb);
+                    } catch (e) {
+                        this.status = 'network_error';
+                        this.applyDegradedFallback(store, fb);
+                    }
+                },
+                applyDegradedFallback(store, fb) {
+                    if (window.__pricingLegacyCardFallback === true) {
+                        this.status = 'fallback_legacy';
+                        this.totalMajor = store.calculateCardTotalPrice(fb);
+                        this.summaryText = '';
+                        this.isOnRequest = false;
+                    } else {
+                        this.totalMajor = 0;
+                        this.summaryText = 'Не удалось рассчитать стоимость';
+                        this.isOnRequest = false;
+                    }
+                },
+            }));
 
             Alpine.store('tenantBooking').loadFromStorage();
         });

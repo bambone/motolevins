@@ -43,7 +43,6 @@ final class ContactsInfoDataService
     /**
      * Flatten repeater state to a list of channel row arrays (unwrap mistaken single-wrapper shape).
      *
-     * @param  mixed  $channels
      * @return list<array<string, mixed>>
      */
     public static function normalizeChannelsForRepeater(mixed $channels): array

@@ -31,7 +31,7 @@ final readonly class SectionAdminSummary
      * @param  array<string, string>  $meta
      * @param  list<ChannelHint>  $channels
      * @param  list<string>  $builderNotes
-     * @param  array<string, string>  $presentationMeta render_mode, width_mode, page_mode, theme_key — для согласованности с публичным выводом
+     * @param  array<string, string>  $presentationMeta  render_mode, width_mode, page_mode, theme_key — для согласованности с публичным выводом
      */
     public function __construct(
         public string $displayTitle,

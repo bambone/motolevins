@@ -4,13 +4,15 @@ namespace App\ContactChannels;
 
 use App\Models\Tenant;
 use App\Models\TenantSetting;
+use Tests\Feature\Tenant\TenantPublicContactsComposerIsolationTest;
+use Tests\Unit\ContactChannels\TenantPublicSiteContactsServiceTest;
 
 /**
  * Публичные контакты для Blade (шапка, плавающие кнопки): из contact_channels.state, без чужих дефолтов.
  * Данные всегда по {@see Tenant::$id} в {@see TenantSetting}; шаблоны общие — изоляция здесь и в View-composer.
  *
- * Тесты: {@see \Tests\Unit\ContactChannels\TenantPublicSiteContactsServiceTest},
- * {@see \Tests\Feature\Tenant\TenantPublicContactsComposerIsolationTest}.
+ * Тесты: {@see TenantPublicSiteContactsServiceTest},
+ * {@see TenantPublicContactsComposerIsolationTest}.
  */
 final class TenantPublicSiteContactsService
 {

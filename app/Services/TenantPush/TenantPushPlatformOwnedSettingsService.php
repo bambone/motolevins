@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Services\TenantPush;
 
 use App\Models\Tenant;
-use App\Models\User;
 use App\TenantPush\TenantPushFeatureGate;
 use App\TenantPush\TenantPushOverride;
 use Illuminate\Contracts\Auth\Authenticatable;

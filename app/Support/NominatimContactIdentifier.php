@@ -13,6 +13,7 @@ final class NominatimContactIdentifier
 {
     /**
      * Адрес в скобках User-Agent. Публичный Nominatim часто отвечает 403 на очевидные
+     *
      * placeholder'ы вроде *@example.com из дефолтного MAIL_FROM_ADDRESS.
      */
     public static function resolveForUserAgent(): string

@@ -71,5 +71,4 @@ class CreateNotificationSubscription extends CreateRecord
         }
         $this->record->destinations()->sync($sync);
     }
-
 }

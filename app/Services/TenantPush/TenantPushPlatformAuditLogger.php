@@ -4,12 +4,13 @@ declare(strict_types=1);
 
 namespace App\Services\TenantPush;
 
+use App\Models\TenantPushSettings;
 use App\Models\User;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Аудит изменений platform-owned полей {@see \App\Models\TenantPushSettings} из панели платформы.
+ * Аудит изменений platform-owned полей {@see TenantPushSettings} из панели платформы.
  */
 final class TenantPushPlatformAuditLogger
 {

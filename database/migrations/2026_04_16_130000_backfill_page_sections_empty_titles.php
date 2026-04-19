@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\PageSection;
+use App\PageBuilder\LegacySectionTypeResolver;
 use App\PageBuilder\PageSectionTypeRegistry;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
@@ -15,7 +16,7 @@ use Illuminate\Support\Facades\DB;
 return new class extends Migration
 {
     /**
-     * Совпадает с {@see \App\PageBuilder\LegacySectionTypeResolver::KEY_TO_TYPE}.
+     * Совпадает с {@see LegacySectionTypeResolver::KEY_TO_TYPE}.
      *
      * @var array<string, string>
      */

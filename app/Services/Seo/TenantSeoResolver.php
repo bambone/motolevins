@@ -10,6 +10,8 @@ use App\Models\SeoMeta;
 use App\Models\Tenant;
 use App\Models\TenantSetting;
 use App\Money\MoneyBindingRegistry;
+use App\MotorcyclePricing\MotorcyclePricingSummaryPresenter;
+use App\MotorcyclePricing\PricingMinorMoney;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 
@@ -22,6 +24,7 @@ final class TenantSeoResolver
         private JsonLdGenerator $jsonLd,
         private TenantPublicOgImageResolver $ogImageResolver,
         private TenantPublicPageBreadcrumbs $pageBreadcrumbs,
+        private MotorcyclePricingSummaryPresenter $motorcyclePricingSummary,
     ) {}
 
     /**
@@ -281,9 +284,11 @@ final class TenantSeoResolver
             $motorcycleName = trim((string) $model->name) ?: (string) $model->slug;
             $motorcycleBrand = trim((string) $model->brand);
             $motorcycleModel = trim((string) $model->model);
-            $price = (int) ($model->price_per_day ?? 0);
-            if ($price > 0) {
-                $fromPrice = tenant_money_format($price, MoneyBindingRegistry::MOTORCYCLE_PRICE_PER_DAY, $tenant);
+            $presented = $this->motorcyclePricingSummary->present($model, $tenant);
+            $seo = $presented['seo_offer_candidate'];
+            if (is_array($seo) && (int) ($seo['minor'] ?? 0) > 0) {
+                $major = PricingMinorMoney::minorToMajor((int) $seo['minor']);
+                $fromPrice = tenant_money_format($major, MoneyBindingRegistry::MOTORCYCLE_PRICE_PER_DAY, $tenant);
             }
             $leadForTitle = trim($motorcycleBrand.' '.$motorcycleModel);
             if ($leadForTitle === '') {

@@ -126,12 +126,14 @@ class TenantMediaBackfillFromR2Command extends Command
                 if ($onlyMissing && is_file($localPath) && filesize($localPath) === $size) {
                     $skipped++;
                     $rows[] = $this->manifestRow($bucket, $key, $localPath, $size, $etag, $lastMod, 'skipped', '');
+
                     continue;
                 }
 
                 if ($dry) {
                     $this->line('[dry-run] '.$key);
                     $rows[] = $this->manifestRow($bucket, $key, $localPath, $size, $etag, $lastMod, 'dry_run', '');
+
                     continue;
                 }
 
@@ -139,6 +141,7 @@ class TenantMediaBackfillFromR2Command extends Command
                 if (! is_dir($dir) && ! mkdir($dir, 0775, true) && ! is_dir($dir)) {
                     $failed++;
                     $rows[] = $this->manifestRow($bucket, $key, $localPath, $size, $etag, $lastMod, 'failed', 'mkdir failed');
+
                     continue;
                 }
 

@@ -65,16 +65,13 @@ class MotorcycleLocationEditor extends Component implements HasSchemas
 
         try {
             $this->form->validate();
-            $data = $this->form->getState();
+            $data = MotorcycleFormFieldKit::normalizeFleetLocationFormState($this->form->getState());
             $m = $this->resolveMotorcycle();
             $prevMode = $m->location_mode ?? MotorcycleLocationMode::Everywhere;
             $prevCardLocationIds = $m->tenantLocations()->pluck('tenant_locations.id')->all();
 
             $usesFleet = (bool) ($data['uses_fleet_units'] ?? false);
             $mode = MotorcycleLocationMode::from($data['location_mode'] ?? MotorcycleLocationMode::Everywhere->value);
-            if (! $usesFleet && $mode === MotorcycleLocationMode::PerUnit) {
-                $mode = MotorcycleLocationMode::Everywhere;
-            }
 
             $m->update([
                 'uses_fleet_units' => $usesFleet,

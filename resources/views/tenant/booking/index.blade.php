@@ -1,6 +1,7 @@
 @extends('tenant.layouts.app')
 
-@php use App\Money\MoneyBindingRegistry;
+@php
+    use App\MotorcyclePricing\MotorcyclePricingSummaryPresenter;
 @endphp
 
 @section('content')
@@ -15,6 +16,14 @@
 
     <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 lg:gap-6">
         @foreach($motorcycles as $m)
+            @php
+                $bp = app(MotorcyclePricingSummaryPresenter::class)->present($m, tenant());
+                $bOnReq = (bool) ($bp['card_is_on_request'] ?? false);
+                $bInvalid = (bool) ($bp['card_profile_invalid'] ?? false);
+                $bText = trim((string) ($bp['card_price_text'] ?? ''));
+                $bSuf = trim((string) ($bp['card_price_suffix'] ?? ''));
+                $bShowFrom = (bool) ($bp['card_show_leading_from'] ?? false);
+            @endphp
             <a href="{{ route('booking.show', $m->slug) }}" class="glass-card group block overflow-hidden rounded-2xl transition-shadow hover:shadow-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moto-amber touch-manipulation">
                 <div class="aspect-[4/3] overflow-hidden bg-carbon">
                     @if($m->publicCoverUrl())
@@ -29,8 +38,19 @@
                     <h3 class="mb-1 text-base font-bold text-white sm:text-lg">{{ $m->name }}</h3>
                     <p class="mb-3 line-clamp-2 text-xs text-silver sm:text-sm">{{ $m->short_description }}</p>
                     <div class="flex flex-wrap items-baseline justify-between gap-2">
-                        <span class="font-bold text-moto-amber">{{ tenant_money_format((int) ($m->price_per_day ?? 0), MoneyBindingRegistry::MOTORCYCLE_PRICE_PER_DAY) }}</span>
-                        <span class="text-xs text-silver sm:text-sm">/ сутки</span>
+                        @if($bInvalid || ($bText === '' && ! $bOnReq))
+                            <span class="font-bold text-moto-amber">{{ $bInvalid ? 'Стоимость уточняйте' : '—' }}</span>
+                        @elseif($bOnReq)
+                            <span class="font-bold text-moto-amber">{{ $bText !== '' ? $bText : 'По запросу' }}</span>
+                        @else
+                            @if($bShowFrom)
+                                <span class="text-xs font-semibold text-silver">от</span>
+                            @endif
+                            <span class="font-bold text-moto-amber">{{ $bText }}</span>
+                            @if($bSuf !== '')
+                                <span class="text-xs text-silver sm:text-sm">{{ $bSuf }}</span>
+                            @endif
+                        @endif
                     </div>
                 </div>
             </a>

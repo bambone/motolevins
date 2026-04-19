@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Notifications;
 
+use App\Jobs\DispatchNotificationDeliveryJob;
 use App\Models\CrmRequest;
 use App\Models\NotificationDelivery;
 use App\Models\NotificationDestination;
@@ -11,7 +12,6 @@ use App\Models\Tenant;
 use App\NotificationCenter\NotificationChannelType;
 use App\NotificationCenter\NotificationDeliveryStatus;
 use App\NotificationCenter\NotificationDestinationStatus;
-use App\Jobs\DispatchNotificationDeliveryJob;
 use App\NotificationCenter\NotificationEventRecorder;
 use App\NotificationCenter\NotificationPayloadDto;
 use App\NotificationCenter\Presenters\CrmRequestNotificationPresenter;

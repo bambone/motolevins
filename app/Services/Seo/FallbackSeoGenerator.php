@@ -10,6 +10,8 @@ use App\Models\SeoLandingPage;
 use App\Models\Tenant;
 use App\Models\TenantSetting;
 use App\Money\MoneyBindingRegistry;
+use App\MotorcyclePricing\MotorcyclePricingSummaryPresenter;
+use App\MotorcyclePricing\PricingMinorMoney;
 use Illuminate\Database\Eloquent\Model;
 
 final class FallbackSeoGenerator
@@ -166,9 +168,24 @@ final class FallbackSeoGenerator
             $description = $this->excerptFromPlain('Аренда '.$name.' у '.$site.'.', 160);
         }
 
+        $present = app(MotorcyclePricingSummaryPresenter::class)->present($moto, $tenant);
+        $offer = $present['seo_offer_candidate'];
+        $priceLine = '';
+        if (is_array($offer) && ($offer['minor'] ?? 0) > 0) {
+            $descriptor = trim((string) ($offer['price_descriptor'] ?? ''));
+            if ($descriptor === '') {
+                $descriptor = 'за сутки';
+            }
+            $priceLine = 'от '.tenant_money_format(
+                PricingMinorMoney::minorToMajor((int) $offer['minor']),
+                MoneyBindingRegistry::MOTORCYCLE_PRICE_PER_DAY,
+                $tenant,
+            ).' '.$descriptor;
+        }
+
         $geoPriceBits = array_filter([
             trim((string) TenantSetting::getForTenant($tenant->id, 'general.primary_city', '')),
-            $moto->price_per_day > 0 ? 'от '.tenant_money_format((int) $moto->price_per_day, MoneyBindingRegistry::MOTORCYCLE_PRICE_PER_DAY, $tenant).'/сутки' : '',
+            $priceLine,
         ]);
         if ($geoPriceBits !== [] && $description !== '') {
             $description = $this->excerptFromPlain($description.' '.implode(', ', $geoPriceBits), 160);

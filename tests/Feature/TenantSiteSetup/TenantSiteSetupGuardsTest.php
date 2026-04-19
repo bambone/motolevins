@@ -11,6 +11,7 @@ use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Testing\TestResponse;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 use Tests\Support\CreatesTenantsWithDomains;
 use Tests\TestCase;
 
@@ -144,7 +145,7 @@ class TenantSiteSetupGuardsTest extends TestCase
         );
         $this->actingAs($user);
 
-        $this->expectException(\Symfony\Component\HttpKernel\Exception\HttpException::class);
+        $this->expectException(HttpException::class);
         app(SetupItemStateService::class)->markNotNeeded($tenant, $user, 'settings.site_name', 'test', null);
     }
 

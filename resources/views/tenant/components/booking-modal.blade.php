@@ -108,17 +108,32 @@
                             </div>
 
                             <div x-show="calculatedDays > 0" x-collapse class="mt-6 rounded-xl border border-moto-amber/20 bg-gradient-to-br from-moto-amber/[0.08] to-white/[0.03] p-5 sm:p-6">
-                                <div class="mb-2 flex items-center justify-between text-base">
-                                    <span class="text-zinc-300">Стоимость 1 суток:</span>
-                                    <span class="font-medium text-white" x-text="formatMoney(bike.price, 'motorcycle.price_per_day')"></span>
-                                </div>
                                 <div class="mb-4 flex items-center justify-between border-b border-white/10 pb-4 text-base">
                                     <span class="text-zinc-300">Количество дней:</span>
                                     <span class="font-medium text-white" x-text="calculatedDays"></span>
                                 </div>
+                                <p class="mb-3 text-xs leading-relaxed text-zinc-500" x-show="quoteStatus === 'legacy_estimate'">
+                                    Ориентир по базовой ставке; итог подтверждает оператор.
+                                </p>
+                                <div x-show="quoteStatus === 'loading'" class="mb-3 text-sm text-zinc-400">Расчёт стоимости…</div>
+                                <div x-show="quoteStatus === 'ok'" class="mb-4 space-y-2 text-base">
+                                    <div class="flex flex-wrap items-center justify-between gap-2">
+                                        <span class="text-zinc-300" x-text="priceLineLabel"></span>
+                                        <span class="font-medium text-white" x-show="priceLineSecondary" x-text="priceLineSecondary"></span>
+                                    </div>
+                                </div>
+                                <div x-show="quoteStatus === 'on_request'" class="mb-4 rounded-lg border border-amber-500/25 bg-amber-500/[0.06] px-3 py-2 text-sm font-medium text-amber-100">
+                                    <span x-text="priceLineLabel || 'Цена по запросу'"></span>
+                                </div>
+                                <div x-show="quoteStatus === 'legacy_estimate'" class="mb-4">
+                                    <div class="mb-2 flex flex-wrap items-center justify-between gap-2 text-base">
+                                        <span class="text-zinc-300" x-text="priceLineLabel"></span>
+                                        <span class="font-medium text-white" x-show="priceLineSecondary" x-text="priceLineSecondary"></span>
+                                    </div>
+                                </div>
                                 <div class="flex items-end justify-between gap-3">
-                                    <span class="text-lg font-medium text-zinc-200">Итого к оплате:</span>
-                                    <span class="text-3xl font-bold tracking-tight text-moto-amber sm:text-4xl" x-text="formatMoney(totalPrice, 'booking.total_price')"></span>
+                                    <span class="text-lg font-medium text-zinc-200" x-text="quoteStatus === 'on_request' ? 'Итого' : 'Итого (ориентир)'"></span>
+                                    <span class="text-3xl font-bold tracking-tight text-moto-amber sm:text-4xl" x-text="quoteStatus === 'on_request' ? '—' : formatMoney(totalPrice, 'booking.total_price')"></span>
                                 </div>
                             </div>
 
@@ -296,6 +311,12 @@ document.addEventListener('alpine:init', () => {
         errorMessage: '',
 
         bike: { id: null, name: '', price: 0 },
+
+        /** @type {'idle'|'loading'|'ok'|'on_request'|'legacy_estimate'} */
+        quoteStatus: 'idle',
+        priceLineLabel: '',
+        priceLineSecondary: '',
+        _quoteSeq: 0,
 
         preferredOptions: Array.isArray(cfg.preferredOptions) ? cfg.preferredOptions : [],
 
@@ -583,7 +604,7 @@ document.addEventListener('alpine:init', () => {
             this.bike = {
                 id: bikeData.id,
                 name: bikeData.name,
-                price: bikeData.price,
+                price: Number(bikeData.price) || 0,
             };
             this.resetForm();
             const store = Alpine.store('tenantBooking');
@@ -633,6 +654,10 @@ document.addEventListener('alpine:init', () => {
             this.form.preferred_contact_value = '';
             this.calculatedDays = 0;
             this.totalPrice = 0;
+            this.quoteStatus = 'idle';
+            this.priceLineLabel = '';
+            this.priceLineSecondary = '';
+            this._quoteSeq += 1;
             this.isSuccess = false;
             this.errorMessage = '';
             this.hintsSeq += 1;
@@ -645,8 +670,12 @@ document.addEventListener('alpine:init', () => {
             this.syncPhoneFieldFromState();
         },
 
-        calculatePrice() {
+        async calculatePrice() {
             if (! this.form.start_date || ! this.form.end_date) {
+                this.calculatedDays = 0;
+                this.totalPrice = 0;
+                this.quoteStatus = 'idle';
+
                 return;
             }
 
@@ -656,6 +685,7 @@ document.addEventListener('alpine:init', () => {
             if (end < start) {
                 this.calculatedDays = 0;
                 this.totalPrice = 0;
+                this.quoteStatus = 'idle';
 
                 return;
             }
@@ -665,13 +695,99 @@ document.addEventListener('alpine:init', () => {
             const utc2 = Date.UTC(end.getFullYear(), end.getMonth(), end.getDate());
 
             this.calculatedDays = Math.floor((utc2 - utc1) / MS_PER_DAY) + 1;
-            this.totalPrice = this.calculatedDays * this.bike.price;
+            await this.refreshQuote();
+        },
+
+        applyLegacyPriceEstimate() {
+            this.quoteStatus = 'legacy_estimate';
+            const p = Number(this.bike.price) || 0;
+            this.totalPrice = this.calculatedDays * p;
+            this.priceLineLabel = 'Ориентир за сутки';
+            this.priceLineSecondary = this.formatMoney(p, 'motorcycle.price_per_day');
+        },
+
+        async refreshQuote() {
+            if (! this.bike?.id || ! this.form.start_date || ! this.form.end_date || this.calculatedDays <= 0) {
+                return;
+            }
+            const seq = ++this._quoteSeq;
+            this.quoteStatus = 'loading';
+            try {
+                const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+                if (! csrf) {
+                    this.applyLegacyPriceEstimate();
+
+                    return;
+                }
+                const res = await fetch('/api/tenant/motorcycles/quote', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Accept: 'application/json',
+                        'X-CSRF-TOKEN': csrf,
+                    },
+                    body: JSON.stringify({
+                        motorcycle_id: this.bike.id,
+                        start_date: this.form.start_date,
+                        end_date: this.form.end_date,
+                    }),
+                });
+                const data = await res.json().catch(() => ({}));
+                if (seq !== this._quoteSeq) {
+                    return;
+                }
+                if (! res.ok) {
+                    this.applyLegacyPriceEstimate();
+
+                    return;
+                }
+                const st = data.status;
+                if (st === 'ok' && data.totals && data.totals.rental_total_minor != null) {
+                    this.quoteStatus = 'ok';
+                    this.totalPrice = Math.floor(Number(data.totals.rental_total_minor) / 100);
+                    const lines = Array.isArray(data.lines) ? data.lines : [];
+                    const line = lines.find((l) => l && l.type === 'rental');
+                    if (line && Number(line.quantity) > 1 && line.unit_amount_minor != null) {
+                        this.priceLineLabel = 'За сутки (в периоде)';
+                        this.priceLineSecondary = this.formatMoney(
+                            Math.floor(Number(line.unit_amount_minor) / 100),
+                            'motorcycle.price_per_day',
+                        );
+                    } else if (line && line.unit_amount_minor != null && Number(line.quantity) === 1) {
+                        this.priceLineLabel = 'За выбранный период';
+                        this.priceLineSecondary = this.formatMoney(
+                            Math.floor(Number(line.unit_amount_minor) / 100),
+                            'booking.total_price',
+                        );
+                    } else {
+                        this.priceLineLabel = 'Аренда';
+                        this.priceLineSecondary = '';
+                    }
+
+                    return;
+                }
+                if (st === 'on_request') {
+                    this.quoteStatus = 'on_request';
+                    this.totalPrice = 0;
+                    this.priceLineLabel = (data.presentation && data.presentation.summary_text)
+                        ? String(data.presentation.summary_text)
+                        : 'Цена по запросу';
+                    this.priceLineSecondary = '';
+
+                    return;
+                }
+                this.applyLegacyPriceEstimate();
+            } catch (e) {
+                if (seq === this._quoteSeq) {
+                    this.applyLegacyPriceEstimate();
+                }
+            }
         },
 
         async submitForm() {
             this.errorMessage = '';
             this.fieldFlashClear();
-            this.calculatePrice();
+            await this.calculatePrice();
 
             const dateInputs = [this.$refs.bookingStartDateInput, this.$refs.bookingEndDateInput].filter(Boolean);
 

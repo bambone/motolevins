@@ -2,9 +2,9 @@
 
 namespace Tests\Unit\PageBuilder;
 
-use App\PageBuilder\Contacts\ContactChannelType;
 use App\PageBuilder\Contacts\ContactChannelRegistry;
 use App\PageBuilder\Contacts\ContactChannelsResolver;
+use App\PageBuilder\Contacts\ContactChannelType;
 use PHPUnit\Framework\TestCase;
 
 final class ContactChannelsResolverTest extends TestCase

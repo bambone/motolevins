@@ -7,6 +7,7 @@ namespace App\TenantPush;
 use App\Models\NotificationDestination;
 use App\Models\NotificationSubscription;
 use App\Models\Tenant;
+use App\Models\TenantOnesignalPushIdentity;
 use App\NotificationCenter\NotificationChannelType;
 use App\NotificationCenter\NotificationDestinationStatus;
 
@@ -56,7 +57,7 @@ final class TenantPushNotificationBindingSync
                 ],
             );
 
-            $identity = \App\Models\TenantOnesignalPushIdentity::query()
+            $identity = TenantOnesignalPushIdentity::query()
                 ->where('tenant_id', $tenant->id)
                 ->where('user_id', $userId)
                 ->where('is_active', true)

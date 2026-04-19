@@ -8,6 +8,9 @@ use App\Models\Motorcycle;
 use App\Models\RentalUnit;
 use App\Models\Tenant;
 use App\Models\User;
+use App\MotorcyclePricing\ApplicabilityMode;
+use App\MotorcyclePricing\MotorcyclePricingSchema;
+use App\MotorcyclePricing\TariffKind;
 use App\Product\CRM\DTO\ManualBookingCreateData;
 use App\Product\CRM\DTO\ManualLeadCreateData;
 use App\Product\CRM\ManualLeadBookingService;
@@ -16,6 +19,7 @@ use Database\Seeders\RolePermissionSeeder;
 use Filament\Facades\Filament;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Tests\Support\CreatesTenantsWithDomains;
 use Tests\TestCase;
@@ -390,6 +394,53 @@ class ManualLeadBookingServiceTest extends TestCase
         ));
 
         $this->assertNotSame($first->lead->id, $second->lead->id);
+    }
+
+    public function test_manual_booking_rejects_on_request_pricing_profile(): void
+    {
+        [$tenant, $m, $unit] = $this->tenantWithActiveUnit('mlb_onreq_block');
+        $tid = (string) Str::uuid();
+        $m->update([
+            'pricing_profile_json' => [
+                'schema_version' => MotorcyclePricingSchema::PROFILE_VERSION,
+                'currency' => 'RUB',
+                'tariffs' => [[
+                    'id' => $tid,
+                    'label' => 'Индивидуально',
+                    'kind' => TariffKind::OnRequest->value,
+                    'note' => 'Оставьте заявку',
+                    'applicability' => ['mode' => ApplicabilityMode::Always->value],
+                    'visibility' => ['show_on_card' => true, 'show_on_detail' => true, 'show_in_quote' => true],
+                    'priority' => 500,
+                    'sort_order' => 10,
+                ]],
+                'display' => [
+                    'card_primary_tariff_id' => $tid,
+                    'card_secondary_mode' => 'none',
+                    'card_secondary_text' => '',
+                    'card_secondary_tariff_id' => null,
+                ],
+                'financial_terms' => [],
+            ],
+        ]);
+        $this->bindTenantContext($tenant);
+
+        $user = User::factory()->create(['status' => 'active']);
+        $user->tenants()->attach($tenant->id, ['role' => 'booking_manager', 'status' => 'active']);
+        $this->actingAs($user);
+
+        $this->expectException(ValidationException::class);
+        app(ManualLeadBookingService::class)->createManualBooking(new ManualBookingCreateData(
+            tenantId: $tenant->id,
+            name: 'Клиент',
+            motorcycleId: $m->id,
+            rentalUnitId: $unit->id,
+            startDateYmd: '2026-09-01',
+            endDateYmd: '2026-09-02',
+            phone: '+79994445566',
+            createLead: true,
+            createCrm: false,
+        ));
     }
 
     public function test_user_without_tenant_membership_cannot_create_lead(): void

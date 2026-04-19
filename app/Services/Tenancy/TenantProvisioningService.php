@@ -10,13 +10,14 @@ use App\Services\Seo\InitializeTenantSeoDefaults;
 use App\Services\TemplateCloningService;
 use App\Tenant\StorageQuota\TenantStorageQuotaService;
 use App\TenantPush\TenantPushFeatureGate;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Единый bootstrap нового клиента после создания записи {@see Tenant}.
  * Шаги идемпотентны: повторный вызов с теми же данными не должен ломать состояние.
  *
  * Контракт вызова: выполнять после коммита транзакции, в которой создан {@see Tenant}
- * (например {@see \Illuminate\Support\Facades\DB::afterCommit()}), чтобы строка клиента была видна в БД.
+ * (например {@see DB::afterCommit()}), чтобы строка клиента была видна в БД.
  * При исключении запись клиента уже существует — нужна ручная диагностика; повторный вызов безопасен (идемпотентность).
  */
 final class TenantProvisioningService

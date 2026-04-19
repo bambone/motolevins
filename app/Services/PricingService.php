@@ -6,8 +6,13 @@ use App\Models\Addon;
 use App\Models\Motorcycle;
 use App\Models\PricingRule;
 use App\Models\RentalUnit;
+use App\MotorcyclePricing\MotorcyclePricingProfileLoader;
+use App\MotorcyclePricing\MotorcycleQuoteEngine;
+use App\MotorcyclePricing\PricingMinorMoney;
+use App\MotorcyclePricing\RentalPricingDuration;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Schema;
 
 class PricingService
 {
@@ -24,15 +29,20 @@ class PricingService
         $motorcycle = $target instanceof Motorcycle ? $target : $target->motorcycle;
         $rentalUnit = $target instanceof RentalUnit ? $target : null;
 
-        $days = $start->diffInDays($end) ?: 1;
+        $days = RentalPricingDuration::inclusiveCalendarDays($start, $end);
         $basePrice = $this->getBasePrice($motorcycle, $rentalUnit, $rentalType, $days, $start);
 
         $addonsTotal = 0;
         $addonsSnapshot = [];
 
+        $tenantId = (int) $motorcycle->tenant_id;
         foreach ($addonIds as $addonId => $qty) {
-            $addon = Addon::find($addonId);
-            if ($addon && $addon->is_active && $qty > 0) {
+            $addon = Addon::query()
+                ->where('tenant_id', $tenantId)
+                ->whereKey((int) $addonId)
+                ->where('is_active', true)
+                ->first();
+            if ($addon && $qty > 0) {
                 $lineTotal = $addon->price * $qty;
                 $addonsTotal += $lineTotal;
                 $addonsSnapshot[] = [
@@ -66,6 +76,19 @@ class PricingService
 
     protected function getBasePrice(?Motorcycle $motorcycle, ?RentalUnit $rentalUnit, string $rentalType, int $days, Carbon $date): int
     {
+        if ($motorcycle !== null && $rentalType === 'daily') {
+            $quote = app(MotorcycleQuoteEngine::class)->quoteForDays($motorcycle, max(1, $days));
+            if (($quote['status'] ?? '') === 'ok') {
+                $minor = (int) ($quote['totals']['rental_total_minor'] ?? 0);
+
+                return PricingMinorMoney::minorToMajor($minor);
+            }
+
+            if (! config('pricing.legacy_scalar_price_fallback', true)) {
+                return 0;
+            }
+        }
+
         $rules = $this->getApplicableRules($motorcycle, $rentalUnit, $rentalType, $days);
 
         foreach ($rules as $rule) {
@@ -74,7 +97,7 @@ class PricingService
             }
         }
 
-        if ($motorcycle) {
+        if ($motorcycle && Schema::hasColumn($motorcycle->getTable(), 'price_per_day')) {
             return match ($rentalType) {
                 'weekly' => (int) (($motorcycle->price_week ?? $motorcycle->price_per_day * 7) * ceil($days / 7)),
                 'hourly' => (int) (($motorcycle->price_per_day ?? 0) / 24 * $days * 24),
@@ -128,6 +151,17 @@ class PricingService
 
     protected function getDeposit(?Motorcycle $motorcycle, ?RentalUnit $rentalUnit, string $rentalType): int
     {
+        if ($motorcycle !== null) {
+            $profile = app(MotorcyclePricingProfileLoader::class)->loadOrSynthesize($motorcycle);
+            $fin = is_array($profile['financial_terms'] ?? null) ? $profile['financial_terms'] : [];
+            if (isset($fin['deposit_amount_minor']) && $fin['deposit_amount_minor'] !== null) {
+                $m = (int) $fin['deposit_amount_minor'];
+                if ($m > 0) {
+                    return PricingMinorMoney::minorToMajor($m);
+                }
+            }
+        }
+
         $tenantId = \currentTenant()?->id;
         if (! $tenantId) {
             return 0;

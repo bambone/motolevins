@@ -69,29 +69,29 @@ class PlatformMarketingSettingsPage extends Page
     public function form(Schema $schema): Schema
     {
         $components = [
-                Section::make('Почта входящих форм')
-                    ->description('Куда уходит уведомление о заявке с маркетингового сайта и от чьего имени отправляется письмо сотрудникам.')
-                    ->schema([
-                        TextInput::make('email_contact_form_recipients')
-                            ->label('Получатели (email.contact_form_recipients)')
-                            ->helperText('Один адрес или несколько через запятую. Пусто — fallback из PLATFORM_MARKETING_CONTACT_TO / mail.from.')
-                            ->maxLength(2000),
-                        TextInput::make('email_default_from_address')
-                            ->label('From: адрес (email.default_from_address)')
-                            ->email()
-                            ->maxLength(255),
-                        TextInput::make('email_default_from_name')
-                            ->label('From: имя (email.default_from_name)')
-                            ->maxLength(255),
-                    ]),
-                Section::make('Контент лендинга (оверлей)')
-                    ->description('JSON поверх config/platform_marketing.php. Ключи совпадают со структурой конфига; перезаписываются рекурсивно. Техническое SEO (robots, sitemap, llms) — на странице «SEO маркетинга».')
-                    ->schema([
-                        Textarea::make('marketing_config_overlay')
-                            ->label('marketing.config_overlay')
-                            ->rows(14)
-                            ->helperText('Оставьте пустым, чтобы использовать только файл конфигурации.'),
-                    ]),
+            Section::make('Почта входящих форм')
+                ->description('Куда уходит уведомление о заявке с маркетингового сайта и от чьего имени отправляется письмо сотрудникам.')
+                ->schema([
+                    TextInput::make('email_contact_form_recipients')
+                        ->label('Получатели (email.contact_form_recipients)')
+                        ->helperText('Один адрес или несколько через запятую. Пусто — fallback из PLATFORM_MARKETING_CONTACT_TO / mail.from.')
+                        ->maxLength(2000),
+                    TextInput::make('email_default_from_address')
+                        ->label('From: адрес (email.default_from_address)')
+                        ->email()
+                        ->maxLength(255),
+                    TextInput::make('email_default_from_name')
+                        ->label('From: имя (email.default_from_name)')
+                        ->maxLength(255),
+                ]),
+            Section::make('Контент лендинга (оверлей)')
+                ->description('JSON поверх config/platform_marketing.php. Ключи совпадают со структурой конфига; перезаписываются рекурсивно. Техническое SEO (robots, sitemap, llms) — на странице «SEO маркетинга».')
+                ->schema([
+                    Textarea::make('marketing_config_overlay')
+                        ->label('marketing.config_overlay')
+                        ->rows(14)
+                        ->helperText('Оставьте пустым, чтобы использовать только файл конфигурации.'),
+                ]),
         ];
         if ($this->canEditMarketingAnalytics()) {
             $components[] = TenantAnalyticsFormSchema::section(true)

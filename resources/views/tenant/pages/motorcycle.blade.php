@@ -1,5 +1,6 @@
 @php
-    use App\Money\MoneyBindingRegistry;
+    use App\MotorcyclePricing\MotorcyclePricingSummaryPresenter;
+    use App\MotorcyclePricing\PricingMinorMoney;
 
     /** @var array{audience: string, use_case: array, advantages: array, rental_notes: string} $detailContent */
     $detailContent = $detailContent ?? ['audience' => '', 'use_case' => [], 'advantages' => [], 'rental_notes' => ''];
@@ -21,9 +22,17 @@
         $heroTagline = $heroCard['scenario'];
     }
     $heroChips = array_slice($heroCard['highlights'] ?? [], 0, 3);
-    $motorcyclePricePerDayFormatted = tenant() !== null
-        ? tenant_money_format((int) $motorcycle->price_per_day, MoneyBindingRegistry::MOTORCYCLE_PRICE_PER_DAY)
-        : number_format((int) $motorcycle->price_per_day, 0, ',', ' ').' '.chr(0xE2).chr(0x82).chr(0xBD);
+    $pricingPresent = app(MotorcyclePricingSummaryPresenter::class)->present($motorcycle, tenant());
+    $cardAmountMajor = $pricingPresent['card_price_minor'] !== null
+        ? PricingMinorMoney::minorToMajor((int) $pricingPresent['card_price_minor'])
+        : 0;
+    $fallbackPpd = $cardAmountMajor > 0 ? $cardAmountMajor : (int) $motorcycle->price_per_day;
+    $cardOnRequest = (bool) ($pricingPresent['card_is_on_request'] ?? false);
+    $cardInvalid = (bool) ($pricingPresent['card_profile_invalid'] ?? false);
+    $cardPriceText = trim((string) ($pricingPresent['card_price_text'] ?? ''));
+    $cardPriceSuffix = trim((string) ($pricingPresent['card_price_suffix'] ?? ''));
+    $cardShowFrom = (bool) ($pricingPresent['card_show_leading_from'] ?? false);
+    $cardCatalogSuffixLine = $cardPriceSuffix !== '' ? $cardPriceText.' '.$cardPriceSuffix : $cardPriceText;
 @endphp
 @extends('tenant.layouts.app')
 
@@ -70,7 +79,7 @@
         @endif
 
         {{-- Flex вместо grid-cols-12: при CDN Tailwind без полного набора утилит col-span мог не попасть в CSS, и колонка схлопывалась в 1/12 сетки --}}
-        <div class="flex w-full min-w-0 flex-col gap-8 lg:flex-row lg:items-start lg:gap-10 xl:gap-12">
+        <div class="flex w-full min-w-0 flex-col gap-8 lg:flex-row lg:items-start lg:gap-10 xl:gap-12" x-data="bikeCardPeriodPrice({ motorcycleId: {{ (int) $motorcycle->id }}, fallbackPricePerDay: {{ (int) $fallbackPpd }} })">
             <div class="w-full min-w-0 flex-1 space-y-7">
                 {{-- Product hero --}}
                 <header class="w-full min-w-0 rounded-2xl border border-white/[0.08] bg-gradient-to-b from-white/[0.04] to-transparent p-5 sm:p-6 md:p-7">
@@ -82,17 +91,31 @@
                     <div class="mt-6 flex w-full min-w-0 flex-col gap-6 lg:flex-row lg:items-start lg:justify-between lg:gap-8">
                         <div class="min-w-0 w-full flex-1 lg:min-w-0">
                             <div x-show="!$store.tenantBooking.filters.start_date || !$store.tenantBooking.filters.end_date">
-                                <p class="text-2xl font-bold text-white sm:text-3xl">
-                                    от <span class="text-moto-amber">{{ $motorcyclePricePerDayFormatted }}</span>
-                                    <span class="text-base font-semibold text-zinc-400">/ сутки</span>
-                                </p>
+                                @if($cardInvalid || ($cardPriceText === '' && ! $cardOnRequest))
+                                    <p class="text-2xl font-bold text-white sm:text-3xl">{{ $cardInvalid ? 'Стоимость уточняйте' : '—' }}</p>
+                                @elseif($cardOnRequest)
+                                    <p class="text-2xl font-bold text-white sm:text-3xl">{{ $cardPriceText !== '' ? $cardPriceText : 'По запросу' }}</p>
+                                @else
+                                    <p class="text-2xl font-bold text-white sm:text-3xl">
+                                        @if($cardShowFrom)
+                                            <span class="text-base font-semibold text-zinc-400">от </span>
+                                        @endif
+                                        <span class="text-moto-amber">{{ $cardPriceText }}</span>
+                                        @if($cardPriceSuffix !== '')
+                                            <span class="text-base font-semibold text-zinc-400"> {{ $cardPriceSuffix }}</span>
+                                        @endif
+                                    </p>
+                                @endif
                             </div>
                             <div x-show="$store.tenantBooking.filters.start_date && $store.tenantBooking.filters.end_date" x-cloak>
                                 <p class="text-[11px] font-bold uppercase tracking-[0.14em] text-zinc-500" x-text="`${$store.tenantBooking.rentalDayCount()} дней · выбранный период`"></p>
-                                <p class="mt-1 text-2xl font-bold text-white sm:text-3xl">
-                                    <span class="text-moto-amber" x-text="$store.tenantBooking.formatPrice($store.tenantBooking.calculateCardTotalPrice({{ (int) $motorcycle->price_per_day }}))"></span>
+                                <p class="mt-1 text-2xl font-bold text-white sm:text-3xl" x-show="showAmount()">
+                                    <span class="text-moto-amber" x-text="$store.tenantBooking.formatPrice(totalMajor)"></span>
                                 </p>
-                                <p class="mt-1 text-sm text-zinc-400">{{ $motorcyclePricePerDayFormatted }} за сутки</p>
+                                <p class="mt-1 text-lg font-semibold leading-snug text-moto-amber sm:text-xl" x-show="!showAmount() && summaryText" x-text="summaryText"></p>
+                                @if($cardCatalogSuffixLine !== '' && ! $cardOnRequest && ! $cardInvalid)
+                                    <p class="mt-1 text-sm text-zinc-400">{{ $cardCatalogSuffixLine }}</p>
+                                @endif
                             </div>
                             @if(count($heroChips) > 0)
                                 <ul class="mt-4 flex flex-wrap gap-2" aria-label="Кратко о модели">
@@ -106,7 +129,7 @@
                             <button type="button"
                                     class="tenant-btn-primary min-h-12 w-full gap-2 px-6 touch-manipulation @if(! $visibleAtSelectedLocation) cursor-not-allowed opacity-50 @endif"
                                     @if($visibleAtSelectedLocation)
-                                        @click="$dispatch('open-booking-modal', Object.assign({}, @js(['id' => $motorcycle->id, 'name' => $motorcycle->name, 'price' => $motorcycle->price_per_day]), { start: $store.tenantBooking.filters.start_date, end: $store.tenantBooking.filters.end_date }))"
+                                        @click="$dispatch('open-booking-modal', Object.assign({}, @js(['id' => $motorcycle->id, 'name' => $motorcycle->name, 'price' => $fallbackPpd]), { start: $store.tenantBooking.filters.start_date, end: $store.tenantBooking.filters.end_date }))"
                                     @else
                                         disabled
                                     @endif
@@ -254,20 +277,37 @@
                         <div>
                             <p class="text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-400">Стоимость</p>
                             <div x-show="!$store.tenantBooking.filters.start_date || !$store.tenantBooking.filters.end_date">
-                                <p class="mt-1 text-4xl font-extrabold tracking-tight text-moto-amber">
-                                    {{ $motorcyclePricePerDayFormatted }}
-                                </p>
-                                <p class="mt-1 text-sm font-medium text-zinc-300">за сутки · итог за период в форме брони</p>
+                                @if($cardInvalid || ($cardPriceText === '' && ! $cardOnRequest))
+                                    <p class="mt-1 text-2xl font-extrabold tracking-tight text-moto-amber">{{ $cardInvalid ? 'Стоимость уточняйте' : '—' }}</p>
+                                    <p class="mt-1 text-sm font-medium text-zinc-300">Итог за период — в форме брони</p>
+                                @elseif($cardOnRequest)
+                                    <p class="mt-1 text-2xl font-extrabold tracking-tight text-moto-amber">{{ $cardPriceText !== '' ? $cardPriceText : 'По запросу' }}</p>
+                                    <p class="mt-1 text-sm font-medium text-zinc-300">Итог за период — в форме брони</p>
+                                @else
+                                    <p class="mt-1 text-4xl font-extrabold tracking-tight text-moto-amber">
+                                        @if($cardShowFrom)
+                                            <span class="text-lg font-semibold text-zinc-400">от </span>
+                                        @endif
+                                        {{ $cardPriceText }}
+                                        @if($cardPriceSuffix !== '')
+                                            <span class="text-lg font-semibold text-zinc-400"> {{ $cardPriceSuffix }}</span>
+                                        @endif
+                                    </p>
+                                    <p class="mt-1 text-sm font-medium text-zinc-300">Итог за период — в форме брони</p>
+                                @endif
                             </div>
                             <div x-show="$store.tenantBooking.filters.start_date && $store.tenantBooking.filters.end_date" x-cloak>
                                 <p class="mt-1 text-[11px] font-semibold uppercase tracking-wide text-zinc-500" x-text="`${$store.tenantBooking.rentalDayCount()} дней`"></p>
-                                <p class="mt-1 text-4xl font-extrabold tracking-tight text-moto-amber" x-text="$store.tenantBooking.formatPrice($store.tenantBooking.calculateCardTotalPrice({{ (int) $motorcycle->price_per_day }}))"></p>
-                                <p class="mt-1 text-sm font-medium text-zinc-300">{{ $motorcyclePricePerDayFormatted }} за сутки</p>
+                                <p class="mt-1 text-4xl font-extrabold tracking-tight text-moto-amber" x-show="showAmount()" x-text="$store.tenantBooking.formatPrice(totalMajor)"></p>
+                                <p class="mt-1 text-lg font-semibold text-moto-amber" x-show="!showAmount() && summaryText" x-text="summaryText"></p>
+                                @if($cardCatalogSuffixLine !== '' && ! $cardOnRequest && ! $cardInvalid)
+                                    <p class="mt-1 text-sm font-medium text-zinc-300">{{ $cardCatalogSuffixLine }} · итог в форме брони</p>
+                                @endif
                             </div>
                         </div>
                         <button type="button"
                                 class="tenant-btn-primary min-h-12 w-full gap-2 touch-manipulation"
-                                @click="$dispatch('open-booking-modal', Object.assign({}, @js(['id' => $motorcycle->id, 'name' => $motorcycle->name, 'price' => $motorcycle->price_per_day]), { start: $store.tenantBooking.filters.start_date, end: $store.tenantBooking.filters.end_date }))">
+                                @click="$dispatch('open-booking-modal', Object.assign({}, @js(['id' => $motorcycle->id, 'name' => $motorcycle->name, 'price' => $fallbackPpd]), { start: $store.tenantBooking.filters.start_date, end: $store.tenantBooking.filters.end_date }))">
                             Забронировать
                         </button>
                         <a href="{{ route('terms') }}"

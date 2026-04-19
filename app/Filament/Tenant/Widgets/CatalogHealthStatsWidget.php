@@ -6,6 +6,7 @@ use App\Filament\Tenant\Resources\MotorcycleResource;
 use App\Filament\Tenant\Resources\PageResource;
 use App\Models\Motorcycle;
 use App\Models\Page;
+use App\MotorcyclePricing\MotorcyclePricingSummaryPresenter;
 use App\Terminology\DomainTermKeys;
 use App\Terminology\TenantTerminologyService;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
@@ -36,10 +37,20 @@ class CatalogHealthStatsWidget extends BaseWidget
             })
             ->count();
 
-        $noPrice = Motorcycle::query()
+        $noPrice = 0;
+        $presenter = app(MotorcyclePricingSummaryPresenter::class);
+        Motorcycle::query()
             ->whereIn('status', ['available', 'maintenance'])
-            ->where('price_per_day', '<=', 0)
-            ->count();
+            ->orderBy('id')
+            ->chunkById(200, function ($rows) use (&$noPrice, $presenter, $tenant): void {
+                foreach ($rows as $m) {
+                    /** @var Motorcycle $m */
+                    $p = $presenter->present($m, $tenant);
+                    if ($p['card_profile_invalid'] || $p['card_is_on_request'] || $p['card_price_minor'] === null || (int) $p['card_price_minor'] <= 0) {
+                        $noPrice++;
+                    }
+                }
+            });
 
         $pagesWithoutSeo = Page::whereDoesntHave('seoMeta')->where('status', 'published')->count();
         $motorcyclesWithoutSeo = Motorcycle::where('show_in_catalog', true)

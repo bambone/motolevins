@@ -8,6 +8,7 @@ use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Validation\Validator;
 
 class PlatformMarketingContactRequest extends FormRequest
 {
@@ -76,7 +77,7 @@ class PlatformMarketingContactRequest extends FormRequest
 
     public function withValidator($validator): void
     {
-        $validator->after(function (\Illuminate\Validation\Validator $v): void {
+        $validator->after(function (Validator $v): void {
             if ($v->errors()->isNotEmpty()) {
                 return;
             }

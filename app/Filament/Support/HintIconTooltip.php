@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace App\Filament\Support;
 
+use Filament\Forms\Components\Concerns\HasHint;
+use Illuminate\Support\HtmlString;
+
 /**
- * Многострочные подсказки для {@see \Filament\Forms\Components\Concerns\HasHint::hintIconTooltip()}.
+ * Многострочные подсказки для {@see HasHint::hintIconTooltip()}.
  *
- * Filament отдаёт тултип в `getHintIconTooltip(): ?string`, поэтому {@see \Illuminate\Support\HtmlString}
+ * Filament отдаёт тултип в `getHintIconTooltip(): ?string`, поэтому {@see HtmlString}
  * приводится к строке и теряется `Htmlable` → в разметке тултипа выключается `allowHTML`, и литералы
  * «&lt;br&gt;» видны как текст. Здесь переводы строк `\n` плюс CSS в
  * `filament-ghost-modal-overlay.css`: у темы Filament у `.tippy-box` стоит `white-space: normal`,

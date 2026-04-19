@@ -1,5 +1,6 @@
 <?php
 
+use App\TenantSiteSetup\SetupSessionService;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -7,7 +8,7 @@ use Illuminate\Support\Facades\Schema;
 /**
  * Tenant site setup framework (readiness + guided mode).
  *
- * Single active session per (tenant_id, user_id): enforced in {@see \App\TenantSiteSetup\SetupSessionService}
+ * Single active session per (tenant_id, user_id): enforced in {@see SetupSessionService}
  * when DB cannot use a partial unique index (MySQL / SQLite).
  */
 return new class extends Migration

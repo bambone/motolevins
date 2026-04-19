@@ -9,6 +9,9 @@ use App\Models\Lead;
 use App\Models\Motorcycle;
 use App\Models\RentalUnit;
 use App\Models\Tenant;
+use App\MotorcyclePricing\BookingPricingHydrator;
+use App\MotorcyclePricing\MotorcycleBookingPricingPolicy;
+use App\MotorcyclePricing\RentalPricingDuration;
 use App\Product\CRM\Actions\CreateCrmRequestFromPublicForm;
 use App\Product\CRM\DTO\ManualBookingCreateData;
 use App\Product\CRM\DTO\ManualLeadCreateData;
@@ -16,6 +19,7 @@ use App\Product\CRM\DTO\ManualOperatorResult;
 use App\Product\CRM\DTO\PublicInboundContext;
 use App\Product\CRM\DTO\PublicInboundSubmission;
 use App\Services\AvailabilityService;
+use App\Services\PricingService;
 use App\Support\Phone\IntlPhoneNormalizer;
 use App\Support\PhoneNormalizer;
 use Carbon\Carbon;
@@ -45,6 +49,9 @@ final class ManualLeadBookingService
     public function __construct(
         private readonly CreateCrmRequestFromPublicForm $createCrmRequestFromPublicForm,
         private readonly AvailabilityService $availabilityService,
+        private readonly PricingService $pricingService,
+        private readonly BookingPricingHydrator $bookingPricingHydrator,
+        private readonly MotorcycleBookingPricingPolicy $motorcycleBookingPricingPolicy,
     ) {}
 
     private function normalizedOperatorPhone(?string $raw): string
@@ -448,11 +455,23 @@ final class ManualLeadBookingService
             $this->throwAvailabilityConflict($unit, $startAt, $endAt);
         }
 
-        $ppd = (int) $motorcycle->price_per_day;
         $startDay = Carbon::parse($startDateYmd, $tz)->startOfDay();
         $endDay = Carbon::parse($endDateYmd, $tz)->startOfDay();
-        $days = max(1, (int) $startDay->diffInDays($endDay) + 1);
-        $total = $days * $ppd;
+        $days = RentalPricingDuration::inclusiveCalendarDays($startDay, $endDay);
+
+        $this->motorcycleBookingPricingPolicy->requireOkQuoteForConfirmedMaterialization($motorcycle, $days);
+
+        $pricing = $this->pricingService->calculatePrice(
+            $unit,
+            $startAt->copy()->startOfDay(),
+            $endAt->copy()->startOfDay(),
+            'daily',
+            [],
+        );
+        $addonLines = is_array($pricing['addons'] ?? null) ? $pricing['addons'] : [];
+        $v2 = $this->bookingPricingHydrator->bookingPricingAttributes($motorcycle, $days, $pricing, $addonLines);
+        $basePrice = (int) ($pricing['base_price'] ?? 0);
+        $ppdSnap = $days > 0 ? (int) round($basePrice / $days) : 0;
 
         $phone = (string) ($lead->phone ?? '');
         $name = (string) ($lead->name ?? '');
@@ -469,8 +488,17 @@ final class ManualLeadBookingService
             'start_at' => $startAt,
             'end_at' => $endAt,
             'status' => BookingStatus::CONFIRMED,
-            'price_per_day_snapshot' => $ppd,
-            'total_price' => $total,
+            'price_per_day_snapshot' => $ppdSnap,
+            'total_price' => (int) ($pricing['total'] ?? 0),
+            'pricing_snapshot_json' => $v2['pricing_snapshot_json'],
+            'pricing_snapshot_schema_version' => $v2['pricing_snapshot_schema_version'],
+            'currency' => $v2['currency'],
+            'rental_total_minor' => $v2['rental_total_minor'],
+            'deposit_amount_minor' => $v2['deposit_amount_minor'],
+            'payable_now_minor' => $v2['payable_now_minor'],
+            'selected_tariff_id' => $v2['selected_tariff_id'],
+            'selected_tariff_kind' => $v2['selected_tariff_kind'],
+            'deposit_amount' => (int) ($pricing['deposit'] ?? 0),
             'customer_name' => $name,
             'phone' => $phone,
             'phone_normalized' => PhoneNormalizer::normalize($phone),

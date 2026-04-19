@@ -5,6 +5,7 @@ use App\Models\Page;
 use App\Models\SeoMeta;
 use App\Models\TenantSetting;
 use Illuminate\Database\Migrations\Migration;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -235,7 +236,7 @@ TXT;
             $group = $parts[0];
             $k = $parts[1] ?? $parts[0];
             DB::table('tenant_settings')->where('tenant_id', $tenantId)->where('group', $group)->where('key', $k)->delete();
-            \Illuminate\Support\Facades\Cache::forget("tenant_settings.{$tenantId}.{$key}");
+            Cache::forget("tenant_settings.{$tenantId}.{$key}");
         }
 
         foreach (['home', 'contacts', 'usloviya-arenda'] as $slug) {
