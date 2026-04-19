@@ -2,6 +2,8 @@
 
 namespace App\PageBuilder\Blueprints\Expert;
 
+use App\Filament\Forms\Components\TenantPublicImagePicker;
+use App\Filament\Forms\Components\TenantPublicMediaPicker;
 use App\Filament\Tenant\PageBuilder\TeleportedEditorRepeater;
 use App\PageBuilder\PageSectionCategory;
 use App\Support\RussianQuantity;
@@ -52,18 +54,21 @@ final class ProcessStepsBlueprint extends ExpertSectionBlueprint
     {
         return [
             TextInput::make('data_json.section_heading')->label('Заголовок')->maxLength(255)->columnSpanFull(),
-            TextInput::make('data_json.aside_image_url')
-                ->label('URL фото рядом с блоком (практика, машина)')
-                ->maxLength(2048)
+            TenantPublicImagePicker::make('data_json.aside_image_url')
+                ->label('Фото рядом с блоком (практика, машина)')
+                ->uploadPublicSiteSubdirectory('site/page-builder/process-steps')
+                ->helperText('Если задано видео ниже — фото скрывается.')
                 ->columnSpanFull(),
-            TextInput::make('data_json.aside_video_url')
-                ->label('URL видео рядом с блоком (MP4)')
+            TenantPublicMediaPicker::make('data_json.aside_video_url')
+                ->label('Видео рядом с блоком (MP4/WebM)')
+                ->mediaType(TenantPublicMediaPicker::MEDIA_VIDEO)
                 ->maxLength(2048)
+                ->uploadPublicSiteSubdirectory('site/page-builder/process-steps')
                 ->helperText('Если задано, показывается вместо фото.')
                 ->columnSpanFull(),
-            TextInput::make('data_json.aside_video_poster_url')
+            TenantPublicImagePicker::make('data_json.aside_video_poster_url')
                 ->label('Постер для видео')
-                ->maxLength(2048)
+                ->uploadPublicSiteSubdirectory('site/page-builder/process-steps')
                 ->columnSpanFull(),
             TextInput::make('data_json.aside_title')->label('Боковой блок — заголовок')->maxLength(255),
             Textarea::make('data_json.aside_body')->label('Боковой блок — текст')->rows(3)->columnSpanFull(),

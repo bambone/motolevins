@@ -29,6 +29,31 @@ class TenantPublicAssetResolverTest extends TestCase
         $this->assertNull(TenantPublicAssetResolver::resolve('  ', 1));
     }
 
+    public function test_legacy_images_motolevins_path_resolves_to_theme_build_not_tenant_public(): void
+    {
+        if (is_file(public_path('themes/moto/marketing/hero-bg.png'))) {
+            $this->markTestSkipped('public/themes shadows resources.');
+        }
+
+        $out = TenantPublicAssetResolver::resolve('images/motolevins/marketing/hero-bg.png', 1);
+
+        $this->assertNotNull($out);
+        $this->assertStringContainsString('theme/build/moto', (string) $out);
+        $this->assertStringNotContainsString('/tenants/1/public/images/', (string) $out);
+    }
+
+    public function test_legacy_short_hero_bg_filename_resolves_to_theme_build(): void
+    {
+        if (is_file(public_path('themes/moto/marketing/hero-bg.png'))) {
+            $this->markTestSkipped('public/themes shadows resources.');
+        }
+
+        $out = TenantPublicAssetResolver::resolve('images/hero-bg.png', 99);
+
+        $this->assertNotNull($out);
+        $this->assertStringContainsString('theme/build/moto', (string) $out);
+    }
+
     public function test_http_url_passthrough(): void
     {
         $u = 'https://example.com/a.png';

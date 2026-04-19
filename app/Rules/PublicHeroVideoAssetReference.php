@@ -6,11 +6,10 @@ use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
 
 /**
- * Разрешает пустое значение, http(s) URL, полный ключ объекта {@code tenants/{id}/public/…},
- * сокращённые пути публичной зоны сайта {@code site/…}, {@code storage/…}, а также
- * legacy-пути bundled-темы {@code images/motolevins/…} (см. {@see theme_platform_url_from_legacy_public_path()}).
+ * Как {@see PublicAssetReference}, плюс короткие legacy-пути hero-видео, которые на сайте
+ * обрабатывает {@see \App\Support\Storage\TenantPublicAssetResolver::resolveHeroVideo()}.
  */
-final class PublicAssetReference implements ValidationRule
+final class PublicHeroVideoAssetReference implements ValidationRule
 {
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
@@ -44,10 +43,19 @@ final class PublicAssetReference implements ValidationRule
         if (preg_match('#^(?:site|storage)/#', $v) === 1) {
             return;
         }
-        $legacy = theme_platform_url_from_legacy_public_path($v);
-        if ($legacy !== null && $legacy !== '') {
+        if (preg_match('#^images/(?:motolevins|motolevin)/videos/.+#i', $v) === 1) {
             return;
         }
-        $fail(__('Укажите URL или ключ файла в хранилище (tenants/…/public/…).'));
+        if (preg_match('#^videos/.+#i', $v) === 1) {
+            return;
+        }
+        if (preg_match('#^themes/.+/videos/.+#i', $v) === 1) {
+            return;
+        }
+        if (preg_match('#^[^/\\\\]+\.(?:mp4|webm)$#i', $v) === 1) {
+            return;
+        }
+
+        $fail(__('Укажите URL или путь к MP4/WebM (например site/videos/…).'));
     }
 }

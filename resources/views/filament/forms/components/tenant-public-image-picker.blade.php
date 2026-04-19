@@ -45,6 +45,11 @@
                     class="fi-input block w-full cursor-default rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-700 dark:border-white/10 dark:bg-white/5 dark:text-gray-200"
                     placeholder="{{ $isThemeFallbackPreview ? __('По умолчанию — фон темы (поле пустое)') : __('Ключ файла или URL появится после выбора') }}"
                 />
+                @if ($isThemeFallbackPreview)
+                    <p class="text-xs text-gray-500 dark:text-gray-400">
+                        {{ __('Пустое поле — на сайте подставляется фон из темы. Файлы темы из каталога не удаляются; загрузите свой файл, чтобы заменить картинку для этого блока.') }}
+                    </p>
+                @endif
                 <div class="flex flex-wrap gap-2">
                     <button
                         type="button"

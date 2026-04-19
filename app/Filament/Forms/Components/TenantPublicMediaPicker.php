@@ -3,6 +3,7 @@
 namespace App\Filament\Forms\Components;
 
 use App\Rules\PublicAssetReference;
+use App\Rules\PublicHeroVideoAssetReference;
 use App\Services\TenantFiles\TenantFileCatalogService;
 use Closure;
 use Filament\Forms\Components\Concerns\CanBeLengthConstrained;
@@ -33,6 +34,9 @@ final class TenantPublicMediaPicker extends Field implements CanBeLengthConstrai
     protected string|Closure $uploadSlotSelector = '[data-tenant-public-upload-input]';
 
     protected string|Closure $uploadPublicSiteSubdirectory = 'page-builder';
+
+    /** Разрешить legacy-пути hero (images/motolevins/videos/…), см. {@see PublicHeroVideoAssetReference}. Только для {@see MEDIA_VIDEO}. */
+    protected bool $allowLegacyHeroVideoPaths = false;
 
     public function mediaType(string|Closure $type): static
     {
@@ -91,6 +95,18 @@ final class TenantPublicMediaPicker extends Field implements CanBeLengthConstrai
         return $v !== '' ? $v : 'page-builder';
     }
 
+    public function allowLegacyHeroVideoPaths(bool $allow = true): static
+    {
+        $this->allowLegacyHeroVideoPaths = $allow;
+
+        return $this;
+    }
+
+    public function isLegacyHeroVideoPathsAllowed(): bool
+    {
+        return $this->allowLegacyHeroVideoPaths;
+    }
+
     public function isEmptyAllowed(): bool
     {
         return (bool) $this->evaluate($this->allowEmpty);
@@ -104,8 +120,11 @@ final class TenantPublicMediaPicker extends Field implements CanBeLengthConstrai
             function (): array {
                 $when = $this->isEmptyAllowed() ? ['nullable'] : ['required'];
                 $length = $this->getLengthValidationRules();
+                $ref = $this->getMediaType() === self::MEDIA_VIDEO && $this->isLegacyHeroVideoPathsAllowed()
+                    ? new PublicHeroVideoAssetReference
+                    : new PublicAssetReference;
 
-                return array_merge($when, $length, [new PublicAssetReference]);
+                return array_merge($when, $length, [$ref]);
             },
         ]);
     }

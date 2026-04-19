@@ -11,7 +11,12 @@
     $isVideo = $mediaType === \App\Filament\Forms\Components\TenantPublicMediaPicker::MEDIA_VIDEO;
     $upSel = $isVideo ? '[data-tenant-public-video-upload-input]' : $field->getUploadSlotSelector();
     $previewUrl = $t && ! $isVideo ? TenantPublicAssetResolver::resolve($raw, (int) $t->id) : null;
-    $resolvedVideoUrl = $t && $isVideo && filled($raw) ? TenantPublicAssetResolver::resolve($raw, (int) $t->id) : null;
+    $resolvedVideoUrl = null;
+    $videoResolveOk = false;
+    if ($t !== null && $isVideo && filled($raw)) {
+        $resolvedVideoUrl = TenantPublicAssetResolver::resolveHeroVideo($raw, $t);
+        $videoResolveOk = $resolvedVideoUrl !== null;
+    }
     $displayName = '';
     if (filled($raw)) {
         $pathPart = parse_url($raw, PHP_URL_PATH);
@@ -45,7 +50,11 @@
                     </svg>
                     @if (filled($raw))
                         <span class="max-w-full truncate text-center text-[10px] font-medium text-gray-700 dark:text-gray-200" title="{{ e($raw) }}">{{ e($displayName) }}</span>
-                        <span class="text-[10px] text-emerald-600 dark:text-emerald-400">{{ __('Файл выбран') }}</span>
+                        @if ($videoResolveOk)
+                            <span class="text-[10px] text-emerald-600 dark:text-emerald-400">{{ __('Видео доступно для сайта') }}</span>
+                        @else
+                            <span class="text-[10px] text-rose-600 dark:text-rose-400">{{ __('Файл не найден — загрузите или проверьте путь') }}</span>
+                        @endif
                     @else
                         <span class="text-center text-xs text-gray-400 dark:text-gray-500">{{ __('Нет видеофайла') }}</span>
                     @endif

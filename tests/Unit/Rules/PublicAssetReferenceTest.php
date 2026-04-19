@@ -39,6 +39,12 @@ class PublicAssetReferenceTest extends TestCase
             ['x' => [new PublicAssetReference]],
         );
         $this->assertFalse($v->fails());
+
+        $v = Validator::make(
+            ['x' => 'images/motolevins/marketing/hero-bg.png'],
+            ['x' => [new PublicAssetReference]],
+        );
+        $this->assertFalse($v->fails());
     }
 
     public function test_rejects_invalid(): void

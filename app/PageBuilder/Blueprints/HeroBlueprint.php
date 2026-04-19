@@ -3,6 +3,7 @@
 namespace App\PageBuilder\Blueprints;
 
 use App\Filament\Forms\Components\TenantPublicImagePicker;
+use App\Filament\Forms\Components\TenantPublicMediaPicker;
 use App\Filament\Tenant\PageBuilder\SectionAdminSummary;
 use App\Filament\Tenant\PageBuilder\TeleportedEditorRepeater;
 use App\Models\PageSection;
@@ -90,11 +91,13 @@ final class HeroBlueprint extends AbstractPageSectionBlueprint
                 ->helperText(__('Обложка для фона hero. Пусто — постер из общей темы (bundled).'))
                 ->uploadPublicSiteSubdirectory('site/videos')
                 ->columnSpanFull(),
-            TextInput::make('data_json.video_src')
+            TenantPublicMediaPicker::make('data_json.video_src')
                 ->label('Видео hero (MP4)')
-                ->placeholder('site/videos/…')
+                ->mediaType(TenantPublicMediaPicker::MEDIA_VIDEO)
+                ->allowLegacyHeroVideoPaths()
                 ->maxLength(2048)
-                ->helperText(__('Заглушка: пусто — на сайте нет кнопки «Смотреть видео». Укажите путь к файлу в вашем хранилище (например site/videos/имя.mp4 после загрузки) или полный https-URL. Общий ролик из шаблона темы не подставляется.'))
+                ->uploadPublicSiteSubdirectory('site/videos')
+                ->helperText(__('Пусто — на сайте нет кнопки «Смотреть видео». Выберите файл из каталога, загрузите MP4/WebM или укажите внешний https-URL. Ролик из шаблона темы автоматически не подставляется.'))
                 ->columnSpanFull(),
             TextInput::make('data_json.button_text')
                 ->label('Текст кнопки')

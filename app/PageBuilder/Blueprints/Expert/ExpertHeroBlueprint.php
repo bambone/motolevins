@@ -3,6 +3,7 @@
 namespace App\PageBuilder\Blueprints\Expert;
 
 use App\Filament\Forms\Components\TenantPublicImagePicker;
+use App\Filament\Forms\Components\TenantPublicMediaPicker;
 use App\Filament\Tenant\PageBuilder\FramingCoverFocalEditor;
 use App\Filament\Tenant\PageBuilder\TeleportedEditorRepeater;
 use App\MediaPresentation\FramingPresentationSummaryResolver;
@@ -297,14 +298,17 @@ final class ExpertHeroBlueprint extends ExpertSectionBlueprint
                 ->label('Alt-текст фото')
                 ->maxLength(255)
                 ->columnSpanFull(),
-            TextInput::make('data_json.hero_video_url')
-                ->label('URL видео для модалки (MP4 или прямой файл)')
+            TenantPublicMediaPicker::make('data_json.hero_video_url')
+                ->label('Видео для модалки (MP4/WebM)')
+                ->mediaType(TenantPublicMediaPicker::MEDIA_VIDEO)
                 ->maxLength(2048)
-                ->helperText('Когда появится ролик — вставьте URL; кнопка в hero откроет плеер.')
+                ->uploadPublicSiteSubdirectory('site/page-builder/hero')
+                ->helperText('Выберите файл из медиатеки, загрузите ролик или укажите внешний https-URL. Когда задано — в hero появится кнопка, откроется плеер.')
                 ->columnSpanFull(),
-            TextInput::make('data_json.hero_video_poster_url')
+            TenantPublicImagePicker::make('data_json.hero_video_poster_url')
                 ->label('Постер для видео (превью)')
-                ->maxLength(2048)
+                ->uploadPublicSiteSubdirectory('site/page-builder/hero')
+                ->helperText('Обложка в модалке; по желанию.')
                 ->columnSpanFull(),
             TextInput::make('data_json.video_trigger_label')
                 ->label('Текст кнопки видео')

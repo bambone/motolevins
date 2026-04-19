@@ -26,6 +26,12 @@ final class TenantPublicAssetResolver
             return null;
         }
 
+        // Старые пути вида images/motolevins/… — ассеты bundled-темы, не tenants/{id}/public/… (см. hero.blade, theme_platform_url_from_legacy_public_path).
+        $legacyThemeUrl = theme_platform_url_from_legacy_public_path($v);
+        if ($legacyThemeUrl !== null && $legacyThemeUrl !== '') {
+            return $legacyThemeUrl;
+        }
+
         if (preg_match('#^https?://#i', $v) === 1) {
             $local = self::rewriteHttpUrlForLocalMediaDelivery($v, $tenantId);
             if ($local !== null) {

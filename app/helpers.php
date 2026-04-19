@@ -191,6 +191,10 @@ if (! function_exists('theme_platform_url_from_legacy_public_path')) {
             return theme_platform_asset_url($m[1]);
         }
 
+        if (preg_match('#^images/hero-bg\.(png|jpe?g)$#i', $path) || preg_match('#^hero-bg\.(png|jpe?g)$#i', $path)) {
+            return theme_platform_asset_url('marketing/hero-bg.png');
+        }
+
         $legacy = trim((string) config('themes.legacy_asset_url_prefix', ''), '/');
         if ($legacy !== '' && str_starts_with(strtolower($path), strtolower($legacy).'/')) {
             $rest = substr($path, strlen($legacy) + 1);

@@ -2,6 +2,7 @@
 
 namespace App\PageBuilder\Blueprints\Expert;
 
+use App\Filament\Forms\Components\TenantPublicImagePicker;
 use App\Filament\Tenant\PageBuilder\TeleportedEditorRepeater;
 use App\PageBuilder\PageSectionCategory;
 use Filament\Forms\Components\Textarea;
@@ -60,14 +61,14 @@ final class CredentialsGridBlueprint extends ExpertSectionBlueprint
                     Textarea::make('description')->label('Описание')->rows(2)->columnSpanFull(),
                 ])
                 ->columnSpanFull(),
-            TextInput::make('data_json.background_image_url')
-                ->label('URL фона секции')
-                ->maxLength(2048)
+            TenantPublicImagePicker::make('data_json.background_image_url')
+                ->label('Фон секции')
+                ->uploadPublicSiteSubdirectory('site/page-builder/credentials-grid')
                 ->helperText('Опционально: фото трассы / автомобиля под лёгким затемнением.')
                 ->columnSpanFull(),
-            TextInput::make('data_json.supporting_image_url')
+            TenantPublicImagePicker::make('data_json.supporting_image_url')
                 ->label('Фото рядом с текстом (награждение, экипировка)')
-                ->maxLength(2048)
+                ->uploadPublicSiteSubdirectory('site/page-builder/credentials-grid')
                 ->columnSpanFull(),
             TextInput::make('data_json.supporting_image_alt')
                 ->label('Alt для фото рядом')

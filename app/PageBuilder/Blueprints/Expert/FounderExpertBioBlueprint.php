@@ -2,6 +2,7 @@
 
 namespace App\PageBuilder\Blueprints\Expert;
 
+use App\Filament\Forms\Components\TenantPublicImagePicker;
 use App\Filament\Tenant\PageBuilder\TeleportedEditorRepeater;
 use App\PageBuilder\PageSectionCategory;
 use Filament\Forms\Components\Textarea;
@@ -65,9 +66,9 @@ final class FounderExpertBioBlueprint extends ExpertSectionBlueprint
                     Textarea::make('text')->label('Текст')->rows(3)->required()->columnSpanFull(),
                 ])
                 ->columnSpanFull(),
-            TextInput::make('data_json.portrait_image_url')
-                ->label('URL портрета')
-                ->maxLength(2048)
+            TenantPublicImagePicker::make('data_json.portrait_image_url')
+                ->label('Портрет')
+                ->uploadPublicSiteSubdirectory('site/page-builder/founder-bio')
                 ->columnSpanFull(),
             TextInput::make('data_json.portrait_image_alt')
                 ->label('Alt портрета')

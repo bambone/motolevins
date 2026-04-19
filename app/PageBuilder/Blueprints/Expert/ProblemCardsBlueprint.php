@@ -2,6 +2,7 @@
 
 namespace App\PageBuilder\Blueprints\Expert;
 
+use App\Filament\Forms\Components\TenantPublicImagePicker;
 use App\Filament\Tenant\PageBuilder\TeleportedEditorRepeater;
 use App\PageBuilder\PageSectionCategory;
 use Filament\Forms\Components\Textarea;
@@ -51,9 +52,9 @@ final class ProblemCardsBlueprint extends ExpertSectionBlueprint
         return [
             TextInput::make('data_json.section_heading')->label('Заголовок секции')->maxLength(255)->columnSpanFull(),
             Textarea::make('data_json.footnote')->label('Сноска под блоком')->rows(2)->columnSpanFull(),
-            TextInput::make('data_json.accent_image_url')
+            TenantPublicImagePicker::make('data_json.accent_image_url')
                 ->label('Акцентное фото секции (фон)')
-                ->maxLength(2048)
+                ->uploadPublicSiteSubdirectory('site/page-builder/problem-cards')
                 ->helperText('Опционально: атмосферное фото слева/на фоне.')
                 ->columnSpanFull(),
             Toggle::make('data_json.full_width_cards')
