@@ -42,8 +42,8 @@ class SlotDebugPage extends Page
 
     public function mount(): void
     {
-        $this->range_from = now()->format('Y-m-d');
-        $this->range_to = now()->addDay()->format('Y-m-d');
+        $this->range_from = now('UTC')->format('Y-m-d');
+        $this->range_to = now('UTC')->addDay()->format('Y-m-d');
     }
 
     protected function utcDateRangeInvalidNotificationTitle(): string

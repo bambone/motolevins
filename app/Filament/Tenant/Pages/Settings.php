@@ -707,20 +707,24 @@ class Settings extends Page
         $disk = Storage::disk(TenantStorageDisks::publicDiskName());
         $before = $this->getSettingsData();
         $fields = ['branding_logo_path', 'branding_favicon_path', 'branding_hero_path'];
-        $sum = 0;
+        $deltaSum = 0;
         foreach ($fields as $field) {
             $new = isset($formData[$field]) ? (string) $formData[$field] : '';
             $old = isset($before[$field]) ? (string) $before[$field] : '';
-            if ($new === '' || $new === $old) {
+            if ($new === $old) {
                 continue;
             }
-            if (! $disk->exists($new)) {
+
+            if ($new !== '' && ! $disk->exists($new)) {
                 continue;
             }
-            $sum += (int) $disk->size($new);
+
+            $newSize = ($new !== '') ? (int) $disk->size($new) : 0;
+            $oldSize = ($old !== '' && $disk->exists($old)) ? (int) $disk->size($old) : 0;
+            $deltaSum += $newSize - $oldSize;
         }
-        if ($sum > 0) {
-            app(TenantStorageQuotaService::class)->assertCanStoreBytes($tenant, $sum, 'branding_upload');
+        if ($deltaSum > 0) {
+            app(TenantStorageQuotaService::class)->assertCanStoreBytes($tenant, $deltaSum, 'branding_upload');
         }
     }
 

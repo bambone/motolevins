@@ -198,6 +198,7 @@ class TerminologySettings extends Page implements HasTable
                                 'source' => 'manual',
                             ]
                         );
+                        app(TenantTerminologyService::class)->forgetTenant($tenant->id);
                         Notification::make()->title('Подпись сохранена')->success()->send();
                     }),
                 Action::make('resetOne')

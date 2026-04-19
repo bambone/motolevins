@@ -8,6 +8,7 @@ use App\Filament\Support\FilamentInlineMarkdown;
 use App\Filament\Tenant\Resources\SchedulingTargetResource\Pages;
 use App\Filament\Tenant\Support\SchedulingAdminNavigationPrerequisites;
 use App\Models\SchedulingTarget;
+use App\Tenant\Filament\TenantPanelSelectScope;
 use App\Scheduling\Enums\CalendarUsageMode;
 use App\Scheduling\Enums\ExternalBusyEffect;
 use App\Scheduling\Enums\OccupancyScopeMode;
@@ -143,7 +144,14 @@ class SchedulingTargetResource extends Resource
                         Select::make('schedulingResources')
                             ->label('Ресурсы')
                             ->helperText('Пусто, пока нет записей в «Ресурсы расписания».')
-                            ->relationship('schedulingResources', 'label')
+                            ->relationship(
+                                name: 'schedulingResources',
+                                titleAttribute: 'label',
+                                modifyQueryUsing: function (Builder $query): void {
+                                    $query->where('scheduling_scope', SchedulingScope::Tenant);
+                                    TenantPanelSelectScope::applyTenantOwnedScope($query, currentTenant()?->id);
+                                },
+                            )
                             ->multiple()
                             ->preload(),
                     ]),

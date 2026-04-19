@@ -3,6 +3,7 @@
 namespace App\Filament\Tenant\Pages;
 
 use App\Filament\Tenant\Support\TenantPanelHintHeaderAction;
+use App\Models\Tenant;
 use App\Models\TenantSetupItemState;
 use App\TenantSiteSetup\SetupApplicabilityEvaluator;
 use App\TenantSiteSetup\SetupCompletionEvaluator;
@@ -17,12 +18,16 @@ use App\TenantSiteSetup\SetupValueSnapshotResolver;
 use App\TenantSiteSetup\TenantSiteSetupFeature;
 use Filament\Actions\Action;
 use Filament\Pages\Page;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use UnitEnum;
 
 class TenantSiteSetupCenterPage extends Page
 {
+    /** @var Collection<string, TenantSetupItemState>|null */
+    private ?Collection $setupItemStatesCache = null;
+
     protected static ?string $navigationLabel = 'Обзор запуска';
 
     protected static string|UnitEnum|null $navigationGroup = 'SiteLaunch';
@@ -208,12 +213,10 @@ class TenantSiteSetupCenterPage extends Page
 
         $defs = SetupItemRegistry::definitions();
         $snap = app(SetupValueSnapshotResolver::class);
+        $states = $this->setupItemStatesKeyedByItemKey($tenant);
         $rows = [];
         foreach ($defs as $key => $def) {
-            $state = TenantSetupItemState::query()
-                ->where('tenant_id', $tenant->id)
-                ->where('item_key', $key)
-                ->first();
+            $state = $states->get($key);
             $exec = $state?->current_status ?? 'pending';
             $executionLabel = match ($exec) {
                 'snoozed' => 'Отложено',
@@ -263,6 +266,8 @@ class TenantSiteSetupCenterPage extends Page
             ];
         }
 
+        $states = $this->setupItemStatesKeyedByItemKey($tenant);
+
         foreach ($defs as $key => $def) {
             if ($applicability->evaluateItem($tenant, $def, Auth::user()) !== 'applicable') {
                 continue;
@@ -273,10 +278,7 @@ class TenantSiteSetupCenterPage extends Page
                 continue;
             }
 
-            $state = TenantSetupItemState::query()
-                ->where('tenant_id', $tenant->id)
-                ->where('item_key', $key)
-                ->first();
+            $state = $states->get($key);
             $exec = $state?->current_status ?? 'pending';
             $executionLabel = match ($exec) {
                 'snoozed' => 'Отложено',
@@ -300,5 +302,16 @@ class TenantSiteSetupCenterPage extends Page
         }
 
         return array_values($sections);
+    }
+
+    /**
+     * @return Collection<string, TenantSetupItemState>
+     */
+    private function setupItemStatesKeyedByItemKey(Tenant $tenant): Collection
+    {
+        return $this->setupItemStatesCache ??= TenantSetupItemState::query()
+            ->where('tenant_id', $tenant->id)
+            ->get()
+            ->keyBy('item_key');
     }
 }
