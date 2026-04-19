@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Filament;
 
 use App\Filament\Platform\Resources\TenantDomainResource\Pages\CreateTenantDomain;
+use App\Filament\Platform\Resources\TenantDomainResource\Pages\ListTenantDomains;
 use App\Filament\Tenant\Resources\CustomDomainResource\Pages\CreateCustomDomain;
 use App\Models\Tenant;
 use App\Models\TenantDomain;
@@ -118,5 +119,44 @@ final class TenantDomainHostFilamentTest extends TestCase
             ])
             ->call('create')
             ->assertHasErrors(['data.host']);
+    }
+
+    public function test_platform_table_slide_over_edit_saves_without_false_client_error(): void
+    {
+        $user = User::factory()->create(['status' => 'active']);
+        $user->assignRole('platform_owner');
+
+        $tenant = Tenant::query()->create([
+            'name' => 'Slide Tenant',
+            'slug' => 'slide-tenant',
+            'status' => 'active',
+        ]);
+
+        $domain = TenantDomain::query()->create([
+            'tenant_id' => $tenant->id,
+            'host' => 'slide-tenant.apex.test',
+            'type' => TenantDomain::TYPE_SUBDOMAIN,
+            'is_primary' => true,
+            'status' => TenantDomain::STATUS_ACTIVE,
+            'ssl_status' => TenantDomain::SSL_NOT_REQUIRED,
+        ]);
+
+        Filament::setCurrentPanel(Filament::getPanel('platform'));
+        $this->actingAs($user);
+
+        // Omit `tenant_id` in the submit payload: slide-over uses `ListRecords`, not `EditRecord`;
+        // the rule must resolve the client from the mounted table action record.
+        Livewire::test(ListTenantDomains::class)
+            ->callTableAction('edit', $domain, data: [
+                'host' => 'slide-renamed.apex.test',
+                'type' => TenantDomain::TYPE_SUBDOMAIN,
+                'is_primary' => true,
+                'status' => TenantDomain::STATUS_ACTIVE,
+                'ssl_status' => TenantDomain::SSL_NOT_REQUIRED,
+            ])
+            ->assertHasNoTableActionErrors();
+
+        $domain->refresh();
+        $this->assertSame('slide-renamed.apex.test', $domain->host);
     }
 }

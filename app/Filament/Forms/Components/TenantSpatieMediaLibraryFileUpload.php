@@ -7,13 +7,16 @@ use App\Support\Storage\TenantStorage;
 use App\Support\Storage\TenantStorageDisks;
 use App\Tenant\StorageQuota\StorageQuotaExceededException;
 use App\Tenant\StorageQuota\TenantStorageQuotaService;
+use Closure;
+use Filament\Forms\Components\BaseFileUpload;
 use Filament\Forms\Components\SpatieMediaLibraryFileUpload;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use League\Flysystem\UnableToCheckFileExistence;
+use League\Flysystem\UnableToRetrieveMetadata;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
-use Spatie\MediaLibrary\MediaCollections\FileAdder;
+use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
 use Throwable;
 
@@ -23,15 +26,97 @@ use Throwable;
  */
 final class TenantSpatieMediaLibraryFileUpload extends SpatieMediaLibraryFileUpload
 {
+    public function maxSize(int|Closure|null $size): static
+    {
+        $this->maxSize = $size;
+
+        $this->rule(static function (BaseFileUpload $component): Closure {
+            return static function (string $attribute, mixed $value, Closure $fail) use ($component): void {
+                $maxKb = $component->getMaxSize();
+                if (! filled($maxKb) || ! $value instanceof TemporaryUploadedFile) {
+                    return;
+                }
+
+                try {
+                    $sizeKb = $value->getSize() / 1024;
+                } catch (UnableToRetrieveMetadata) {
+                    $fail('Временный файл загрузки недоступен. Повторите загрузку изображения.');
+
+                    return;
+                }
+
+                if ($sizeKb > $maxKb) {
+                    $fail(__(
+                        'validation.max.file',
+                        ['attribute' => $component->getValidationAttribute(), 'max' => $maxKb],
+                    ));
+                }
+            };
+        });
+
+        return $this;
+    }
+
+    public function minSize(int|Closure|null $size): static
+    {
+        $this->minSize = $size;
+
+        $this->rule(static function (BaseFileUpload $component): Closure {
+            return static function (string $attribute, mixed $value, Closure $fail) use ($component): void {
+                $minKb = $component->getMinSize();
+                if (! filled($minKb) || ! $value instanceof TemporaryUploadedFile) {
+                    return;
+                }
+
+                try {
+                    $sizeKb = $value->getSize() / 1024;
+                } catch (UnableToRetrieveMetadata) {
+                    $fail('Временный файл загрузки недоступен. Повторите загрузку изображения.');
+
+                    return;
+                }
+
+                if ($sizeKb < $minKb) {
+                    $fail(__(
+                        'validation.min.file',
+                        ['attribute' => $component->getValidationAttribute(), 'min' => $minKb],
+                    ));
+                }
+            };
+        });
+
+        return $this;
+    }
+
     protected function setUp(): void
     {
         parent::setUp();
 
         $this->saveUploadedFileUsing(function (SpatieMediaLibraryFileUpload $component, TemporaryUploadedFile $file, ?Model $record): ?string {
+            try {
+                if (! $file->exists()) {
+                    throw ValidationException::withMessages([
+                        $component->getStatePath() => ['Временный файл загрузки не найден. Повторите загрузку изображения.'],
+                    ]);
+                }
+            } catch (UnableToCheckFileExistence $exception) {
+                throw ValidationException::withMessages([
+                    $component->getStatePath() => ['Не удалось проверить загруженный файл. Повторите загрузку изображения.'],
+                ]);
+            }
+
             $tenant = currentTenant();
             if ($tenant instanceof Tenant && TenantStorageQuotaService::isQuotaEnforcementActive()) {
                 try {
-                    app(TenantStorageQuotaService::class)->assertCanStoreBytes($tenant, (int) $file->getSize(), 'media_upload');
+                    $bytes = (int) $file->getSize();
+                } catch (UnableToRetrieveMetadata) {
+                    throw ValidationException::withMessages([
+                        $component->getStatePath() => ['Временный файл загрузки недоступен. Повторите загрузку изображения.'],
+                    ]);
+                }
+
+                try {
+                    app(TenantStorageQuotaService::class)->assertCanStoreBytes($tenant, $bytes, 'media_upload');
                 } catch (StorageQuotaExceededException $e) {
                     throw ValidationException::withMessages([
                         $component->getStatePath() => [$e->getMessage()],
@@ -39,19 +124,13 @@ final class TenantSpatieMediaLibraryFileUpload extends SpatieMediaLibraryFileUpl
                 }
             }
 
-            if (! method_exists($record, 'addMediaFromString')) {
-                return $file;
+            if (! $record instanceof HasMedia) {
+                throw ValidationException::withMessages([
+                    $component->getStatePath() => ['Невозможно сохранить файл: запись недоступна или не поддерживает медиабиблиотеку.'],
+                ]);
             }
 
-            try {
-                if (! $file->exists()) {
-                    return null;
-                }
-            } catch (UnableToCheckFileExistence $exception) {
-                return null;
-            }
-
-            /** @var FileAdder $mediaAdder */
+            /** @var Model&HasMedia $record */
             $mediaAdder = $record->addMediaFromString($file->get());
 
             $filename = $component->getUploadedFileNameForStorage($file);
