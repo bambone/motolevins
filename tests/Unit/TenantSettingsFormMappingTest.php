@@ -19,6 +19,7 @@ class TenantSettingsFormMappingTest extends TestCase
         $expected = [
             'general_site_name' => 'general.site_name',
             'general_short_description' => 'general.short_description',
+            'general_footer_tagline' => 'general.footer_tagline',
             'general_domain' => 'general.domain',
             'branding_logo' => 'branding.logo',
             'branding_logo_path' => 'branding.logo_path',
@@ -33,6 +34,7 @@ class TenantSettingsFormMappingTest extends TestCase
             'contacts_whatsapp' => 'contacts.whatsapp',
             'contacts_telegram' => 'contacts.telegram',
             'contacts_address' => 'contacts.address',
+            'contacts_public_office_address' => 'contacts.public_office_address',
             'contacts_hours' => 'contacts.hours',
             'programs_cta_behavior' => 'programs.cta_behavior',
             'programs_enrollment_page_slug' => 'programs.enrollment_page_slug',

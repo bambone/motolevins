@@ -2,6 +2,7 @@
 
 namespace App\Filament\Tenant\Pages;
 
+use App\ContactChannels\TenantPublicSiteContactsService;
 use App\Filament\Forms\Components\TenantPublicImagePicker;
 use App\Filament\Shared\TenantAnalyticsFormSchema;
 use App\Filament\Tenant\Support\TenantPanelHintHeaderAction;
@@ -71,6 +72,7 @@ class Settings extends Page
         'contacts_whatsapp' => 'contacts.whatsapp',
         'contacts_telegram' => 'contacts.telegram',
         'contacts_address' => 'contacts.address',
+        'contacts_public_office_address' => 'contacts.public_office_address',
         'contacts_hours' => 'contacts.hours',
         'programs_cta_behavior' => 'programs.cta_behavior',
         'programs_enrollment_page_slug' => 'programs.enrollment_page_slug',
@@ -131,7 +133,9 @@ class Settings extends Page
                 'contacts_whatsapp' => TenantSetting::getForTenant($tenant->id, 'contacts.whatsapp', ''),
                 'contacts_telegram' => TenantSetting::getForTenant($tenant->id, 'contacts.telegram', ''),
                 'contacts_address' => TenantSetting::getForTenant($tenant->id, 'contacts.address', ''),
+                'contacts_public_office_address' => TenantSetting::getForTenant($tenant->id, 'contacts.public_office_address', ''),
                 'contacts_hours' => TenantSetting::getForTenant($tenant->id, 'contacts.hours', ''),
+                'public_site_footer_messenger_links' => app(TenantPublicSiteContactsService::class)->footerMessengerLinksModeForForm((int) $tenant->id),
                 'programs_cta_behavior' => TenantSetting::getForTenant(
                     $tenant->id,
                     'programs.cta_behavior',
@@ -165,6 +169,7 @@ class Settings extends Page
                     'reviews.success_message_published',
                     'Спасибо! Ваш отзыв успешно отправлен.',
                 ),
+                'booking_legal_consents_required' => (bool) TenantSetting::getForTenant($tenant->id, 'booking.legal_consents_required', false),
                 ...AnalyticsSettingsFormMapper::toFormState(
                     app(AnalyticsSettingsPersistence::class)->load((int) $tenant->id)
                 ),
@@ -213,7 +218,7 @@ class Settings extends Page
                 ->label('Подпись в подвале сайта')
                 ->rows(2)
                 ->maxLength(500)
-                ->helperText('Текст справа от копирайта на публичном сайте (темы «по умолчанию» и expert_auto). Пусто — подставится стандартная формулировка про аренду и связь.')
+                ->helperText('Дополнительная строка под копирайтом на публичном сайте (темы default, moto, expert_auto и др.): в типизированном подвале — если не задан вторичный текст в секции «Нижняя строка», иначе как запасной вариант. Пусто — может подставиться стандартная формулировка темы.')
                 ->visible(fn (): bool => $tenant !== null),
         ];
         if ($tenant === null) {
@@ -309,7 +314,7 @@ class Settings extends Page
                                     ->schema($siteIdentityFields)->columns(2),
 
                                 Section::make('Контакты')
-                                    ->description('Телефоны и мессенджеры обычно выводятся в шапке, подвале и на странице контактов.')
+                                    ->description('Телефоны и мессенджеры выводятся в шапке, на странице контактов и в подвале (см. также раздел «Подвал» в админке для типизированных секций).')
                                     ->extraAttributes(['data-setup-section' => 'contacts_block'])
                                     ->schema([
                                         TextInput::make('contacts_phone')
@@ -331,7 +336,20 @@ class Settings extends Page
                                             ->helperText('Без маски: можно номер или полную ссылку WhatsApp.'),
                                         TextInput::make('contacts_telegram')->label('Telegram')->placeholder('@username или ссылка t.me/…'),
                                         Textarea::make('contacts_address')->label('Адрес')->rows(2),
+                                        Textarea::make('contacts_public_office_address')
+                                            ->label('Адрес / зона выдачи для подвала')
+                                            ->rows(2)
+                                            ->helperText('Показывается в блоке «Контакты» типизированного подвала, если включено отображение адреса. Общий «Адрес» выше может дублироваться или использоваться на странице контактов — по смыслу для вашего сайта.'),
                                         Textarea::make('contacts_hours')->label('Часы работы')->rows(2)->placeholder('Например: Пн–Вс 9:00–21:00'),
+                                        Select::make('public_site_footer_messenger_links')
+                                            ->label('Мессенджеры в минимальном подвале')
+                                            ->options([
+                                                'inherit' => 'Как у плавающих кнопок (по умолчанию)',
+                                                'show' => 'Показывать (даже если плавающие кнопки выключены)',
+                                                'hide' => 'Скрыть',
+                                            ])
+                                            ->native(true)
+                                            ->helperText('Минимальный подвал — когда нет секций подвала в БД. Плавающие кнопки настраиваются отдельно; здесь можно развести сценарии «без FAB, но ссылка в подвале».'),
                                     ])->columns(2),
                             ]),
 
@@ -461,6 +479,24 @@ class Settings extends Page
                                     ->columns(2),
                             ]),
 
+                        'booking' => Tab::make('Бронирование')
+                            ->id('booking')
+                            ->icon('heroicon-o-clipboard-document-check')
+                            ->visible(fn (): bool => $tenant !== null)
+                            ->schema([
+                                Section::make('Юридические согласия при бронировании')
+                                    ->description('Влияет только на сценарии оформления брони (checkout и заявка с выбором техники). Обычные контактные формы не затрагивает.')
+                                    ->schema([
+                                        Toggle::make('booking_legal_consents_required')
+                                            ->label('Требовать пункты согласий из списка')
+                                            ->helperText(
+                                                'Пункты задаются в разделе «Согласия бронирования» в настройках. Для существующих клиентов по умолчанию выключено, чтобы не менять конверсию без осознанного включения.'
+                                            )
+                                            ->default(false),
+                                    ])
+                                    ->columns(2),
+                            ]),
+
                         'analytics' => Tab::make(__('tenant_admin_settings.tabs.analytics'))
                             ->id('analytics')
                             ->icon('heroicon-o-chart-bar')
@@ -517,6 +553,28 @@ class Settings extends Page
                             TenantSetting::setForTenant((int) $tenant->id, 'general.domain', rtrim($raw, '/'));
                         }
                         unset($data['general_domain']);
+                    }
+
+                    if (array_key_exists('booking_legal_consents_required', $data)) {
+                        TenantSetting::setForTenant(
+                            (int) $tenant->id,
+                            'booking.legal_consents_required',
+                            (bool) $data['booking_legal_consents_required'],
+                            'boolean',
+                        );
+                        unset($data['booking_legal_consents_required']);
+                    }
+
+                    if (array_key_exists('public_site_footer_messenger_links', $data)) {
+                        $mode = (string) ($data['public_site_footer_messenger_links'] ?? 'inherit');
+                        if ($mode === 'inherit') {
+                            TenantSetting::forgetForTenant((int) $tenant->id, 'public_site.footer_messenger_links');
+                        } elseif ($mode === 'show') {
+                            TenantSetting::setForTenant((int) $tenant->id, 'public_site.footer_messenger_links', true, 'boolean');
+                        } else {
+                            TenantSetting::setForTenant((int) $tenant->id, 'public_site.footer_messenger_links', false, 'boolean');
+                        }
+                        unset($data['public_site_footer_messenger_links']);
                     }
 
                     foreach ($data as $field => $value) {

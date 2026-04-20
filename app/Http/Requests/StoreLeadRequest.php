@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\BookingConsent\BookingConsentValidationRules;
 use App\ContactChannels\ContactChannelType;
 use App\ContactChannels\TenantContactChannelsStore;
 use App\Support\Phone\IntlPhoneNormalizer;
@@ -41,7 +42,7 @@ class StoreLeadRequest extends FormRequest
 
         $tenantId = $tenant?->id ?? 0;
 
-        return [
+        $base = [
             'motorcycle_id' => [
                 'nullable',
                 Rule::exists('motorcycles', 'id')->where('tenant_id', $tenantId),
@@ -65,16 +66,8 @@ class StoreLeadRequest extends FormRequest
             'page_url' => ['nullable', 'string', 'max:500'],
             'preferred_contact_channel' => ['required', 'string', Rule::in($allowed)],
             'preferred_contact_value' => ['nullable', 'string', 'max:500'],
-            'agree_to_terms' => [
-                Rule::excludeIf(fn () => ! $this->filled('motorcycle_id')),
-                'required',
-                'accepted',
-            ],
-            'agree_to_privacy' => [
-                Rule::excludeIf(fn () => ! $this->filled('motorcycle_id')),
-                'required',
-                'accepted',
-            ],
         ];
+
+        return app(BookingConsentValidationRules::class)->applyLeadRules($this, $base);
     }
 }

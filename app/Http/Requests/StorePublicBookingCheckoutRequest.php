@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\BookingConsent\BookingConsentValidationRules;
 use App\ContactChannels\ContactChannelRegistry;
 use App\ContactChannels\ContactChannelType;
 use App\ContactChannels\PreferredContactValueMessages;
@@ -43,9 +44,7 @@ class StorePublicBookingCheckoutRequest extends FormRequest
             ? app(TenantContactChannelsStore::class)->allowedPreferredChannelIds($tenant->id)
             : [ContactChannelType::Phone->value];
 
-        return [
-            'agree_to_terms' => ['required', 'accepted'],
-            'agree_to_privacy' => ['required', 'accepted'],
+        $base = [
             'customer_name' => ['required', 'string', 'max:255'],
             'phone' => [
                 'required',
@@ -62,6 +61,8 @@ class StorePublicBookingCheckoutRequest extends FormRequest
             'preferred_contact_channel' => ['required', 'string', Rule::in($allowed)],
             'preferred_contact_value' => ['nullable', 'string', 'max:500'],
         ];
+
+        return app(BookingConsentValidationRules::class)->applyCheckoutRules($this, $base);
     }
 
     public function withValidator(Validator $validator): void

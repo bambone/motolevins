@@ -14,6 +14,8 @@ use App\Models\RentalUnit;
 use App\Models\TenantLocation;
 use App\Money\MoneyBindingRegistry;
 use App\Services\AvailabilityService;
+use App\BookingConsent\BookingConsentSnapshotFactory;
+use App\BookingConsent\BookingConsentValidationRules;
 use App\Services\BookingService;
 use App\Services\Catalog\MotorcycleLocationCatalogService;
 use App\Services\Tenancy\TenantMotoRentalLegalUrls;
@@ -357,6 +359,10 @@ class PublicBookingController extends Controller
             }
         }
 
+        $legalSnapshot = app(BookingConsentValidationRules::class)->dynamicConsentActive($tenant)
+            ? app(BookingConsentSnapshotFactory::class)->buildFromRequest($tenant, $request, 'booking_checkout')
+            : $this->motoRentalLegalUrls->acceptanceSnapshotForBooking($tenant);
+
         try {
             $booking = $this->bookingService->createPublicBooking([
                 'tenant_id' => $tenant->id,
@@ -372,7 +378,7 @@ class PublicBookingController extends Controller
                 'preferred_contact_channel' => $contact['preferred_contact_channel'],
                 'preferred_contact_value' => $contact['preferred_contact_value'],
                 'visitor_contact_channels_json' => $contact['visitor_contact_channels_json'],
-                'legal_acceptances_json' => $this->motoRentalLegalUrls->acceptanceSnapshotForBooking($tenant),
+                'legal_acceptances_json' => $legalSnapshot,
                 'email' => $validated['email'] ?? null,
                 'customer_comment' => $validated['customer_comment'] ?? null,
                 'source' => 'public_booking',

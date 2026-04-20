@@ -129,6 +129,32 @@ class TenantPublicSiteContactsServiceTest extends TestCase
         $this->assertFalse($this->service()->floatingMessengerButtonsEnabled((int) $tenant->id));
     }
 
+    public function test_footer_messenger_links_follows_floating_when_unset(): void
+    {
+        $tenant = Tenant::query()->create(['name' => 'Fm1', 'slug' => 'tenant-fm1', 'status' => 'active']);
+        TenantSetting::setForTenant($tenant->id, 'public_site.floating_messenger_buttons', false, 'boolean');
+        Cache::flush();
+        $this->assertFalse($this->service()->footerMessengerLinksEnabled((int) $tenant->id));
+    }
+
+    public function test_footer_messenger_links_can_show_when_floating_disabled(): void
+    {
+        $tenant = Tenant::query()->create(['name' => 'Fm2', 'slug' => 'tenant-fm2', 'status' => 'active']);
+        TenantSetting::setForTenant($tenant->id, 'public_site.floating_messenger_buttons', false, 'boolean');
+        TenantSetting::setForTenant($tenant->id, 'public_site.footer_messenger_links', true, 'boolean');
+        Cache::flush();
+        $this->assertTrue($this->service()->footerMessengerLinksEnabled((int) $tenant->id));
+    }
+
+    public function test_footer_messenger_string_false_normalizes_like_service_not_raw_bool_cast(): void
+    {
+        $tenant = Tenant::query()->create(['name' => 'Fm3', 'slug' => 'tenant-fm3', 'status' => 'active']);
+        TenantSetting::setForTenant($tenant->id, 'public_site.footer_messenger_links', 'false', 'string');
+        Cache::flush();
+        $this->assertFalse($this->service()->footerMessengerLinksEnabled((int) $tenant->id));
+        $this->assertSame('hide', $this->service()->footerMessengerLinksModeForForm((int) $tenant->id));
+    }
+
     public function test_each_tenant_gets_own_whatsapp_digits_from_persisted_channels(): void
     {
         $t1 = Tenant::query()->create(['name' => 'Iso1', 'slug' => 'iso-svc-1', 'status' => 'active']);

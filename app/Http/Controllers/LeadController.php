@@ -6,6 +6,8 @@ use App\ContactChannels\VisitorContactPayloadBuilder;
 use App\Http\Requests\StoreLeadRequest;
 use App\Jobs\SendLeadTelegramNotification;
 use App\Product\CRM\Actions\CreateCrmRequestFromPublicForm;
+use App\BookingConsent\BookingConsentSnapshotFactory;
+use App\BookingConsent\BookingConsentValidationRules;
 use App\Product\CRM\DTO\PublicInboundContext;
 use App\Product\CRM\DTO\PublicInboundSubmission;
 use App\Services\Tenancy\TenantMotoRentalLegalUrls;
@@ -33,6 +35,13 @@ class LeadController extends Controller
             'preferred_contact_value' => $request->validated('preferred_contact_value'),
         ]);
 
+        $legalJson = null;
+        if ($hasMotorcycleBooking) {
+            $legalJson = app(BookingConsentValidationRules::class)->dynamicConsentActive($tenant)
+                ? app(BookingConsentSnapshotFactory::class)->buildFromRequest($tenant, $request, 'api_lead_booking')
+                : $motoRentalLegalUrls->acceptanceSnapshotForBooking($tenant);
+        }
+
         $submission = new PublicInboundSubmission(
             requestType: 'tenant_booking',
             name: $request->validated('name'),
@@ -53,7 +62,7 @@ class LeadController extends Controller
             preferredContactChannel: $contact['preferred_contact_channel'],
             preferredContactValue: $contact['preferred_contact_value'],
             visitorContactChannelsJson: $contact['visitor_contact_channels_json'],
-            legalAcceptancesJson: $hasMotorcycleBooking ? $motoRentalLegalUrls->acceptanceSnapshotForBooking($tenant) : null,
+            legalAcceptancesJson: $legalJson,
         );
 
         $result = $createCrmRequest->handle(PublicInboundContext::tenant($tenant->id), $submission);

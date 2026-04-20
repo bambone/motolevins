@@ -33,7 +33,7 @@
         </div>
     </section>
 
-    <section class="mx-auto max-w-6xl px-3 pb-10 sm:px-4 md:px-8">
+    <section class="mx-auto max-w-6xl px-3 pb-6 sm:px-4 md:px-8">
         <div class="grid gap-6 sm:grid-cols-2">
             <div class="rounded-2xl border border-white/10 bg-carbon/80 p-5 sm:p-6">
                 <h2 class="mb-2 text-lg font-bold text-white sm:text-xl">Как работает бронирование</h2>
@@ -67,13 +67,14 @@
         </div>
     </section>
 
-    <section class="border-t border-white/[0.04] bg-[#0c0c0e] py-12 sm:py-16">
+    <section class="border-t border-white/[0.04] bg-[#0c0c0e] py-8 sm:py-10">
         <div class="mx-auto max-w-7xl px-3 sm:px-4 md:px-8">
             <h2 class="mb-8 text-balance text-xl font-bold text-white sm:text-2xl">Модели в каталоге</h2>
             @if($bikes->isEmpty())
                 <p class="text-sm text-silver sm:text-base">Сейчас нет моделей в каталоге — загляните позже или напишите в <a href="{{ route('contacts') }}" class="text-moto-amber underline-offset-2 hover:underline">контакты</a>.</p>
             @else
-                <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-6 md:grid-cols-2 xl:grid-cols-3 xl:gap-8">
+                {{-- Резиновая сетка: число колонок от ширины контейнера (min трека ~24rem → в max-w-7xl обычно 3 колонки, без жёсткого перелома только на 2xl). --}}
+                <div class="grid grid-cols-1 gap-5 sm:gap-6 xl:gap-8 sm:grid-cols-[repeat(auto-fill,minmax(min(100%,24rem),1fr))]">
                     @foreach ($bikes as $index => $bike)
                         <x-bike-card :bike="$bike" :badge="$badges[$index] ?? null" :use-booking-context="false" />
                     @endforeach

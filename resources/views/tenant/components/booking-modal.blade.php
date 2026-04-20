@@ -2,7 +2,7 @@
 
 <!-- Alpine Booking Modal -->
 <div
-    x-data="bookingModal({ preferredOptions: @js($preferredChannelFormOptions) })"
+    x-data="bookingModal({ preferredOptions: @js($preferredChannelFormOptions), bookingConsentUi: @js($tenantBookingConsentUi ?? ['show' => false, 'required' => false, 'items' => []]) })"
     @open-booking-modal.window="openModal($event.detail)"
     @keydown.escape.window="isOpen && closeModal()"
     x-show="isOpen"
@@ -324,6 +324,9 @@ document.addEventListener('alpine:init', () => {
         _quoteSeq: 0,
 
         preferredOptions: Array.isArray(cfg.preferredOptions) ? cfg.preferredOptions : [],
+        bookingConsentUi: cfg.bookingConsentUi && typeof cfg.bookingConsentUi === 'object'
+            ? cfg.bookingConsentUi
+            : { show: false, required: false, items: [] },
 
         form: {
             start_date: '',
@@ -661,6 +664,16 @@ document.addEventListener('alpine:init', () => {
             this.form.preferred_contact_value = '';
             this.form.agree_to_terms = false;
             this.form.agree_to_privacy = false;
+            try {
+                const box = this.$refs.bookingLegalConsents;
+                if (box && box.querySelectorAll) {
+                    box.querySelectorAll('input[type="checkbox"]').forEach((el) => {
+                        el.checked = false;
+                    });
+                }
+            } catch {
+                /* ignore */
+            }
             this.calculatedDays = 0;
             this.totalPrice = 0;
             this.quoteStatus = 'idle';
@@ -867,7 +880,21 @@ document.addEventListener('alpine:init', () => {
                 }
             }
 
-            if (! this.form.agree_to_terms || ! this.form.agree_to_privacy) {
+            const consentCfg = this.bookingConsentUi || { show: false, items: [] };
+            if (consentCfg.show && Array.isArray(consentCfg.items)) {
+                for (const it of consentCfg.items) {
+                    if (! it.is_required) {
+                        continue;
+                    }
+                    const el = document.getElementById('booking-modal-consent-' + it.id);
+                    if (! el || ! el.checked) {
+                        this.errorMessage = 'Подтвердите обязательные согласия.';
+                        this.flashFieldGroup(this.$refs.bookingLegalConsents);
+
+                        return;
+                    }
+                }
+            } else if (! this.form.agree_to_terms || ! this.form.agree_to_privacy) {
                 this.errorMessage = 'Подтвердите согласие с условиями проката и обработкой персональных данных.';
                 this.flashFieldGroup(this.$refs.bookingLegalConsents);
 
@@ -892,19 +919,37 @@ document.addEventListener('alpine:init', () => {
                         'X-CSRF-TOKEN': csrf,
                         'Accept': 'application/json',
                     },
-                    body: JSON.stringify({
-                        motorcycle_id: this.bike.id,
-                        name: this.form.customer_name,
-                        phone: this.form.phone,
-                        comment: this.form.customer_comment,
-                        rental_date_from: this.form.start_date,
-                        rental_date_to: this.form.end_date,
-                        source: 'booking_form',
-                        preferred_contact_channel: this.form.preferred_contact_channel,
-                        preferred_contact_value: this.selectedNeedsExtraValue() ? (this.form.preferred_contact_value || '').trim() : null,
-                        agree_to_terms: true,
-                        agree_to_privacy: true,
-                    }),
+                    body: JSON.stringify((() => {
+                        const base = {
+                            motorcycle_id: this.bike.id,
+                            name: this.form.customer_name,
+                            phone: this.form.phone,
+                            comment: this.form.customer_comment,
+                            rental_date_from: this.form.start_date,
+                            rental_date_to: this.form.end_date,
+                            source: 'booking_form',
+                            preferred_contact_channel: this.form.preferred_contact_channel,
+                            preferred_contact_value: this.selectedNeedsExtraValue() ? (this.form.preferred_contact_value || '').trim() : null,
+                        };
+                        const cc = this.bookingConsentUi || { show: false, items: [] };
+                        if (cc.show && Array.isArray(cc.items)) {
+                            const consent_accepted = {};
+                            cc.items.forEach((it) => {
+                                const el = document.getElementById('booking-modal-consent-' + it.id);
+                                if (el && el.checked) {
+                                    consent_accepted[it.id] = true;
+                                }
+                            });
+
+                            return { ...base, consent_accepted };
+                        }
+
+                        return {
+                            ...base,
+                            agree_to_terms: true,
+                            agree_to_privacy: true,
+                        };
+                    })()),
                 });
 
                 const data = await response.json();

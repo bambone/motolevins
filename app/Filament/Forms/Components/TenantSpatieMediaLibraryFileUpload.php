@@ -93,67 +93,77 @@ final class TenantSpatieMediaLibraryFileUpload extends SpatieMediaLibraryFileUpl
         parent::setUp();
 
         $this->saveUploadedFileUsing(function (SpatieMediaLibraryFileUpload $component, TemporaryUploadedFile $file, ?Model $record): ?string {
+            $unavailable = fn (): ValidationException => ValidationException::withMessages([
+                $component->getStatePath() => ['Временный файл загрузки недоступен. Повторите загрузку изображения.'],
+            ]);
+
             try {
-                if (! $file->exists()) {
+                try {
+                    if (! $file->exists()) {
+                        throw $unavailable();
+                    }
+                } catch (UnableToCheckFileExistence) {
+                    throw $unavailable();
+                }
+
+                $tenant = currentTenant();
+                if ($tenant instanceof Tenant && TenantStorageQuotaService::isQuotaEnforcementActive()) {
+                    try {
+                        $bytes = (int) $file->getSize();
+                    } catch (UnableToRetrieveMetadata) {
+                        throw $unavailable();
+                    }
+
+                    try {
+                        app(TenantStorageQuotaService::class)->assertCanStoreBytes($tenant, $bytes, 'media_upload');
+                    } catch (StorageQuotaExceededException $e) {
+                        throw ValidationException::withMessages([
+                            $component->getStatePath() => [$e->getMessage()],
+                        ]);
+                    }
+                }
+
+                if (! $record instanceof HasMedia) {
                     throw ValidationException::withMessages([
-                        $component->getStatePath() => ['Временный файл загрузки не найден. Повторите загрузку изображения.'],
+                        $component->getStatePath() => ['Невозможно сохранить файл: запись недоступна или не поддерживает медиабиблиотеку.'],
                     ]);
                 }
-            } catch (UnableToCheckFileExistence $exception) {
-                throw ValidationException::withMessages([
-                    $component->getStatePath() => ['Не удалось проверить загруженный файл. Повторите загрузку изображения.'],
-                ]);
-            }
 
-            $tenant = currentTenant();
-            if ($tenant instanceof Tenant && TenantStorageQuotaService::isQuotaEnforcementActive()) {
+                /** @var Model&HasMedia $record */
+                $mediaAdder = $record->addMediaFromString($file->get());
+
+                $filename = $component->getUploadedFileNameForStorage($file);
+
                 try {
-                    $bytes = (int) $file->getSize();
+                    $mimeType = $file->getMimeType();
                 } catch (UnableToRetrieveMetadata) {
-                    throw ValidationException::withMessages([
-                        $component->getStatePath() => ['Временный файл загрузки недоступен. Повторите загрузку изображения.'],
-                    ]);
+                    throw $unavailable();
                 }
 
-                try {
-                    app(TenantStorageQuotaService::class)->assertCanStoreBytes($tenant, $bytes, 'media_upload');
-                } catch (StorageQuotaExceededException $e) {
-                    throw ValidationException::withMessages([
-                        $component->getStatePath() => [$e->getMessage()],
-                    ]);
+                $uploadHeaders = ['ContentType' => $mimeType];
+                $diskName = $component->getDiskName();
+                if ($diskName !== '' && $diskName !== TenantStorageDisks::privateDiskName()) {
+                    $uploadDisk = Storage::disk($diskName);
+                    $uploadHeaders = TenantStorage::mergedOptionsForPublicObjectWrite($uploadDisk, $uploadHeaders);
                 }
+
+                $media = $mediaAdder
+                    ->addCustomHeaders([...$uploadHeaders, ...$component->getCustomHeaders()])
+                    ->usingFileName($filename)
+                    ->usingName($component->getMediaName($file) ?? pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME))
+                    ->storingConversionsOnDisk($component->getConversionsDisk() ?? '')
+                    ->withCustomProperties($component->getCustomProperties($file))
+                    ->withManipulations($component->getManipulations())
+                    ->withResponsiveImagesIf($component->hasResponsiveImages())
+                    ->withProperties($component->getProperties())
+                    ->toMediaCollection($component->getCollection() ?? 'default', $component->getDiskName());
+
+                return $media->getAttributeValue('uuid');
+            } catch (ValidationException $e) {
+                throw $e;
+            } catch (UnableToRetrieveMetadata) {
+                throw $unavailable();
             }
-
-            if (! $record instanceof HasMedia) {
-                throw ValidationException::withMessages([
-                    $component->getStatePath() => ['Невозможно сохранить файл: запись недоступна или не поддерживает медиабиблиотеку.'],
-                ]);
-            }
-
-            /** @var Model&HasMedia $record */
-            $mediaAdder = $record->addMediaFromString($file->get());
-
-            $filename = $component->getUploadedFileNameForStorage($file);
-
-            $uploadHeaders = ['ContentType' => $file->getMimeType()];
-            $diskName = $component->getDiskName();
-            if ($diskName !== '' && $diskName !== TenantStorageDisks::privateDiskName()) {
-                $uploadDisk = Storage::disk($diskName);
-                $uploadHeaders = TenantStorage::mergedOptionsForPublicObjectWrite($uploadDisk, $uploadHeaders);
-            }
-
-            $media = $mediaAdder
-                ->addCustomHeaders([...$uploadHeaders, ...$component->getCustomHeaders()])
-                ->usingFileName($filename)
-                ->usingName($component->getMediaName($file) ?? pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME))
-                ->storingConversionsOnDisk($component->getConversionsDisk() ?? '')
-                ->withCustomProperties($component->getCustomProperties($file))
-                ->withManipulations($component->getManipulations())
-                ->withResponsiveImagesIf($component->hasResponsiveImages())
-                ->withProperties($component->getProperties())
-                ->toMediaCollection($component->getCollection() ?? 'default', $component->getDiskName());
-
-            return $media->getAttributeValue('uuid');
         });
 
         $this->getUploadedFileUsing(function (SpatieMediaLibraryFileUpload $component, string $file): ?array {

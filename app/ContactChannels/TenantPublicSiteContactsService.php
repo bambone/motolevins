@@ -4,15 +4,10 @@ namespace App\ContactChannels;
 
 use App\Models\Tenant;
 use App\Models\TenantSetting;
-use Tests\Feature\Tenant\TenantPublicContactsComposerIsolationTest;
-use Tests\Unit\ContactChannels\TenantPublicSiteContactsServiceTest;
 
 /**
- * Публичные контакты для Blade (шапка, плавающие кнопки): из contact_channels.state, без чужих дефолтов.
+ * Публичные контакты для Blade (шапка, плавающие кнопки, подвал): из contact_channels.state, без чужих дефолтов.
  * Данные всегда по {@see Tenant::$id} в {@see TenantSetting}; шаблоны общие — изоляция здесь и в View-composer.
- *
- * Тесты: {@see TenantPublicSiteContactsServiceTest},
- * {@see TenantPublicContactsComposerIsolationTest}.
  */
 final class TenantPublicSiteContactsService
 {
@@ -21,12 +16,47 @@ final class TenantPublicSiteContactsService
     ) {}
 
     /**
+     * Значение для селекта в Filament: inherit | show | hide. Та же нормализация bool, что и для runtime.
+     */
+    public function footerMessengerLinksModeForForm(int $tenantId): string
+    {
+        $v = TenantSetting::getForTenant($tenantId, 'public_site.footer_messenger_links', null);
+        if ($v === null) {
+            return 'inherit';
+        }
+
+        return self::normalizeBoolishTenantSetting($v) ? 'show' : 'hide';
+    }
+
+    /**
      * Плавающие кнопки WA/TG на лендинге: по умолчанию включены, пока явно не выключены в настройках.
      */
     public function floatingMessengerButtonsEnabled(int $tenantId): bool
     {
         $v = TenantSetting::getForTenant($tenantId, 'public_site.floating_messenger_buttons', true);
 
+        return self::normalizeBoolishTenantSetting($v);
+    }
+
+    /**
+     * Ссылки Telegram/WhatsApp/VK в минимальном подвале (не путать с FAB).
+     * Если настройка не задана — как {@see floatingMessengerButtonsEnabled} (обратная совместимость).
+     */
+    public function footerMessengerLinksEnabled(int $tenantId): bool
+    {
+        $v = TenantSetting::getForTenant($tenantId, 'public_site.footer_messenger_links', null);
+        if ($v === null) {
+            return $this->floatingMessengerButtonsEnabled($tenantId);
+        }
+
+        return self::normalizeBoolishTenantSetting($v);
+    }
+
+    /**
+     * Единая нормализация boolean-настроек из БД (bool / строки 'true'|'false'|'' / прочее).
+     */
+    private static function normalizeBoolishTenantSetting(mixed $v): bool
+    {
         if (is_bool($v)) {
             return $v;
         }
@@ -41,6 +71,10 @@ final class TenantPublicSiteContactsService
             };
         }
 
+        if (is_int($v) || is_float($v)) {
+            return $v !== 0;
+        }
+
         return (bool) $v;
     }
 
@@ -53,7 +87,7 @@ final class TenantPublicSiteContactsService
         $state = $this->channels->resolvedState($tenantId);
         $hasSavedChannels = TenantContactChannelsStore::hasSavedContactChannelsState($tenantId);
 
-        $phone = $this->resolvePhoneForLayout($state, $hasSavedChannels, $tenantId);
+        $phone = $this->resolvePhoneForLayout($state, $hasSavedChannels);
 
         return [
             'phone' => $phone,
@@ -84,7 +118,7 @@ final class TenantPublicSiteContactsService
     /**
      * @param  array<string, TenantContactChannelConfig>  $state
      */
-    private function resolvePhoneForLayout(array $state, bool $hasSavedChannels, int $tenantId): string
+    private function resolvePhoneForLayout(array $state, bool $hasSavedChannels): string
     {
         $p = $state[ContactChannelType::Phone->value] ?? null;
         if ($p === null || ! $p->usesChannel) {

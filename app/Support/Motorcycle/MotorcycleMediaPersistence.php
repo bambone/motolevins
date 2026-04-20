@@ -7,6 +7,9 @@ namespace App\Support\Motorcycle;
 use App\Filament\Forms\Components\TenantSpatieMediaLibraryFileUpload;
 use Filament\Notifications\Notification;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Validation\ValidationException;
+use League\Flysystem\UnableToCheckFileExistence;
+use League\Flysystem\UnableToRetrieveMetadata;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Throwable;
 
@@ -30,6 +33,17 @@ final class MotorcycleMediaPersistence
         try {
             $component->deleteAbandonedFiles();
             $component->saveUploadedFiles();
+        } catch (ValidationException $e) {
+            throw $e;
+        } catch (UnableToRetrieveMetadata | UnableToCheckFileExistence $e) {
+            Notification::make()
+                ->title('Файл загрузки недоступен')
+                ->body('Повторите загрузку изображения. Если ошибка повторяется, проверьте, что все запросы Livewire попадают на один сервер с общим диском для livewire-tmp.')
+                ->danger()
+                ->persistent()
+                ->send();
+
+            return;
         } catch (Throwable $e) {
             report($e);
             Notification::make()

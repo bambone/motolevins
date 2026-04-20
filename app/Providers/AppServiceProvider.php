@@ -55,8 +55,9 @@ use App\Services\Mail\TenantMailer;
 use App\Services\PageBuilder\PageSectionOperationsService;
 use App\Services\PageBuilder\SectionViewResolver;
 use App\Services\Platform\PlatformNotificationSettings;
+use App\BookingConsent\TenantBookingConsentQuery;
 use App\Services\Tenancy\TenantAdvocateEditorialFooterData;
-use App\Services\Tenancy\TenantExpertAutoFooterData;
+use App\Tenant\Footer\TenantFooterResolver;
 use App\Services\Tenancy\TenantMainMenuPages;
 use App\Services\Tenancy\TenantMotoRentalLegalUrls;
 use App\Services\Tenancy\TenantPagePrimaryHtmlSync;
@@ -400,8 +401,9 @@ class AppServiceProvider extends ServiceProvider
                         ? app(TenantAdvocateEditorialFooterData::class)->build($tenant)
                         : null,
                     'tenantMotoPublicFooter' => in_array($tenant->themeKey(), ['default', 'moto', 'expert_auto'], true)
-                        ? app(TenantExpertAutoFooterData::class)->build($tenant)
+                        ? app(TenantFooterResolver::class)->resolve($tenant)
                         : null,
+                    'tenantBookingConsentUi' => self::tenantBookingConsentUiBundle($tenant),
                     'tenantReviewSubmitConfig' => TenantReviewSubmitConfig::forTenant((int) $tenant->id),
                     'rentalLegalUrls' => app(TenantMotoRentalLegalUrls::class)->forTenant($tenant),
                 ];
@@ -430,6 +432,11 @@ class AppServiceProvider extends ServiceProvider
                     'tenantMainMenuPages' => collect(),
                     'tenantAdvocateFooter' => null,
                     'tenantMotoPublicFooter' => null,
+                    'tenantBookingConsentUi' => [
+                        'show' => false,
+                        'required' => false,
+                        'items' => [],
+                    ],
                     'tenantReviewSubmitConfig' => null,
                     'rentalLegalUrls' => [],
                 ];
@@ -500,8 +507,37 @@ class AppServiceProvider extends ServiceProvider
             'tenantMainMenuPages' => collect(),
             'tenantAdvocateFooter' => null,
             'tenantMotoPublicFooter' => null,
+            'tenantBookingConsentUi' => [
+                'show' => false,
+                'required' => false,
+                'items' => [],
+            ],
             'tenantReviewSubmitConfig' => null,
             'rentalLegalUrls' => [],
+        ];
+    }
+
+    /**
+     * @return array{show: bool, required: bool, items: list<array<string, mixed>>}
+     */
+    private static function tenantBookingConsentUiBundle(\App\Models\Tenant $tenant): array
+    {
+        $required = (bool) TenantSetting::getForTenant((int) $tenant->id, 'booking.legal_consents_required', false);
+        $items = app(TenantBookingConsentQuery::class)->enabledOrdered((int) $tenant->id);
+
+        return [
+            'required' => $required,
+            'show' => $required && $items->isNotEmpty(),
+            'items' => $items
+                ->map(static fn ($i): array => [
+                    'id' => (int) $i->id,
+                    'label' => (string) $i->label,
+                    'link_text' => $i->link_text,
+                    'link_url' => $i->link_url,
+                    'is_required' => (bool) $i->is_required,
+                ])
+                ->values()
+                ->all(),
         ];
     }
 }

@@ -28,7 +28,8 @@
     $cardShowFrom = (bool) ($pricingPresent['card_show_leading_from'] ?? false);
     $cardSecondary = trim((string) ($pricingPresent['card_secondary_text'] ?? ''));
 @endphp
-<article class="group/card relative flex h-full flex-col overflow-hidden rounded-2xl border border-white/5 bg-carbon shadow-lg shadow-black/30 transition-[border-color,box-shadow,transform] duration-300 hover:-translate-y-0.5 hover:border-white/10 hover:shadow-xl hover:shadow-black/40 focus-within:border-white/12 focus-within:shadow-xl [content-visibility:auto] [contain-intrinsic-size:auto_36rem]">
+{{-- w-full min-w-0: явно заполняем grid-cell (иначе при min-width:auto у потомков flex может казаться «узкой» полоса контента). --}}
+<article class="group/card relative flex h-full min-w-0 w-full flex-col overflow-hidden rounded-2xl border border-white/5 bg-carbon shadow-lg shadow-black/30 transition-[border-color,box-shadow,transform] duration-300 hover:-translate-y-0.5 hover:border-white/10 hover:shadow-xl hover:shadow-black/40 focus-within:border-white/12 focus-within:shadow-xl [content-visibility:auto] [contain-intrinsic-size:auto_36rem]">
     <div class="pointer-events-none absolute inset-0 -z-10 rounded-2xl bg-white/[0.02] opacity-0 blur-2xl transition-opacity duration-300 group-hover/card:opacity-100"></div>
 
     <a href="{{ $detailUrl }}"
