@@ -192,6 +192,21 @@
                     </div>
                 @endif
 
+                @if(count($pricingPresent['detail_price_rows'] ?? []) > 0)
+                    <section class="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-5 sm:p-6" aria-labelledby="moto-price-list-heading">
+                        <h2 id="moto-price-list-heading" class="mb-3 text-lg font-bold text-white sm:text-xl">Стоимость и тарифы</h2>
+                        <p class="mb-3 max-w-2xl text-sm text-zinc-400">Кратко по срокам; итог за выбранные даты считается в форме брони.</p>
+                        <ul class="space-y-2 text-sm leading-snug text-zinc-200 sm:text-base">
+                            @foreach($pricingPresent['detail_price_rows'] as $row)
+                                <li class="flex gap-2.5">
+                                    <span class="mt-2 h-1 w-1 shrink-0 rounded-full bg-moto-amber" aria-hidden="true"></span>
+                                    <span>{{ $row['line'] }}</span>
+                                </li>
+                            @endforeach
+                        </ul>
+                    </section>
+                @endif
+
                 @if(filled($detailContent['audience']) || count($detailContent['use_case']) > 0)
                     <section class="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-5 sm:p-6" aria-labelledby="moto-use-heading">
                         <h2 id="moto-use-heading" class="mb-3 text-lg font-bold text-white sm:text-xl">Кому подойдёт и для какого сценария</h2>

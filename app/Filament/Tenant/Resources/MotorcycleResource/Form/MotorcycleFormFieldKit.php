@@ -14,6 +14,7 @@ use App\MotorcyclePricing\MotorcyclePricingProfileFormHydrator;
 use App\MotorcyclePricing\MotorcyclePricingProfileLoader;
 use App\MotorcyclePricing\MotorcyclePricingProfileValidator;
 use App\MotorcyclePricing\MotorcyclePricingSchema;
+use App\MotorcyclePricing\TariffCatalogDayUnit;
 use App\MotorcyclePricing\TariffKind;
 use App\Services\Seo\TenantSeoPublicPreviewService;
 use App\Support\CatalogHighlightNormalizer;
@@ -67,7 +68,7 @@ final class MotorcycleFormFieldKit
                 ->required()
                 ->maxLength(255)
                 ->unique(ignoreRecord: true)
-                ->helperText('Адрес карточки в каталоге, например /catalog/your-slug. Латиница, цифры и дефис.'),
+                ->helperText('Латиница, цифры и дефис; URL карточки в каталоге.'),
             TextInput::make('brand')
                 ->label('Бренд')
                 ->id('motorcycle-brand')
@@ -80,7 +81,7 @@ final class MotorcycleFormFieldKit
                 ->label('Позиционирование в каталоге')
                 ->id('motorcycle-short-description')
                 ->rows(3)
-                ->helperText('1–2 короткие строки: для какого сценария модель и чем отличается от соседних. Только правдивый маркетинговый смысл, без выдуманных цифр.')
+                ->helperText('1–2 строки: сценарий и отличия от соседних моделей в каталоге.')
                 ->columnSpanFull(),
             TextInput::make('catalog_scenario')
                 ->label('Сценарий / кому подойдёт')
@@ -126,7 +127,7 @@ final class MotorcycleFormFieldKit
                 ->label('Кому подойдёт')
                 ->id('motorcycle-detail-audience')
                 ->rows(3)
-                ->helperText('1–3 предложения. Если пусто — на сайте используется сценарий из поля выше.')
+                ->helperText('Если пусто — подставится сценарий из блока «Основное».')
                 ->columnSpanFull(),
             Textarea::make('detail_use_case_bullets')
                 ->label('Сценарий: тезисы (по одному на строку, до 4)')
@@ -170,11 +171,16 @@ final class MotorcycleFormFieldKit
                     return array_slice($lines, 0, 6);
                 })
                 ->columnSpanFull(),
-            Textarea::make('detail_rental_notes')
-                ->label('Аренда: примечания к этой модели')
-                ->id('motorcycle-detail-rental')
-                ->rows(4)
-                ->helperText('Только проверяемые формулировки. Общие условия — на странице «Правила аренды».')
+            Section::make('Аренда: примечания к модели')
+                ->collapsed()
+                ->schema([
+                    Textarea::make('detail_rental_notes')
+                        ->label('Текст')
+                        ->id('motorcycle-detail-rental')
+                        ->rows(4)
+                        ->helperText('Проверяемые формулировки; общие условия — на странице «Правила аренды».')
+                        ->columnSpanFull(),
+                ])
                 ->columnSpanFull(),
         ];
     }
@@ -242,7 +248,9 @@ final class MotorcycleFormFieldKit
     {
         return [
             RichEditor::make('full_description')
-                ->label('Описание')
+                ->label('Текст для сайта')
+                ->placeholder('Заголовки, абзацы, списки. Не дублируйте короткие тезисы — они задаются отдельным блоком выше.')
+                ->helperText('Узкая колонка и высота поля — чтобы было удобнее читать и править длинный текст.')
                 ->id('motorcycle-full-description')
                 ->columnSpanFull(),
         ];
@@ -324,6 +332,60 @@ final class MotorcycleFormFieldKit
     }
 
     /**
+     * Краткая строка для заголовка свёрнутой строки тарифа в Repeater.
+     *
+     * @param  array<string, mixed>  $state
+     */
+    public static function formatTariffRepeaterItemLabel(array $state, string $currencyIso = MotorcyclePricingSchema::DEFAULT_CURRENCY): string
+    {
+        $currencyIso = strtoupper(substr(trim($currencyIso), 0, 3));
+        if ($currencyIso === '') {
+            $currencyIso = MotorcyclePricingSchema::DEFAULT_CURRENCY;
+        }
+
+        $label = trim((string) ($state['label'] ?? ''));
+        $head = $label !== '' ? $label : 'Тариф';
+
+        $kind = TariffKind::tryFrom((string) ($state['kind'] ?? '')) ?? TariffKind::FixedPerDay;
+        $kindShort = match ($kind) {
+            TariffKind::FixedPerDay => 'Сутки',
+            TariffKind::FixedPerRental => 'Период',
+            TariffKind::FixedPerHourBlock => 'Блок ч.',
+            TariffKind::OnRequest => 'По запросу',
+            TariffKind::Informational => 'Инфо',
+        };
+
+        $amountPart = null;
+        if (! in_array($kind, [TariffKind::OnRequest, TariffKind::Informational], true)) {
+            $rawMajor = $state['amount_major'] ?? null;
+            if ($rawMajor !== null && $rawMajor !== '') {
+                $major = (int) $rawMajor;
+                $sym = $currencyIso === 'RUB' ? '₽' : $currencyIso;
+
+                $amountPart = number_format(max(0, $major), 0, '', ' ').' '.$sym;
+            } else {
+                $amountPart = '—';
+            }
+        }
+
+        $mode = ApplicabilityMode::tryFrom((string) ($state['applicability_mode'] ?? '')) ?? ApplicabilityMode::Always;
+        $appShort = match ($mode) {
+            ApplicabilityMode::Always => 'Всегда',
+            ApplicabilityMode::DurationRangeDays => 'Диапазон дн.',
+            ApplicabilityMode::DurationMinDays => 'Мин. дн.',
+            ApplicabilityMode::ManualOnly => 'Вручную',
+        };
+
+        $parts = [$head, $kindShort];
+        if ($amountPart !== null) {
+            $parts[] = $amountPart;
+        }
+        $parts[] = $appShort;
+
+        return implode(' · ', $parts);
+    }
+
+    /**
      * Тарифы, отображение на карточке и финансовые условия (канонически в pricing_profile_json).
      *
      * @return array<int, Component>
@@ -331,7 +393,7 @@ final class MotorcycleFormFieldKit
     public static function pricingProfileFields(): array
     {
         $kindOptions = collect(TariffKind::cases())->mapWithKeys(fn (TariffKind $k): array => [$k->value => match ($k) {
-            TariffKind::FixedPerDay => 'Фикс за сутки',
+            TariffKind::FixedPerDay => 'Фикс за сутки / день',
             TariffKind::FixedPerRental => 'Фикс за период',
             TariffKind::FixedPerHourBlock => 'Блок часов',
             TariffKind::OnRequest => 'По запросу',
@@ -346,148 +408,210 @@ final class MotorcycleFormFieldKit
         }])->all();
 
         return [
-            TextInput::make('pricing_currency')
-                ->label('Валюта (ISO)')
-                ->id('motorcycle-pricing-currency')
-                ->default(MotorcyclePricingSchema::DEFAULT_CURRENCY)
-                ->maxLength(3)
-                ->helperText('Профиль ценообразования v'.MotorcyclePricingSchema::PROFILE_VERSION),
-            Repeater::make('pricing_tariffs')
-                ->label('Тарифы')
-                ->id('motorcycle-pricing-tariffs')
-                ->minItems(1)
+            Grid::make(['default' => 1, 'lg' => 2])
+                ->columnSpanFull()
+                ->gap()
                 ->schema([
-                    Hidden::make('id')
-                        ->default(fn () => (string) Str::uuid()),
-                    TextInput::make('label')
-                        ->label('Название')
-                        ->required()
-                        ->maxLength(120),
-                    Select::make('kind')
-                        ->label('Тип')
-                        ->options($kindOptions)
-                        ->required()
-                        ->native(true)
-                        ->live(),
-                    MotorcyclePricingProfileFormHydrator::profileMoneyInput('amount_major', 'Сумма')
-                        ->visible(fn (Get $get): bool => ! in_array((string) $get('kind'), [TariffKind::OnRequest->value, TariffKind::Informational->value], true)),
-                    TextInput::make('block_hours')
-                        ->label('Часов в блоке')
-                        ->numeric()
-                        ->default(24)
-                        ->visible(fn (Get $get): bool => (string) $get('kind') === TariffKind::FixedPerHourBlock->value),
-                    Textarea::make('note')
-                        ->label('Подсказка для «По запросу»')
-                        ->rows(2)
-                        ->visible(fn (Get $get): bool => (string) $get('kind') === TariffKind::OnRequest->value),
-                    Select::make('applicability_mode')
-                        ->label('Применимость')
-                        ->options($appOptions)
-                        ->required()
-                        ->native(true)
-                        ->live(),
-                    TextInput::make('min_days')
-                        ->label('Мин. дней')
-                        ->numeric()
-                        ->default(1)
-                        ->visible(fn (Get $get): bool => in_array((string) $get('applicability_mode'), [
-                            ApplicabilityMode::DurationRangeDays->value,
-                            ApplicabilityMode::DurationMinDays->value,
-                        ], true)),
-                    TextInput::make('max_days')
-                        ->label('Макс. дней')
-                        ->numeric()
-                        ->default(3)
-                        ->visible(fn (Get $get): bool => (string) $get('applicability_mode') === ApplicabilityMode::DurationRangeDays->value),
-                    TextInput::make('priority')
-                        ->label('Приоритет (меньше — важнее при конфликте)')
-                        ->numeric()
-                        ->default(500),
-                    TextInput::make('sort_order')
-                        ->label('Порядок в списке')
-                        ->numeric()
-                        ->default(10),
-                    Toggle::make('show_on_card')
-                        ->label('Карточка каталога')
-                        ->default(false),
-                    Toggle::make('show_on_detail')
-                        ->label('Страница модели')
-                        ->default(true),
-                    Toggle::make('show_in_quote')
-                        ->label('Калькулятор брони')
-                        ->default(true),
-                ])
-                ->defaultItems(1)
-                ->addActionLabel('Добавить тариф')
-                ->reorderable()
-                ->collapsible()
-                ->columnSpanFull(),
-            Select::make('pricing_card_primary_tariff_id')
-                ->label('Основной тариф на карточке')
-                ->options(function (Get $get): array {
-                    $opts = [];
-                    foreach ($get('pricing_tariffs') ?? [] as $row) {
-                        if (! is_array($row)) {
-                            continue;
-                        }
-                        $id = (string) ($row['id'] ?? '');
-                        if ($id === '') {
-                            continue;
-                        }
-                        $opts[$id] = (string) ($row['label'] ?? $id);
-                    }
+                    Grid::make(['default' => 1])
+                        ->schema([
+                            TextInput::make('pricing_currency')
+                                ->label('Валюта (ISO)')
+                                ->id('motorcycle-pricing-currency')
+                                ->default(MotorcyclePricingSchema::DEFAULT_CURRENCY)
+                                ->maxLength(3)
+                                ->live()
+                                ->helperText('Профиль ценообразования v'.MotorcyclePricingSchema::PROFILE_VERSION),
+                            Repeater::make('pricing_tariffs')
+                                ->label('Тарифы')
+                                ->id('motorcycle-pricing-tariffs')
+                                ->helperText('Перетащите тарифы в нужном порядке. Свернутые строки показывают краткое резюме; раскрывайте только ту, что редактируете. Если для периода подходят несколько тарифов одинаково, система выберет верхний в списке.')
+                                ->minItems(1)
+                                ->collapsed()
+                                ->itemLabel(function (array $state, Get $get): string {
+                                    $cur = (string) ($get('pricing_currency') ?? MotorcyclePricingSchema::DEFAULT_CURRENCY);
 
-                    return $opts;
-                })
-                ->native(true),
-            Select::make('pricing_card_secondary_mode')
-                ->label('Вторичная подсказка на карточке')
-                ->options([
-                    'none' => 'Нет',
-                    'hint_text' => 'Текст',
-                    'secondary_tariff' => 'Другой тариф',
-                ])
-                ->default('none')
-                ->native(true)
-                ->live(),
-            TextInput::make('pricing_card_secondary_text')
-                ->label('Текст подсказки')
-                ->maxLength(120)
-                ->visible(fn (Get $get): bool => (string) $get('pricing_card_secondary_mode') === 'hint_text'),
-            Select::make('pricing_card_secondary_tariff_id')
-                ->label('Тариф для подсказки')
-                ->options(function (Get $get): array {
-                    $opts = [];
-                    foreach ($get('pricing_tariffs') ?? [] as $row) {
-                        if (! is_array($row)) {
-                            continue;
-                        }
-                        $id = (string) ($row['id'] ?? '');
-                        if ($id === '') {
-                            continue;
-                        }
-                        $opts[$id] = (string) ($row['label'] ?? $id);
-                    }
+                                    return self::formatTariffRepeaterItemLabel($state, $cur);
+                                })
+                                ->schema([
+                                    Hidden::make('id')
+                                        ->default(fn () => (string) Str::uuid()),
+                                    Grid::make(['default' => 1])
+                                        ->gap()
+                                        ->schema([
+                                            Fieldset::make('Условия и цена')
+                                                ->contained(false)
+                                                ->columns(2)
+                                                ->schema([
+                                                    TextInput::make('label')
+                                                        ->label('Название')
+                                                        ->required()
+                                                        ->maxLength(120)
+                                                        ->columnSpanFull(),
+                                                    Select::make('kind')
+                                                        ->label('Тип')
+                                                        ->options($kindOptions)
+                                                        ->required()
+                                                        ->native(true)
+                                                        ->live(),
+                                                    MotorcyclePricingProfileFormHydrator::profileMoneyInput('amount_major', 'Сумма')
+                                                        ->visible(fn (Get $get): bool => ! in_array((string) $get('kind'), [TariffKind::OnRequest->value, TariffKind::Informational->value], true)),
+                                                    TextInput::make('block_hours')
+                                                        ->label('Часов в блоке')
+                                                        ->numeric()
+                                                        ->default(24)
+                                                        ->visible(fn (Get $get): bool => (string) $get('kind') === TariffKind::FixedPerHourBlock->value),
+                                                    Textarea::make('note')
+                                                        ->label('Подсказка для «По запросу»')
+                                                        ->rows(2)
+                                                        ->columnSpanFull()
+                                                        ->visible(fn (Get $get): bool => (string) $get('kind') === TariffKind::OnRequest->value),
+                                                    Select::make('applicability_mode')
+                                                        ->label('Применимость')
+                                                        ->options($appOptions)
+                                                        ->required()
+                                                        ->native(true)
+                                                        ->live()
+                                                        ->columnSpanFull(),
+                                                    TextInput::make('min_days')
+                                                        ->label('Мин. дней')
+                                                        ->numeric()
+                                                        ->default(1)
+                                                        ->visible(fn (Get $get): bool => in_array((string) $get('applicability_mode'), [
+                                                            ApplicabilityMode::DurationRangeDays->value,
+                                                            ApplicabilityMode::DurationMinDays->value,
+                                                        ], true)),
+                                                    TextInput::make('max_days')
+                                                        ->label('Макс. дней')
+                                                        ->numeric()
+                                                        ->default(3)
+                                                        ->visible(fn (Get $get): bool => (string) $get('applicability_mode') === ApplicabilityMode::DurationRangeDays->value),
+                                                ]),
+                                            Fieldset::make('На сайте')
+                                                ->contained(false)
+                                                ->schema([
+                                                    Select::make('catalog_day_unit')
+                                                        ->label('Как писать на сайте (сутки / день)')
+                                                        ->options([
+                                                            TariffCatalogDayUnit::FullDay->value => 'Сутки — «за сутки», диапазоны «… суток»',
+                                                            TariffCatalogDayUnit::ShortDay->value => 'День — «за день», диапазоны «… дня»',
+                                                        ])
+                                                        ->default(TariffCatalogDayUnit::FullDay->value)
+                                                        ->native(true)
+                                                        ->visible(fn (Get $get): bool => (string) $get('kind') === TariffKind::FixedPerDay->value)
+                                                        ->helperText('Только текст для посетителей. Расчёт в калькуляторе по-прежнему за выбранные календарные дни.'),
+                                                    TextInput::make('catalog_public_hint')
+                                                        ->label('Пояснение в скобках на сайте')
+                                                        ->maxLength(80)
+                                                        ->visible(fn (Get $get): bool => in_array((string) $get('kind'), [
+                                                            TariffKind::FixedPerDay->value,
+                                                            TariffKind::FixedPerRental->value,
+                                                            TariffKind::FixedPerHourBlock->value,
+                                                            TariffKind::Informational->value,
+                                                        ], true))
+                                                        ->helperText('Например: 10 часов — получится «Название (10 часов)». Скобки добавляются сами, без «( )» в поле.'),
+                                                    Grid::make(['default' => 1])
+                                                        ->columnSpanFull()
+                                                        ->schema([
+                                                            Toggle::make('show_on_card')
+                                                                ->label('Показывать в каталоге')
+                                                                ->default(false)
+                                                                ->inline(false),
+                                                            Toggle::make('show_on_detail')
+                                                                ->label('Показывать на странице модели')
+                                                                ->default(true)
+                                                                ->inline(false),
+                                                            Toggle::make('show_in_quote')
+                                                                ->label('Показывать в калькуляторе бронирования')
+                                                                ->default(true)
+                                                                ->inline(false),
+                                                        ]),
+                                                ]),
+                                        ]),
+                                ])
+                                ->defaultItems(1)
+                                ->addActionLabel('Добавить тариф')
+                                ->reorderable()
+                                ->collapsible()
+                                ->columnSpanFull(),
+                        ]),
+                    Grid::make(['default' => 1])
+                        ->schema([
+                            Section::make('Финансовые условия')
+                                ->description('Залог, предоплата и подпись в каталоге — отдельно от списка тарифов.')
+                                ->schema([
+                                    MotorcyclePricingProfileFormHydrator::profileMoneyInput('pricing_deposit_amount', 'Залог'),
+                                    MotorcyclePricingProfileFormHydrator::profileMoneyInput('pricing_prepayment_amount', 'Предоплата'),
+                                    TextInput::make('pricing_catalog_price_note')
+                                        ->label('Подпись под ценой в каталоге')
+                                        ->maxLength(80)
+                                        ->placeholder('Только реальное условие')
+                                        ->columnSpanFull(),
+                                ])
+                                ->columns(2)
+                                ->compact(),
+                            Section::make('Отображение в каталоге')
+                                ->description('Какую строку тарифа показывать на карточке в списке и вторичную подсказку.')
+                                ->schema([
+                                    Select::make('pricing_card_primary_tariff_id')
+                                        ->label('Основной тариф на карточке')
+                                        ->options(function (Get $get): array {
+                                            $opts = [];
+                                            foreach ($get('pricing_tariffs') ?? [] as $row) {
+                                                if (! is_array($row)) {
+                                                    continue;
+                                                }
+                                                $id = (string) ($row['id'] ?? '');
+                                                if ($id === '') {
+                                                    continue;
+                                                }
+                                                $opts[$id] = (string) ($row['label'] ?? $id);
+                                            }
 
-                    return $opts;
-                })
-                ->visible(fn (Get $get): bool => (string) $get('pricing_card_secondary_mode') === 'secondary_tariff')
-                ->native(true),
-            TextInput::make('pricing_detail_tariffs_limit')
-                ->label('Лимит строк на странице модели')
-                ->numeric()
-                ->nullable(),
-            Section::make('Финансовые условия')
-                ->schema([
-                    MotorcyclePricingProfileFormHydrator::profileMoneyInput('pricing_deposit_amount', 'Залог'),
-                    MotorcyclePricingProfileFormHydrator::profileMoneyInput('pricing_prepayment_amount', 'Предоплата'),
-                    TextInput::make('pricing_catalog_price_note')
-                        ->label('Подпись под ценой в каталоге')
-                        ->maxLength(80)
-                        ->placeholder('Только реальное условие'),
-                ])
-                ->columns(1)
-                ->compact(),
+                                            return $opts;
+                                        })
+                                        ->native(true),
+                                    Select::make('pricing_card_secondary_mode')
+                                        ->label('Вторичная подсказка на карточке')
+                                        ->options([
+                                            'none' => 'Нет',
+                                            'hint_text' => 'Текст',
+                                            'secondary_tariff' => 'Другой тариф',
+                                        ])
+                                        ->default('none')
+                                        ->native(true)
+                                        ->live(),
+                                    TextInput::make('pricing_card_secondary_text')
+                                        ->label('Текст подсказки')
+                                        ->maxLength(120)
+                                        ->visible(fn (Get $get): bool => (string) $get('pricing_card_secondary_mode') === 'hint_text'),
+                                    Select::make('pricing_card_secondary_tariff_id')
+                                        ->label('Тариф для подсказки')
+                                        ->options(function (Get $get): array {
+                                            $opts = [];
+                                            foreach ($get('pricing_tariffs') ?? [] as $row) {
+                                                if (! is_array($row)) {
+                                                    continue;
+                                                }
+                                                $id = (string) ($row['id'] ?? '');
+                                                if ($id === '') {
+                                                    continue;
+                                                }
+                                                $opts[$id] = (string) ($row['label'] ?? $id);
+                                            }
+
+                                            return $opts;
+                                        })
+                                        ->visible(fn (Get $get): bool => (string) $get('pricing_card_secondary_mode') === 'secondary_tariff')
+                                        ->native(true),
+                                    TextInput::make('pricing_detail_tariffs_limit')
+                                        ->label('Лимит строк на странице модели')
+                                        ->numeric()
+                                        ->nullable(),
+                                ])
+                                ->columns(2)
+                                ->compact(),
+                        ]),
+                ]),
         ];
     }
 
@@ -706,12 +830,13 @@ final class MotorcycleFormFieldKit
                 ->visibility('public')
                 ->conversionsDisk(config('media-library.disk_name'))
                 ->image()
+                ->imagePreviewHeight('320px')
                 ->label('Обложка')
                 ->helperText('Основное изображение карточки. Рекомендуется 16:9. При редактировании файл сохраняется в медиатеку сразу после успешной загрузки. При создании новой карточки — после первого сохранения формы.')
                 ->id('motorcycle-cover')
                 ->columnSpanFull()
                 ->fetchFileInformation(false)
-                ->orientImagesFromExif(false)
+                ->orientImagesFromExif(true)
                 ->maxSize(15360)
                 ->afterStateUpdated(MotorcycleMediaPersistence::persistAfterUploadStateChange(...)),
             TenantSpatieMediaLibraryFileUpload::make('gallery')
@@ -720,6 +845,7 @@ final class MotorcycleFormFieldKit
                 ->visibility('public')
                 ->conversionsDisk(config('media-library.disk_name'))
                 ->image()
+                ->imagePreviewHeight('240px')
                 ->multiple()
                 ->maxFiles(10)
                 ->reorderable()
@@ -728,7 +854,7 @@ final class MotorcycleFormFieldKit
                 ->id('motorcycle-gallery')
                 ->columnSpanFull()
                 ->fetchFileInformation(false)
-                ->orientImagesFromExif(false)
+                ->orientImagesFromExif(true)
                 ->maxSize(15360)
                 ->afterStateUpdated(MotorcycleMediaPersistence::persistAfterUploadStateChange(...)),
         ];

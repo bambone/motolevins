@@ -12,4 +12,12 @@ final class MotorcyclePricingSchema
 
     /** ISO-4217 default when tenant has no separate currency on profile */
     public const DEFAULT_CURRENCY = 'RUB';
+
+    /** Step between successive tariff `priority` / `sort_order` values after normalization (list order). */
+    public const TARIFF_ORDER_STEP = 10;
+
+    public static function orderValueForIndex(int $index): int
+    {
+        return ($index + 1) * self::TARIFF_ORDER_STEP;
+    }
 }

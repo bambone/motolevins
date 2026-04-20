@@ -6,11 +6,11 @@ namespace App\Livewire\Tenant\Motorcycles;
 
 use App\Filament\Tenant\Resources\MotorcycleResource\Form\MotorcycleFormFieldKit;
 use App\Livewire\Tenant\Motorcycles\Concerns\HasMotorcycleBlockFormState;
+use App\Livewire\Tenant\Motorcycles\Concerns\ReportsMotorcycleEditBlockFooter;
 use App\Livewire\Tenant\Motorcycles\Concerns\ResolvesMotorcycleRecord;
 use App\Support\FilamentTipTapDocumentSanitizer;
 use App\Support\Motorcycle\MotorcycleBlockSaveLogger;
 use Filament\Notifications\Notification;
-use Filament\Schemas\Components\Section;
 use Filament\Schemas\Concerns\InteractsWithSchemas;
 use Filament\Schemas\Contracts\HasSchemas;
 use Filament\Schemas\Schema;
@@ -23,6 +23,7 @@ class MotorcycleDescriptionEditor extends Component implements HasSchemas
 {
     use HasMotorcycleBlockFormState;
     use InteractsWithSchemas;
+    use ReportsMotorcycleEditBlockFooter;
     use ResolvesMotorcycleRecord;
 
     private const BLOCK = 'description';
@@ -50,11 +51,7 @@ class MotorcycleDescriptionEditor extends Component implements HasSchemas
 
     public function form(Schema $schema): Schema
     {
-        return $schema->components([
-            Section::make('Подробное описание')
-                ->description('Rich text для карточки на сайте')
-                ->schema(MotorcycleFormFieldKit::fullDescriptionField()),
-        ]);
+        return $schema->components(MotorcycleFormFieldKit::fullDescriptionField());
     }
 
     /**
@@ -92,6 +89,7 @@ class MotorcycleDescriptionEditor extends Component implements HasSchemas
             $m = $this->resolveMotorcycle();
             $m->update($data);
             $this->initialSnapshot = $this->computeSnapshot();
+            $this->touchMotorcycleEditSavedTimestamp();
             Notification::make()->title('Описание сохранено')->success()->send();
             MotorcycleBlockSaveLogger::log(
                 self::BLOCK.'_done',
@@ -117,9 +115,7 @@ class MotorcycleDescriptionEditor extends Component implements HasSchemas
 
     public function getStatusLineProperty(): string
     {
-        return $this->computeSnapshot() !== $this->initialSnapshot
-            ? 'Есть несохранённые изменения'
-            : 'Сохранено';
+        return $this->motorcycleEditFooterStatus($this->computeSnapshot() !== $this->initialSnapshot);
     }
 
     private function computeSnapshot(): string

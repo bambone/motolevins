@@ -1,7 +1,9 @@
 <div>
     <x-motorcycle.edit-block-chrome
+        variant="primary"
+        :compact="true"
         title="Тарифы и условия"
-        description="Профиль ценообразования v1: тарифы, отображение на карточке, залог и подпись в каталоге. Стабильные id строк не меняются при сортировке."
+        description="Тарифы, карточка каталога, залог и подпись цены."
         save-label="Сохранить тарифы"
         :status-text="$this->statusLine"
     >

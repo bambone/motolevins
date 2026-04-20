@@ -10,6 +10,8 @@ use App\Money\MoneyBindingRegistry;
 
 /**
  * View-layer DTO builder: card line, detail list, SEO candidate (no raw profile leakage).
+ *
+ * {@see present()}: `detail_tariffs` and `detail_price_rows` are truncated to `display.detail_tariffs_limit` when it is a positive integer.
  */
 final class MotorcyclePricingSummaryPresenter
 {
@@ -63,7 +65,14 @@ final class MotorcyclePricingSummaryPresenter
             } elseif ($primaryKind !== null && $primaryKind !== TariffKind::Informational) {
                 $cardMinor = isset($primary['amount_minor']) ? (int) $primary['amount_minor'] : null;
             }
-            $cardLabel = (string) ($primary['label'] ?? '');
+            if ($primaryKind === TariffKind::Informational) {
+                $cardLabel = self::labelWithOptionalParenthetical(
+                    trim((string) ($primary['label'] ?? '')),
+                    trim((string) ($primary['catalog_public_hint'] ?? '')),
+                );
+            } else {
+                $cardLabel = (string) ($primary['label'] ?? '');
+            }
         }
 
         $hint = null;
@@ -87,6 +96,10 @@ final class MotorcyclePricingSummaryPresenter
 
         $invalid = $v['validity'] === PricingProfileValidity::Invalid;
 
+        $primaryDayUnit = is_array($primary) && $primaryKind === TariffKind::FixedPerDay
+            ? TariffCatalogDayUnit::fromProfile($primary['catalog_day_unit'] ?? null)
+            : null;
+
         [$cardPriceText, $cardPriceSuffix, $cardShowLeadingFrom] = $this->buildCardPriceParts(
             $invalid,
             $cardOnRequest,
@@ -94,6 +107,7 @@ final class MotorcyclePricingSummaryPresenter
             $cardMinor,
             $cardLabel,
             $tenant,
+            $primaryDayUnit,
         );
 
         $detail = [];
@@ -105,14 +119,22 @@ final class MotorcyclePricingSummaryPresenter
             if (! ($vis['show_on_detail'] ?? false)) {
                 continue;
             }
+            $app = is_array($t['applicability'] ?? null) ? $t['applicability'] : [];
             $detail[] = [
                 'id' => (string) ($t['id'] ?? ''),
                 'label' => (string) ($t['label'] ?? ''),
                 'kind' => (string) ($t['kind'] ?? ''),
                 'minor' => isset($t['amount_minor']) ? (int) $t['amount_minor'] : null,
+                'applicability_mode' => (string) ($app['mode'] ?? ApplicabilityMode::Always->value),
+                'min_days' => isset($app['min_days']) ? (int) $app['min_days'] : 1,
+                'max_days' => isset($app['max_days']) ? (int) $app['max_days'] : 3,
+                'catalog_day_unit' => TariffCatalogDayUnit::fromProfile($t['catalog_day_unit'] ?? null),
+                'catalog_public_hint' => trim((string) ($t['catalog_public_hint'] ?? '')),
             ];
         }
 
+        $detailLimit = self::normalizeDetailTariffsLimit($display['detail_tariffs_limit'] ?? null);
+        $detail = self::applyDetailTariffsLimit($detail, $detailLimit);
         $detailPriceRows = $this->buildDetailPriceRows($detail, $tenant);
 
         $seo = $this->buildSeoOfferCandidate($primary, $currency, $v['validity']);
@@ -136,42 +158,128 @@ final class MotorcyclePricingSummaryPresenter
     }
 
     /**
-     * @param  list<array{label: string, minor: ?int, kind: string, id: string}>  $detail
+     * @param  list<array<string, mixed>>  $detail
      * @return list<array{line: string, hint: ?string}>
      */
     private function buildDetailPriceRows(array $detail, ?Tenant $tenant): array
     {
         $rows = [];
         foreach ($detail as $t) {
-            $kind = TariffKind::tryFrom((string) ($t['kind'] ?? ''));
-            if ($kind === TariffKind::OnRequest) {
-                $label = trim((string) $t['label']);
-                $rows[] = ['line' => $label !== '' ? $label : 'По запросу', 'hint' => null];
-
-                continue;
-            }
-            if ($kind === TariffKind::Informational) {
-                $rows[] = ['line' => trim((string) $t['label']), 'hint' => null];
-
-                continue;
-            }
-            if ($t['minor'] !== null && $kind !== null) {
-                $major = PricingMinorMoney::minorToMajor((int) $t['minor']);
-                $amount = $this->formatMajor($tenant, $major);
-                $suffix = self::catalogUnitSuffix($kind);
-                $line = $suffix !== '' ? $amount.' '.$suffix : $amount;
-                $label = trim((string) $t['label']);
-                $rows[] = [
-                    'line' => $label !== '' ? $label.': '.$line : $line,
-                    'hint' => null,
-                ];
-
-                continue;
-            }
-            $rows[] = ['line' => trim((string) $t['label']), 'hint' => null];
+            $rows[] = $this->formatDetailPriceRow($t, $tenant);
         }
 
         return $rows;
+    }
+
+    /**
+     * @param  array<string, mixed>  $t
+     * @return array{line: string, hint: ?string}
+     */
+    private function formatDetailPriceRow(array $t, ?Tenant $tenant): array
+    {
+        $kind = TariffKind::tryFrom((string) ($t['kind'] ?? ''));
+        $mode = ApplicabilityMode::tryFrom((string) ($t['applicability_mode'] ?? '')) ?? ApplicabilityMode::Always;
+        $dayUnit = $t['catalog_day_unit'] instanceof TariffCatalogDayUnit
+            ? $t['catalog_day_unit']
+            : TariffCatalogDayUnit::fromProfile($t['catalog_day_unit'] ?? null);
+        $hint = (string) ($t['catalog_public_hint'] ?? '');
+        $label = trim((string) ($t['label'] ?? ''));
+        $labelLed = self::labelWithOptionalParenthetical($label, $hint);
+        $minor = $t['minor'] ?? null;
+        $minDays = max(1, (int) ($t['min_days'] ?? 1));
+        $maxDays = max($minDays, (int) ($t['max_days'] ?? $minDays));
+
+        if ($kind === TariffKind::OnRequest) {
+            $line = self::labelWithOptionalParenthetical($label, $hint);
+
+            return ['line' => $line !== '' ? $line : 'По запросу', 'hint' => null];
+        }
+        if ($kind === TariffKind::Informational) {
+            return ['line' => self::labelWithOptionalParenthetical($label, $hint), 'hint' => null];
+        }
+        if ($kind === null || $minor === null) {
+            return ['line' => $labelLed !== '' ? $labelLed : trim($label), 'hint' => null];
+        }
+
+        $major = PricingMinorMoney::minorToMajor((int) $minor);
+        $amount = $this->formatMajor($tenant, $major);
+
+        if ($kind === TariffKind::FixedPerDay && $mode === ApplicabilityMode::DurationRangeDays) {
+            $bucket = $dayUnit->rangeBucketWord();
+            $suffix = $dayUnit->perUnitSuffix();
+            $auto = "{$minDays}–{$maxDays} {$bucket} по {$amount} {$suffix}";
+            if ($labelLed !== '') {
+                return ['line' => $labelLed.' — '.$auto, 'hint' => null];
+            }
+
+            return ['line' => $auto, 'hint' => null];
+        }
+
+        if ($kind === TariffKind::FixedPerDay && $mode === ApplicabilityMode::DurationMinDays) {
+            $bucket = $dayUnit->rangeBucketWord();
+            $suffix = $dayUnit->perUnitSuffix();
+            $auto = "от {$minDays} {$bucket} по {$amount} {$suffix}";
+            if ($labelLed !== '') {
+                return ['line' => $labelLed.' — '.$auto, 'hint' => null];
+            }
+
+            return ['line' => $auto, 'hint' => null];
+        }
+
+        if ($kind === TariffKind::FixedPerRental && $mode === ApplicabilityMode::DurationRangeDays) {
+            $auto = "{$minDays}–{$maxDays} суток по {$amount} за период";
+            if ($labelLed !== '') {
+                return ['line' => $labelLed.' — '.$auto, 'hint' => null];
+            }
+
+            return ['line' => $auto, 'hint' => null];
+        }
+
+        $suffix = self::catalogUnitSuffix($kind, $kind === TariffKind::FixedPerDay ? $dayUnit : null);
+        $line = $suffix !== '' ? $amount.' '.$suffix : $amount;
+
+        if ($labelLed !== '') {
+            return ['line' => $labelLed.': '.$line, 'hint' => null];
+        }
+
+        return ['line' => $line, 'hint' => null];
+    }
+
+    private static function labelWithOptionalParenthetical(string $label, string $hint): string
+    {
+        $label = trim($label);
+        $hint = trim($hint);
+        if ($label === '') {
+            return $hint === '' ? '' : '('.$hint.')';
+        }
+        if ($hint === '') {
+            return $label;
+        }
+
+        return $label.' ('.$hint.')';
+    }
+
+    private static function normalizeDetailTariffsLimit(mixed $raw): ?int
+    {
+        if ($raw === null || $raw === '') {
+            return null;
+        }
+        $n = (int) $raw;
+
+        return $n >= 1 ? $n : null;
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $detail
+     * @return list<array<string, mixed>>
+     */
+    private static function applyDetailTariffsLimit(array $detail, ?int $limit): array
+    {
+        if ($limit === null) {
+            return $detail;
+        }
+
+        return array_slice($detail, 0, $limit);
     }
 
     /**
@@ -180,35 +288,43 @@ final class MotorcyclePricingSummaryPresenter
     private function formatTariffCatalogLine(array $tariff, ?Tenant $tenant): string
     {
         $kind = TariffKind::tryFrom((string) ($tariff['kind'] ?? ''));
-        if ($kind === TariffKind::OnRequest) {
-            $label = trim((string) ($tariff['label'] ?? ''));
+        $labelRaw = trim((string) ($tariff['label'] ?? ''));
+        $hintRaw = trim((string) ($tariff['catalog_public_hint'] ?? ''));
 
-            return $label !== '' ? $label : 'По запросу';
+        if ($kind === TariffKind::OnRequest) {
+            $line = self::labelWithOptionalParenthetical($labelRaw, $hintRaw);
+
+            return $line !== '' ? $line : 'По запросу';
         }
         if ($kind === TariffKind::Informational) {
-            return trim((string) ($tariff['label'] ?? ''));
+            return self::labelWithOptionalParenthetical($labelRaw, $hintRaw);
         }
         if ($kind === null || ! isset($tariff['amount_minor'])) {
-            return trim((string) ($tariff['label'] ?? ''));
+            return self::labelWithOptionalParenthetical($labelRaw, $hintRaw);
         }
         $major = PricingMinorMoney::minorToMajor((int) $tariff['amount_minor']);
         $amount = $this->formatMajor($tenant, $major);
-        $suffix = self::catalogUnitSuffix($kind);
+        $dayUnit = $kind === TariffKind::FixedPerDay
+            ? TariffCatalogDayUnit::fromProfile($tariff['catalog_day_unit'] ?? null)
+            : null;
+        $suffix = self::catalogUnitSuffix($kind, $dayUnit);
+        $led = self::labelWithOptionalParenthetical($labelRaw, $hintRaw);
+        $tail = trim($amount.' '.$suffix);
 
-        return trim($amount.' '.$suffix);
+        return $led !== '' ? $led.': '.$tail : $tail;
     }
 
     /**
      * Human unit phrase after formatted amount (catalog / cards), lowercase.
      */
-    public static function catalogUnitSuffix(?TariffKind $kind): string
+    public static function catalogUnitSuffix(?TariffKind $kind, ?TariffCatalogDayUnit $dayUnit = null): string
     {
         if ($kind === null) {
             return '';
         }
 
         return match ($kind) {
-            TariffKind::FixedPerDay => 'за сутки',
+            TariffKind::FixedPerDay => ($dayUnit ?? TariffCatalogDayUnit::FullDay)->perUnitSuffix(),
             TariffKind::FixedPerRental => 'за период',
             TariffKind::FixedPerHourBlock => 'за блок часов',
             TariffKind::OnRequest, TariffKind::Informational => '',
@@ -225,6 +341,7 @@ final class MotorcyclePricingSummaryPresenter
         ?int $cardMinor,
         string $cardLabel,
         ?Tenant $tenant,
+        ?TariffCatalogDayUnit $primaryDayUnit = null,
     ): array {
         if ($invalid) {
             return ['Стоимость уточняйте', '', false];
@@ -240,7 +357,10 @@ final class MotorcyclePricingSummaryPresenter
         if ($cardMinor !== null && $primaryKind !== null && $cardMinor > 0) {
             $major = PricingMinorMoney::minorToMajor($cardMinor);
             $text = $this->formatMajor($tenant, $major);
-            $suffix = self::catalogUnitSuffix($primaryKind);
+            $suffix = self::catalogUnitSuffix(
+                $primaryKind,
+                $primaryKind === TariffKind::FixedPerDay ? $primaryDayUnit : null,
+            );
             $from = $primaryKind === TariffKind::FixedPerDay;
 
             return [$text, $suffix, $from];
@@ -304,11 +424,15 @@ final class MotorcyclePricingSummaryPresenter
             return null;
         }
 
+        $dayUnit = $kind === TariffKind::FixedPerDay
+            ? TariffCatalogDayUnit::fromProfile($primary['catalog_day_unit'] ?? null)
+            : null;
+
         return [
             'minor' => $minor,
             'currency' => $currency,
             'label' => (string) ($primary['label'] ?? ''),
-            'price_descriptor' => self::catalogUnitSuffix($kind),
+            'price_descriptor' => self::catalogUnitSuffix($kind, $dayUnit),
         ];
     }
 }

@@ -6,6 +6,7 @@ namespace App\Livewire\Tenant\Motorcycles;
 
 use App\Filament\Tenant\Resources\MotorcycleResource\Form\MotorcycleFormFieldKit;
 use App\Livewire\Tenant\Motorcycles\Concerns\HasMotorcycleBlockFormState;
+use App\Livewire\Tenant\Motorcycles\Concerns\ReportsMotorcycleEditBlockFooter;
 use App\Livewire\Tenant\Motorcycles\Concerns\ResolvesMotorcycleRecord;
 use App\Support\Motorcycle\MotorcycleBlockSaveLogger;
 use Filament\Notifications\Notification;
@@ -22,6 +23,7 @@ class MotorcyclePageModelEditor extends Component implements HasSchemas
 {
     use HasMotorcycleBlockFormState;
     use InteractsWithSchemas;
+    use ReportsMotorcycleEditBlockFooter;
     use ResolvesMotorcycleRecord;
 
     private const BLOCK = 'page_model';
@@ -68,6 +70,7 @@ class MotorcyclePageModelEditor extends Component implements HasSchemas
             $m = $this->resolveMotorcycle();
             $m->update($data);
             $this->initialSnapshot = $this->computeSnapshot();
+            $this->touchMotorcycleEditSavedTimestamp();
             Notification::make()->title('Контент страницы модели сохранён')->success()->send();
             MotorcycleBlockSaveLogger::log(
                 self::BLOCK.'_done',
@@ -93,9 +96,7 @@ class MotorcyclePageModelEditor extends Component implements HasSchemas
 
     public function getStatusLineProperty(): string
     {
-        return $this->computeSnapshot() !== $this->initialSnapshot
-            ? 'Есть несохранённые изменения'
-            : 'Сохранено';
+        return $this->motorcycleEditFooterStatus($this->computeSnapshot() !== $this->initialSnapshot);
     }
 
     private function computeSnapshot(): string

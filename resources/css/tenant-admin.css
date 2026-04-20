@@ -1973,3 +1973,184 @@ body.fi-ts-setup-active.fi-ts-setup-use-top-offset {
     display: inline;
     margin: 0;
 }
+
+/**
+ * Редактирование мотоцикла: 8+4 в main-tab-shell.
+ * Если в билде нет tailwind-утилит lg:col-span-8/4, при lg:grid-cols-12 дети остаются по 1 колонке — две «щели» слева и пусто справа.
+ */
+.fi-motorcycle-edit-main-grid > * {
+    grid-column: 1 / -1;
+}
+
+@media (min-width: 1024px) {
+    .fi-motorcycle-edit-main-grid {
+        grid-template-columns: repeat(12, minmax(0, 1fr));
+    }
+
+    .fi-motorcycle-edit-main-grid > :nth-child(1) {
+        grid-column: span 8 / span 8;
+    }
+
+    .fi-motorcycle-edit-main-grid > :nth-child(2) {
+        grid-column: span 4 / span 4;
+    }
+}
+
+/* Якоря секций: не прятать под topbar Filament + sticky TOC */
+.fi-moto-section-anchor {
+    scroll-margin-top: clamp(5rem, 12vh, 7.5rem);
+}
+
+/**
+ * Sticky TOC: position/z-index/top задаём здесь (не только Tailwind), иначе после сборки
+ * утилита lg:z-[100] может отсутствовать — карточки с «Сохранить …» оказываются поверх плашки.
+ */
+.fi-motorcycle-edit-toc-sticky {
+    position: sticky;
+    top: 4.5rem;
+    z-index: 500;
+    border-radius: 0.75rem;
+    border: 1px solid rgba(15, 23, 42, 0.1);
+    background-color: #ffffff !important;
+    box-shadow: 0 1px 0 rgba(15, 23, 42, 0.06);
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+
+/* Поток форм ниже по слою относительно sticky TOC */
+.fi-motorcycle-edit-primary-stack > .fi-motorcycle-primary-flow {
+    position: relative;
+    z-index: 0;
+}
+
+.fi-motorcycle-edit-primary-stack .motorcycle-block-editor {
+    position: relative;
+    z-index: 0;
+}
+
+.dark .fi-motorcycle-edit-toc-sticky {
+    border-color: rgba(255, 255, 255, 0.1);
+    /* тот же токен, что у .dark .fi-section в этом файле */
+    background-color: #161822 !important;
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.35);
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+
+/* Внутренний nav: тот же сплошной фон, перебиваем полупрозрачные слои */
+.fi-moto-edit-toc.fi-moto-edit-toc--bar {
+    background-color: #ffffff !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+
+.dark .fi-moto-edit-toc.fi-moto-edit-toc--bar {
+    background-color: #161822 !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+
+/* nav одновременно .fi-section: глобальная тень карточки для TOC не нужна — оставляем плоскую плашку */
+.dark .fi-moto-edit-toc.fi-moto-edit-toc--bar.fi-section {
+    box-shadow: none !important;
+}
+
+/* TOC: активная ссылка и индикаторы полноты */
+.fi-moto-toc-link.fi-moto-toc-active {
+    background-color: rgb(255 247 237);
+    color: rgb(12 10 9);
+    box-shadow: 0 0 0 1px rgb(251 191 36 / 0.45);
+}
+
+.dark .fi-moto-toc-link.fi-moto-toc-active {
+    background-color: rgb(255 255 255 / 0.08);
+    color: rgb(248 250 252);
+    box-shadow: 0 0 0 1px rgb(251 191 36 / 0.35);
+}
+
+/* TOC в topbar: компактные ссылки на тёмной плашке Filament */
+.fi-topbar .fi-moto-edit-toc--topbar .fi-moto-toc-link.fi-moto-toc-active {
+    background-color: rgb(255 255 255 / 0.12);
+    color: rgb(248 250 252);
+    box-shadow: 0 0 0 1px rgb(251 191 36 / 0.55);
+}
+
+html:not(.dark) .fi-topbar .fi-moto-edit-toc--topbar .fi-moto-toc-link.fi-moto-toc-active {
+    background-color: rgb(255 247 237);
+    color: rgb(12 10 9);
+    box-shadow: 0 0 0 1px rgb(251 191 36 / 0.45);
+}
+
+.fi-topbar .fi-moto-edit-toc--topbar .fi-moto-toc-scroll {
+    mask-image: none;
+    scrollbar-width: thin;
+}
+
+.fi-moto-toc-dot {
+    height: 0.375rem;
+    width: 0.375rem;
+    border-radius: 9999px;
+    flex-shrink: 0;
+}
+
+.fi-moto-toc-dot--ok {
+    background-color: rgb(16 185 129);
+}
+
+.fi-moto-toc-dot--warn {
+    background-color: rgb(245 158 11);
+}
+
+.fi-moto-toc-dot--todo {
+    background-color: rgb(203 213 225);
+}
+
+.dark .fi-moto-toc-dot--todo {
+    background-color: rgb(71 85 105);
+}
+
+.fi-moto-toc-scroll {
+    scrollbar-width: thin;
+    mask-image: linear-gradient(to right, transparent, #000 0.75rem, #000 calc(100% - 0.75rem), transparent);
+}
+
+@media (min-width: 1024px) {
+    .fi-moto-toc-scroll {
+        mask-image: none;
+    }
+}
+
+/**
+ * Медиа мотоцикла: обложка — ширина; высоту задаёт Filament/FilePond (imagePreviewHeight в px).
+ */
+.fi-motorcycle-media-editor .fi-fo-file-upload#motorcycle-cover {
+    width: 100%;
+    max-width: min(100%, 40rem);
+    min-height: 0;
+}
+
+/* FilePond: не даём коллапсить панель превью (компактный layout + крупный превью) */
+.fi-motorcycle-media-editor .fi-fo-file-upload#motorcycle-cover .filepond--root {
+    min-height: 14rem;
+}
+
+.fi-motorcycle-media-editor .fi-fo-file-upload#motorcycle-cover .filepond--list {
+    min-height: 10rem;
+}
+
+.fi-motorcycle-media-editor .fi-fo-file-upload#motorcycle-cover .filepond--item {
+    min-height: 10rem;
+}
+
+.fi-motorcycle-media-editor .fi-fo-file-upload#motorcycle-gallery .filepond--root {
+    min-height: 8rem;
+}
+
+/**
+ * Ниже сгиба: блок перенесён в основной поток; класс оставлен для обратной совместимости include.
+ */
+.fi-motorcycle-edit-below-fold {
+    width: 100%;
+    max-width: min(100%, 72rem);
+    margin-inline: auto;
+}

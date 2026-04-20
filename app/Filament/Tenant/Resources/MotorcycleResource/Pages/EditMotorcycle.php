@@ -8,7 +8,6 @@ use App\Filament\Tenant\Forms\LinkedBookableSchedulingForm;
 use App\Filament\Tenant\Resources\MotorcycleResource;
 use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;
-use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Schemas\Components\View as SchemaView;
@@ -19,6 +18,20 @@ use Livewire\Attributes\On;
 class EditMotorcycle extends EditRecord
 {
     protected static string $resource = MotorcycleResource::class;
+
+    /**
+     * {@see EditRecord::defaultForm()} мержит columns и оставляет lg=2; без явных брейкпоинтов форма остаётся в половине ширины.
+     *
+     * @var array<string, int>
+     */
+    private const SCHEMA_SINGLE_COLUMN = [
+        'default' => 1,
+        'sm' => 1,
+        'md' => 1,
+        'lg' => 1,
+        'xl' => 1,
+        '2xl' => 1,
+    ];
 
     #[On('motorcycle-settings-updated')]
     public function refreshMotorcycleFromChild(): void
@@ -62,28 +75,30 @@ class EditMotorcycle extends EditRecord
         ];
     }
 
+    public function content(Schema $schema): Schema
+    {
+        return parent::content($schema->columns(self::SCHEMA_SINGLE_COLUMN));
+    }
+
     public function form(Schema $schema): Schema
     {
         $recordId = (int) $this->record->getKey();
 
         return $schema
-            ->columns(1)
+            ->columns(self::SCHEMA_SINGLE_COLUMN)
             ->components([
                 Tabs::make('Карточка')
+                    ->columns(self::SCHEMA_SINGLE_COLUMN)
                     ->persistTabInQueryString(LinkedBookableSchedulingForm::MOTORCYCLE_TAB_QUERY_KEY)
                     ->tabs([
                         LinkedBookableSchedulingForm::TAB_KEY_MAIN => Tab::make('Основное')
                             ->id(LinkedBookableSchedulingForm::TAB_KEY_MAIN)
+                            ->columns(self::SCHEMA_SINGLE_COLUMN)
                             ->schema([
-                                Grid::make(['default' => 1, 'lg' => 12])
-                                    ->schema([
-                                        SchemaView::make('filament.tenant.resources.motorcycle-resource.blocks.main-column')
-                                            ->viewData(['recordId' => $recordId])
-                                            ->columnSpan(['default' => 12, 'lg' => 8]),
-                                        SchemaView::make('filament.tenant.resources.motorcycle-resource.blocks.side-column')
-                                            ->viewData(['recordId' => $recordId])
-                                            ->columnSpan(['default' => 12, 'lg' => 4]),
-                                    ]),
+                                SchemaView::make('filament.tenant.resources.motorcycle-resource.blocks.main-tab-shell')
+                                    ->viewData(['recordId' => $recordId])
+                                    ->columnSpanFull()
+                                    ->extraAttributes(['class' => 'fi-motorcycle-edit-tab-shell w-full min-w-0']),
                             ]),
                         LinkedBookableSchedulingForm::TAB_KEY_ONLINE_BOOKING => Tab::make('Онлайн-запись')
                             ->id(LinkedBookableSchedulingForm::TAB_KEY_ONLINE_BOOKING)
@@ -94,7 +109,7 @@ class EditMotorcycle extends EditRecord
                                 SchemaView::make('filament.tenant.resources.motorcycle-resource.blocks.scheduling-tab')
                                     ->viewData(['recordId' => $recordId]),
                             ])
-                            ->columnSpan(['default' => 12, 'lg' => 12]),
+                            ->columnSpanFull(),
                         LinkedBookableSchedulingForm::TAB_KEY_FLEET_UNITS => Tab::make('Единицы парка')
                             ->id(LinkedBookableSchedulingForm::TAB_KEY_FLEET_UNITS)
                             ->hiddenOn('create')
@@ -109,9 +124,9 @@ class EditMotorcycle extends EditRecord
                                 SchemaView::make('filament.tenant.resources.motorcycle-resource.blocks.fleet-units-tab')
                                     ->viewData(['recordId' => $recordId]),
                             ])
-                            ->columnSpan(['default' => 12, 'lg' => 12]),
+                            ->columnSpanFull(),
                     ])
-                    ->columnSpan(['default' => 12, 'lg' => 12]),
+                    ->columnSpanFull(),
             ]);
     }
 
@@ -141,7 +156,16 @@ class EditMotorcycle extends EditRecord
 
     protected function getHeaderActions(): array
     {
+        $slug = trim((string) ($this->record->slug ?? ''));
+
         return [
+            Actions\Action::make('sitePreview')
+                ->label('Просмотр на сайте')
+                ->icon('heroicon-o-arrow-top-right-on-square')
+                ->url(fn (): string => $slug !== '' ? route('motorcycle.show', ['slug' => $slug]) : '#')
+                ->openUrlInNewTab()
+                ->visible(fn (): bool => $slug !== '')
+                ->disabled(fn (): bool => $slug === ''),
             Actions\ActionGroup::make([
                 Actions\DeleteAction::make()
                     ->modalHeading('Удалить мотоцикл'),

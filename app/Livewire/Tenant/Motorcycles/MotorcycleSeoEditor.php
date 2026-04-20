@@ -6,6 +6,7 @@ namespace App\Livewire\Tenant\Motorcycles;
 
 use App\Filament\Tenant\Resources\MotorcycleResource\Form\MotorcycleFormFieldKit;
 use App\Livewire\Tenant\Motorcycles\Concerns\HasMotorcycleBlockFormState;
+use App\Livewire\Tenant\Motorcycles\Concerns\ReportsMotorcycleEditBlockFooter;
 use App\Livewire\Tenant\Motorcycles\Concerns\ResolvesMotorcycleRecord;
 use App\Models\SeoMeta;
 use App\Services\Seo\TenantSeoPublicPreviewService;
@@ -24,6 +25,7 @@ class MotorcycleSeoEditor extends Component implements HasSchemas
 {
     use HasMotorcycleBlockFormState;
     use InteractsWithSchemas;
+    use ReportsMotorcycleEditBlockFooter;
     use ResolvesMotorcycleRecord;
 
     private const BLOCK = 'seo';
@@ -142,9 +144,7 @@ class MotorcycleSeoEditor extends Component implements HasSchemas
 
     public function getStatusLineProperty(): string
     {
-        return $this->computeSnapshot() !== $this->initialSnapshot
-            ? 'Есть несохранённые изменения'
-            : 'Сохранено';
+        return $this->motorcycleEditFooterStatus($this->computeSnapshot() !== $this->initialSnapshot);
     }
 
     private function computeSnapshot(): string

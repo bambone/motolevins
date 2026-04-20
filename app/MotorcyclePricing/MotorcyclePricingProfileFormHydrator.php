@@ -34,7 +34,7 @@ final class MotorcyclePricingProfileFormHydrator
         $fin = is_array($profile['financial_terms'] ?? null) ? $profile['financial_terms'] : [];
 
         $rows = [];
-        foreach ($tariffs as $t) {
+        foreach (self::sortProfileTariffsForForm($tariffs) as $t) {
             if (! is_array($t)) {
                 continue;
             }
@@ -49,11 +49,11 @@ final class MotorcyclePricingProfileFormHydrator
                 'applicability_mode' => (string) (is_array($t['applicability'] ?? null) ? ($t['applicability']['mode'] ?? ApplicabilityMode::Always->value) : ApplicabilityMode::Always->value),
                 'min_days' => isset($t['applicability']['min_days']) ? (int) $t['applicability']['min_days'] : 1,
                 'max_days' => isset($t['applicability']['max_days']) ? (int) $t['applicability']['max_days'] : 3,
-                'priority' => (int) ($t['priority'] ?? 500),
-                'sort_order' => (int) ($t['sort_order'] ?? 500),
                 'show_on_card' => (bool) (is_array($t['visibility'] ?? null) ? ($t['visibility']['show_on_card'] ?? false) : false),
                 'show_on_detail' => (bool) (is_array($t['visibility'] ?? null) ? ($t['visibility']['show_on_detail'] ?? true) : true),
                 'show_in_quote' => (bool) (is_array($t['visibility'] ?? null) ? ($t['visibility']['show_in_quote'] ?? true) : true),
+                'catalog_day_unit' => TariffCatalogDayUnit::fromProfile($t['catalog_day_unit'] ?? null)->value,
+                'catalog_public_hint' => (string) ($t['catalog_public_hint'] ?? ''),
             ];
         }
 
@@ -88,6 +88,7 @@ final class MotorcyclePricingProfileFormHydrator
     {
         $currency = (string) ($flat['currency'] ?? MotorcyclePricingSchema::DEFAULT_CURRENCY);
         $rawTariffs = is_array($flat['tariffs'] ?? null) ? $flat['tariffs'] : [];
+        $rawTariffs = array_values($rawTariffs);
 
         $tariffs = [];
         $seenIds = [];
@@ -120,6 +121,8 @@ final class MotorcyclePricingProfileFormHydrator
                 $applicability['min_days'] = max(1, (int) ($row['min_days'] ?? 1));
             }
 
+            $order = MotorcyclePricingSchema::orderValueForIndex(count($tariffs));
+
             $t = [
                 'id' => $id,
                 'label' => (string) ($row['label'] ?? ''),
@@ -130,8 +133,8 @@ final class MotorcyclePricingProfileFormHydrator
                     'show_on_detail' => (bool) ($row['show_on_detail'] ?? true),
                     'show_in_quote' => (bool) ($row['show_in_quote'] ?? true),
                 ],
-                'priority' => (int) ($row['priority'] ?? 500),
-                'sort_order' => (int) ($row['sort_order'] ?? 500),
+                'priority' => $order,
+                'sort_order' => $order,
             ];
             if ($amountMinor !== null) {
                 $t['amount_minor'] = $amountMinor;
@@ -142,10 +145,11 @@ final class MotorcyclePricingProfileFormHydrator
             if ($kind === TariffKind::OnRequest) {
                 $t['note'] = (string) ($row['note'] ?? '');
             }
+            foreach (self::catalogDisplayFieldsForProfile($kind, $row) as $ck => $cv) {
+                $t[$ck] = $cv;
+            }
             $tariffs[] = $t;
         }
-
-        usort($tariffs, fn (array $a, array $b): int => ((int) ($a['sort_order'] ?? 0)) <=> ((int) ($b['sort_order'] ?? 0)));
 
         $primary = (string) ($flat['card_primary_tariff_id'] ?? '');
         $secondaryMode = self::normalizeCardSecondaryMode((string) ($flat['card_secondary_mode'] ?? 'none'));
@@ -194,12 +198,83 @@ final class MotorcyclePricingProfileFormHydrator
             'applicability_mode' => ApplicabilityMode::Always->value,
             'min_days' => 1,
             'max_days' => 3,
-            'priority' => 500,
-            'sort_order' => 10,
             'show_on_card' => true,
             'show_on_detail' => true,
             'show_in_quote' => true,
+            'catalog_day_unit' => TariffCatalogDayUnit::FullDay->value,
+            'catalog_public_hint' => '',
         ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $row
+     * @return array<string, string>
+     */
+    private static function catalogDisplayFieldsForProfile(TariffKind $kind, array $row): array
+    {
+        $out = [];
+        if ($kind === TariffKind::FixedPerDay) {
+            $unit = TariffCatalogDayUnit::tryFrom((string) ($row['catalog_day_unit'] ?? ''))
+                ?? TariffCatalogDayUnit::FullDay;
+            $out['catalog_day_unit'] = $unit->value;
+        }
+        if (in_array($kind, [
+            TariffKind::FixedPerDay,
+            TariffKind::FixedPerRental,
+            TariffKind::FixedPerHourBlock,
+            TariffKind::Informational,
+        ], true)) {
+            $hint = trim((string) ($row['catalog_public_hint'] ?? ''));
+            if ($hint !== '') {
+                $out['catalog_public_hint'] = mb_substr($hint, 0, 80);
+            }
+        }
+
+        return $out;
+    }
+
+    /**
+     * Stable ordering for loading legacy / unsorted profile JSON into the repeater (matches resolver tie-break intent).
+     *
+     * @param  list<mixed>  $tariffs
+     * @return list<array<string, mixed>>
+     */
+    private static function sortProfileTariffsForForm(array $tariffs): array
+    {
+        $wrapped = [];
+        foreach ($tariffs as $origIdx => $t) {
+            if (! is_array($t)) {
+                continue;
+            }
+            $wrapped[] = ['orig' => (int) $origIdx, 't' => $t];
+        }
+
+        usort($wrapped, static function (array $a, array $b): int {
+            $ta = $a['t'];
+            $tb = $b['t'];
+            $soA = isset($ta['sort_order']) ? (int) $ta['sort_order'] : 1_000_000;
+            $soB = isset($tb['sort_order']) ? (int) $tb['sort_order'] : 1_000_000;
+            if ($soA !== $soB) {
+                return $soA <=> $soB;
+            }
+            $prA = isset($ta['priority']) ? (int) $ta['priority'] : 1_000_000;
+            $prB = isset($tb['priority']) ? (int) $tb['priority'] : 1_000_000;
+            if ($prA !== $prB) {
+                return $prA <=> $prB;
+            }
+
+            return $a['orig'] <=> $b['orig'];
+        });
+
+        $out = [];
+        foreach ($wrapped as $item) {
+            $t = $item['t'];
+            if (is_array($t)) {
+                $out[] = $t;
+            }
+        }
+
+        return $out;
     }
 
     /**

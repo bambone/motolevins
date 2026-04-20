@@ -6,13 +6,15 @@ namespace App\Livewire\Tenant\Motorcycles;
 
 use App\Filament\Tenant\Resources\MotorcycleResource\Form\MotorcycleFormFieldKit;
 use App\Livewire\Tenant\Motorcycles\Concerns\HasMotorcycleBlockFormState;
+use App\Livewire\Tenant\Motorcycles\Concerns\ReportsMotorcycleEditBlockFooter;
 use App\Livewire\Tenant\Motorcycles\Concerns\ResolvesMotorcycleRecord;
 use App\MotorcyclePricing\MotorcyclePricingProfileValidator;
 use App\MotorcyclePricing\MotorcyclePricingSchema;
 use App\MotorcyclePricing\PricingProfileValidity;
 use App\Support\Motorcycle\MotorcycleBlockSaveLogger;
+use Filament\Actions\Concerns\InteractsWithActions;
+use Filament\Actions\Contracts\HasActions;
 use Filament\Notifications\Notification;
-use Filament\Schemas\Components\Section;
 use Filament\Schemas\Concerns\InteractsWithSchemas;
 use Filament\Schemas\Contracts\HasSchemas;
 use Filament\Schemas\Schema;
@@ -22,10 +24,12 @@ use Illuminate\Validation\ValidationException;
 use Livewire\Component;
 use Throwable;
 
-class MotorcyclePricingProfileEditor extends Component implements HasSchemas
+class MotorcyclePricingProfileEditor extends Component implements HasActions, HasSchemas
 {
     use HasMotorcycleBlockFormState;
+    use InteractsWithActions;
     use InteractsWithSchemas;
+    use ReportsMotorcycleEditBlockFooter;
     use ResolvesMotorcycleRecord;
 
     private const BLOCK = 'pricing_profile';
@@ -64,11 +68,7 @@ class MotorcyclePricingProfileEditor extends Component implements HasSchemas
 
     public function form(Schema $schema): Schema
     {
-        return $schema->components([
-            Section::make()
-                ->schema(MotorcycleFormFieldKit::pricingProfileFields())
-                ->columns(1),
-        ]);
+        return $schema->components(MotorcycleFormFieldKit::pricingProfileFields());
     }
 
     public function save(): void
@@ -113,6 +113,7 @@ class MotorcyclePricingProfileEditor extends Component implements HasSchemas
 
             $this->form->fill(MotorcycleFormFieldKit::extractPricingProfileFormDefaults($m->fresh()));
             $this->initialSnapshot = $this->computeSnapshot();
+            $this->touchMotorcycleEditSavedTimestamp();
 
             $title = $v['validity'] === PricingProfileValidity::ValidWithWarnings
                 ? 'Тарифы сохранены (есть предупреждения)'
@@ -151,9 +152,7 @@ class MotorcyclePricingProfileEditor extends Component implements HasSchemas
 
     public function getStatusLineProperty(): string
     {
-        return $this->computeSnapshot() !== $this->initialSnapshot
-            ? 'Есть несохранённые изменения'
-            : 'Сохранено';
+        return $this->motorcycleEditFooterStatus($this->computeSnapshot() !== $this->initialSnapshot);
     }
 
     private function computeSnapshot(): string

@@ -45,6 +45,20 @@ class MotorcycleResource extends Resource
 {
     use ResolvesDomainTermLabels;
 
+    /**
+     * Явные брейкпоинты: иначе после merge с defaultForm остаётся lg=2 и сетка 8+4 сжимается в половину экрана.
+     *
+     * @var array<string, int>
+     */
+    private const SCHEMA_SINGLE_COLUMN = [
+        'default' => 1,
+        'sm' => 1,
+        'md' => 1,
+        'lg' => 1,
+        'xl' => 1,
+        '2xl' => 1,
+    ];
+
     protected static ?string $model = Motorcycle::class;
 
     protected static string|UnitEnum|null $navigationGroup = 'Catalog';
@@ -85,9 +99,10 @@ class MotorcycleResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema
-            ->columns(1)
+            ->columns(self::SCHEMA_SINGLE_COLUMN)
             ->components([
                 Tabs::make('Карточка')
+                    ->columns(self::SCHEMA_SINGLE_COLUMN)
                     ->persistTabInQueryString(LinkedBookableSchedulingForm::MOTORCYCLE_TAB_QUERY_KEY)
                     ->tabs([
                         'main' => Tab::make('Основное')

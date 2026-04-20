@@ -8,7 +8,8 @@ namespace App\MotorcyclePricing;
  * Picks a single auto-quotable tariff for a duration.
  *
  * Policy: collect candidates (kinds that can carry a price, applicability matches days, not manual-only / not on-request).
- * Sort by specificity (narrow duration range beats “always”, then min-days bands, then narrower windows, then higher priority, then stable id).
+ * Sort by specificity (narrow duration range beats “always”, then min-days bands, then narrower windows, then lower `priority`, then stable id).
+ * In the admin pricing profile, `priority` is derived from repeater row order after save (first row = lowest priority number = wins ties).
  * If the top two candidates share the same tie-breaker tuple, return conflict → {@see MotorcycleQuoteEngine} surfaces invalid_profile.
  */
 final class MotorcycleTariffResolver

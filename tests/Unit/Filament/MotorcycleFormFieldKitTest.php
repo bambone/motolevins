@@ -6,7 +6,10 @@ namespace Tests\Unit\Filament;
 
 use App\Enums\MotorcycleLocationMode;
 use App\Filament\Tenant\Resources\MotorcycleResource\Form\MotorcycleFormFieldKit;
+use App\MotorcyclePricing\ApplicabilityMode;
 use App\MotorcyclePricing\MotorcyclePricingProfileFormHydrator;
+use App\MotorcyclePricing\MotorcyclePricingSchema;
+use App\MotorcyclePricing\TariffKind;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
@@ -89,5 +92,103 @@ final class MotorcycleFormFieldKitTest extends TestCase
         $this->assertIsArray($profile);
         $display = $profile['display'] ?? [];
         $this->assertSame($keepId, (string) ($display['card_primary_tariff_id'] ?? ''));
+    }
+
+    public function test_merge_pricing_profile_assigns_priority_from_row_order_via_schema_helper(): void
+    {
+        $id1 = (string) Str::uuid();
+        $id2 = (string) Str::uuid();
+        $id3 = (string) Str::uuid();
+
+        $rows = [
+            array_merge(MotorcyclePricingProfileFormHydrator::defaultTariffRow(), [
+                'id' => $id1,
+                'label' => 'Один',
+                'amount_major' => 1000,
+            ]),
+            array_merge(MotorcyclePricingProfileFormHydrator::defaultTariffRow(), [
+                'id' => $id2,
+                'label' => 'Два',
+                'amount_major' => 2000,
+            ]),
+            array_merge(MotorcyclePricingProfileFormHydrator::defaultTariffRow(), [
+                'id' => $id3,
+                'label' => 'Три',
+                'amount_major' => 3000,
+            ]),
+        ];
+
+        $merged = MotorcycleFormFieldKit::mergePricingProfileIntoMotorcycleData([
+            'pricing_currency' => 'RUB',
+            'pricing_tariffs' => $rows,
+            'pricing_card_primary_tariff_id' => $id1,
+            'pricing_card_secondary_mode' => 'none',
+            'pricing_card_secondary_text' => '',
+            'pricing_card_secondary_tariff_id' => '',
+            'pricing_detail_tariffs_limit' => null,
+            'pricing_deposit_amount' => null,
+            'pricing_prepayment_amount' => null,
+            'pricing_catalog_price_note' => '',
+        ]);
+
+        $tariffs = $merged['pricing_profile_json']['tariffs'] ?? [];
+        $this->assertCount(3, $tariffs);
+        foreach ($tariffs as $i => $t) {
+            $expected = MotorcyclePricingSchema::orderValueForIndex($i);
+            $this->assertSame($expected, (int) ($t['priority'] ?? 0), 'priority idx '.$i);
+            $this->assertSame($expected, (int) ($t['sort_order'] ?? 0), 'sort_order idx '.$i);
+        }
+    }
+
+    public function test_merge_pricing_profile_keeps_primary_tariff_id_after_row_reorder(): void
+    {
+        $id1 = (string) Str::uuid();
+        $id2 = (string) Str::uuid();
+        $id3 = (string) Str::uuid();
+
+        $row = static fn (string $id, string $label): array => array_merge(
+            MotorcyclePricingProfileFormHydrator::defaultTariffRow(),
+            [
+                'id' => $id,
+                'label' => $label,
+                'amount_major' => 1000,
+            ],
+        );
+
+        $originalOrder = [$row($id1, 'Первый'), $row($id2, 'Второй'), $row($id3, 'Третий')];
+        $reordered = [$row($id3, 'Третий'), $row($id1, 'Первый'), $row($id2, 'Второй')];
+
+        $merge = static function (array $tariffRows) use ($id2): array {
+            return MotorcycleFormFieldKit::mergePricingProfileIntoMotorcycleData([
+                'pricing_currency' => 'RUB',
+                'pricing_tariffs' => $tariffRows,
+                'pricing_card_primary_tariff_id' => $id2,
+                'pricing_card_secondary_mode' => 'none',
+                'pricing_card_secondary_text' => '',
+                'pricing_card_secondary_tariff_id' => '',
+                'pricing_detail_tariffs_limit' => null,
+                'pricing_deposit_amount' => null,
+                'pricing_prepayment_amount' => null,
+                'pricing_catalog_price_note' => '',
+            ]);
+        };
+
+        $displayBefore = $merge($originalOrder)['pricing_profile_json']['display'] ?? [];
+        $displayAfter = $merge($reordered)['pricing_profile_json']['display'] ?? [];
+
+        $this->assertSame($id2, (string) ($displayBefore['card_primary_tariff_id'] ?? ''));
+        $this->assertSame($id2, (string) ($displayAfter['card_primary_tariff_id'] ?? ''));
+    }
+
+    public function test_format_tariff_repeater_item_label_joins_summary_parts(): void
+    {
+        $line = MotorcycleFormFieldKit::formatTariffRepeaterItemLabel([
+            'label' => 'Будни',
+            'kind' => TariffKind::FixedPerDay->value,
+            'amount_major' => 9500,
+            'applicability_mode' => ApplicabilityMode::Always->value,
+        ], 'RUB');
+
+        $this->assertSame('Будни · Сутки · 9 500 ₽ · Всегда', $line);
     }
 }

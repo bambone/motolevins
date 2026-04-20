@@ -7,6 +7,7 @@ namespace App\Livewire\Tenant\Motorcycles;
 use App\Enums\MotorcycleLocationMode;
 use App\Filament\Tenant\Resources\MotorcycleResource\Form\MotorcycleFormFieldKit;
 use App\Livewire\Tenant\Motorcycles\Concerns\HasMotorcycleBlockFormState;
+use App\Livewire\Tenant\Motorcycles\Concerns\ReportsMotorcycleEditBlockFooter;
 use App\Livewire\Tenant\Motorcycles\Concerns\ResolvesMotorcycleRecord;
 use App\Models\Motorcycle;
 use App\Support\Motorcycle\MotorcycleBlockSaveLogger;
@@ -23,6 +24,7 @@ class MotorcycleLocationEditor extends Component implements HasSchemas
 {
     use HasMotorcycleBlockFormState;
     use InteractsWithSchemas;
+    use ReportsMotorcycleEditBlockFooter;
     use ResolvesMotorcycleRecord;
 
     private const BLOCK = 'location';
@@ -106,6 +108,7 @@ class MotorcycleLocationEditor extends Component implements HasSchemas
                 'tenant_location_ids' => $m->tenantLocations()->pluck('tenant_locations.id')->all(),
             ]);
             $this->initialSnapshot = $this->computeSnapshot();
+            $this->touchMotorcycleEditSavedTimestamp();
 
             Notification::make()->title('Доступность по локациям сохранена')->success()->send();
             $this->dispatch('motorcycle-settings-updated');
@@ -125,9 +128,7 @@ class MotorcycleLocationEditor extends Component implements HasSchemas
 
     public function getStatusLineProperty(): string
     {
-        return $this->computeSnapshot() !== $this->initialSnapshot
-            ? 'Есть несохранённые изменения'
-            : 'Сохранено';
+        return $this->motorcycleEditFooterStatus($this->computeSnapshot() !== $this->initialSnapshot);
     }
 
     private function computeSnapshot(): string

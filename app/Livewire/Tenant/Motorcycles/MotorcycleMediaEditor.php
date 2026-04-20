@@ -6,10 +6,10 @@ namespace App\Livewire\Tenant\Motorcycles;
 
 use App\Filament\Tenant\Resources\MotorcycleResource\Form\MotorcycleFormFieldKit;
 use App\Livewire\Tenant\Motorcycles\Concerns\HasMotorcycleBlockFormState;
+use App\Livewire\Tenant\Motorcycles\Concerns\ReportsMotorcycleEditBlockFooter;
 use App\Livewire\Tenant\Motorcycles\Concerns\ResolvesMotorcycleRecord;
 use App\Support\Motorcycle\MotorcycleBlockSaveLogger;
 use Filament\Notifications\Notification;
-use Filament\Schemas\Components\Section;
 use Filament\Schemas\Concerns\InteractsWithSchemas;
 use Filament\Schemas\Contracts\HasSchemas;
 use Filament\Schemas\Schema;
@@ -21,6 +21,7 @@ class MotorcycleMediaEditor extends Component implements HasSchemas
 {
     use HasMotorcycleBlockFormState;
     use InteractsWithSchemas;
+    use ReportsMotorcycleEditBlockFooter;
     use ResolvesMotorcycleRecord;
 
     private const BLOCK = 'media';
@@ -52,11 +53,7 @@ class MotorcycleMediaEditor extends Component implements HasSchemas
 
     public function form(Schema $schema): Schema
     {
-        return $schema->components([
-            Section::make('Медиа')
-                ->description('Обложка и галерея. Новые файлы обычно сохраняются сразу после загрузки; эта кнопка дожимает состояние формы (порядок, удаления).')
-                ->schema(MotorcycleFormFieldKit::mediaUploadFields()),
-        ]);
+        return $schema->components(MotorcycleFormFieldKit::mediaUploadFields());
     }
 
     public function save(): void
@@ -74,6 +71,7 @@ class MotorcycleMediaEditor extends Component implements HasSchemas
                 'gallery' => $m->getMedia('gallery')->pluck('uuid')->values()->all(),
             ]);
             $this->initialSnapshot = $this->computeSnapshot();
+            $this->touchMotorcycleEditSavedTimestamp();
             Notification::make()->title('Медиа сохранены')->success()->send();
             MotorcycleBlockSaveLogger::log(
                 self::BLOCK.'_done',
@@ -99,9 +97,7 @@ class MotorcycleMediaEditor extends Component implements HasSchemas
 
     public function getStatusLineProperty(): string
     {
-        return $this->computeSnapshot() !== $this->initialSnapshot
-            ? 'Есть несохранённые изменения'
-            : 'Сохранено';
+        return $this->motorcycleEditFooterStatus($this->computeSnapshot() !== $this->initialSnapshot);
     }
 
     private function computeSnapshot(): string

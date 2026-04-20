@@ -32,6 +32,33 @@ final class MotorcycleBlockEditorsTest extends TestCase
         $this->withoutVite();
     }
 
+    public function test_edit_motorcycle_main_tab_has_toc_anchors_and_site_preview(): void
+    {
+        $tenant = $this->createTenantWithActiveDomain('fil_moto_edit_ux_shell');
+        $m = Motorcycle::query()->create([
+            'tenant_id' => $tenant->id,
+            'name' => 'UX Shell',
+            'slug' => 'ux-shell',
+            'status' => 'available',
+            'show_in_catalog' => true,
+            'price_per_day' => 1000,
+        ]);
+
+        $user = User::factory()->create(['status' => 'active']);
+        $user->tenants()->attach($tenant->id, ['role' => 'tenant_owner', 'status' => 'active']);
+
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+        $this->actingAs($user);
+        app(CurrentTenantManager::class)->setTenant($tenant);
+
+        Livewire::test(EditMotorcycle::class, ['record' => $m->getKey()])
+            ->assertSuccessful()
+            ->assertSee('id="moto-main"', false)
+            ->assertSee('id="moto-pricing"', false)
+            ->assertSee('fi-moto-edit-toc', false)
+            ->assertSee('Просмотр на сайте', false);
+    }
+
     public function test_edit_motorcycle_shell_has_no_global_save_changes_action(): void
     {
         $tenant = $this->createTenantWithActiveDomain('fil_moto_block_shell');
