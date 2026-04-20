@@ -1994,6 +1994,30 @@ body.fi-ts-setup-active.fi-ts-setup-use-top-offset {
     .fi-motorcycle-edit-main-grid > :nth-child(2) {
         grid-column: span 4 / span 4;
     }
+
+    /* Левая колонка по высоте контента — иначе растягивание под правый rail иногда ломает sticky TOC */
+    .fi-motorcycle-edit-main-grid > .fi-motorcycle-edit-primary-stack {
+        align-self: start;
+    }
+}
+
+/*
+ * Sticky TOC цепляется к ближайшему scrollport; overflow:hidden у вкладки/оболочки обрывает position:sticky.
+ */
+.fi-motorcycle-edit-tab-shell {
+    overflow: visible !important;
+}
+
+.fi-motorcycle-edit-canvas {
+    overflow: visible;
+}
+
+.fi-motorcycle-edit-main-grid {
+    overflow: visible;
+}
+
+.fi-motorcycle-edit-primary-stack {
+    overflow: visible;
 }
 
 /* Якоря секций: не прятать под topbar Filament + sticky TOC */
@@ -2006,6 +2030,7 @@ body.fi-ts-setup-active.fi-ts-setup-use-top-offset {
  * утилита lg:z-[100] может отсутствовать — карточки с «Сохранить …» оказываются поверх плашки.
  */
 .fi-motorcycle-edit-toc-sticky {
+    position: -webkit-sticky;
     position: sticky;
     top: 4.5rem;
     z-index: 500;
@@ -2121,25 +2146,60 @@ html:not(.dark) .fi-topbar .fi-moto-edit-toc--topbar .fi-moto-toc-link.fi-moto-t
 }
 
 /**
- * Медиа мотоцикла: обложка — ширина; высоту задаёт Filament/FilePond (imagePreviewHeight в px).
+ * Медиа мотоцикла: обложка — по центру колонки; галерея — отступ от блока обложки.
  */
+.fi-motorcycle-media-editor .fi-moto-media-cover-field {
+    width: 100%;
+}
+
+.fi-motorcycle-media-editor .fi-moto-media-cover-field .fi-fo-field-content-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+}
+
 .fi-motorcycle-media-editor .fi-fo-file-upload#motorcycle-cover {
+    box-sizing: border-box;
     width: 100%;
     max-width: min(100%, 40rem);
+    min-width: 0;
+    margin-inline: auto;
     min-height: 0;
 }
 
-/* FilePond: не даём коллапсить панель превью (компактный layout + крупный превью) */
+/* Отступ перед полем «Галерея» (подпись + зона загрузки), адаптивно */
+.fi-motorcycle-media-editor .fi-moto-media-gallery-field,
+.fi-motorcycle-media-editor .fi-fo-field:has(#motorcycle-gallery) {
+    margin-top: clamp(1.25rem, 2.2vw, 2.25rem);
+}
+
+/* FilePond: корень ограничиваем по ширине — тёмная «панель» не тянется на всю колонку на 2K */
 .fi-motorcycle-media-editor .fi-fo-file-upload#motorcycle-cover .filepond--root {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: min(100%, 40rem);
     min-height: 14rem;
+    margin-inline: auto;
 }
 
 .fi-motorcycle-media-editor .fi-fo-file-upload#motorcycle-cover .filepond--list {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: flex-start;
     min-height: 10rem;
 }
 
 .fi-motorcycle-media-editor .fi-fo-file-upload#motorcycle-cover .filepond--item {
+    margin-inline: auto;
     min-height: 10rem;
+    max-width: 100%;
+}
+
+/* На случай иного префикса/обёртки FilePond в сборке */
+.fi-motorcycle-media-editor .fi-fo-file-upload#motorcycle-cover [class*='filepond--panel'] {
+    margin-inline: auto;
 }
 
 .fi-motorcycle-media-editor .fi-fo-file-upload#motorcycle-gallery .filepond--root {
