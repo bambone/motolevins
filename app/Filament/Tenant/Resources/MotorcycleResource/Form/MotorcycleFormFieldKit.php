@@ -446,6 +446,7 @@ final class MotorcycleFormFieldKit
                                                         ->label('Название')
                                                         ->required()
                                                         ->maxLength(120)
+                                                        ->placeholder('Например: Сутки, будни, почасовой тариф (как увидит гость)')
                                                         ->columnSpanFull(),
                                                     Select::make('kind')
                                                         ->label('Тип')
@@ -514,6 +515,7 @@ final class MotorcycleFormFieldKit
                                                         ->schema([
                                                             Toggle::make('show_on_card')
                                                                 ->label('Показывать в каталоге')
+                                                                ->helperText('Плитка моделей на сайте для гостей. Сумма «от …» на плитке берётся только из поля «Основной тариф на карточке» ниже; если включить здесь у всех тарифов, вторая цена на одну карточку не появится — переключатель про «участие» строки в каталоге и про то, чтобы не выключить всё сразу.')
                                                                 ->default(false)
                                                                 ->inline(false),
                                                             Toggle::make('show_on_detail')
@@ -550,10 +552,11 @@ final class MotorcycleFormFieldKit
                                 ->columns(2)
                                 ->compact(),
                             Section::make('Отображение в каталоге')
-                                ->description('Какую строку тарифа показывать на карточке в списке и вторичную подсказку.')
+                                ->description('Какой тариф даёт крупную цену «от …» на сайте: в плитке каталога и в шапке страницы модели. Сама сумма — в выбранной строке тарифа выше, поле «Сумма». Вторичная подпись — ниже.')
                                 ->schema([
                                     Select::make('pricing_card_primary_tariff_id')
                                         ->label('Основной тариф на карточке')
+                                        ->helperText('Должен совпадать с одной из строк в «Тарифы». Для типа «за сутки» на сайте показывается «от {Сумма} за сутки» (если профиль валиден).')
                                         ->options(function (Get $get): array {
                                             $opts = [];
                                             foreach ($get('pricing_tariffs') ?? [] as $row) {
