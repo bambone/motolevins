@@ -31,10 +31,10 @@
             </div>
         </template>
 
-        <div class="grid grid-cols-1 gap-5 sm:gap-6 md:gap-6 xl:gap-8 sm:grid-cols-[repeat(auto-fill,minmax(min(100%,24rem),1fr))]" x-show="filteredBikes.length > 0">
+        <div class="grid grid-cols-1 gap-5 sm:gap-6 md:grid-cols-12 md:gap-x-6 md:gap-y-6 lg:gap-x-14 lg:gap-y-10 xl:gap-x-16" x-show="filteredBikes.length > 0">
             @foreach ($bikes as $index => $bike)
                 <div
-                    class="min-w-0 w-full transition-opacity duration-300"
+                    class="min-w-0 w-full transition-opacity duration-300 md:col-span-6 lg:col-span-4"
                     x-show="isBikeVisible({{ $bike->id }})"
                     :class="{ 'opacity-[0.42]': isCatalogDimmed({{ $bike->id }}) }"
                     :style="{ order: catalogOrder({{ $bike->id }}) }"
