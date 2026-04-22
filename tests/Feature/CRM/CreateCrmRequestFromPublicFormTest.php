@@ -7,11 +7,17 @@ use App\Mail\PlatformMarketingContactMail;
 use App\Models\CrmRequest;
 use App\Models\CrmRequestActivity;
 use App\Models\Lead;
+use App\Models\NotificationDelivery;
+use App\Models\Plan;
+use App\Models\User;
+use App\NotificationCenter\NotificationChannelType;
+use App\NotificationCenter\TenantCrmNewRequestEmailDefaults;
 use App\Product\CRM\Actions\CreateCrmRequestFromPublicForm;
 use App\Product\CRM\DTO\PublicInboundContext;
 use App\Product\CRM\DTO\PublicInboundSubmission;
 use App\Product\Mail\ProductMailOrchestrator;
 use App\Services\Platform\PlatformNotificationSettings;
+use Database\Seeders\PlanSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Mail;
@@ -150,5 +156,44 @@ class CreateCrmRequestFromPublicFormTest extends TestCase
         $this->assertSame(0, CrmRequest::query()->count());
         $this->assertSame(0, CrmRequestActivity::query()->count());
         $this->assertSame(0, Lead::query()->count());
+    }
+
+    public function test_tenant_crm_plans_email_notification_to_owner_when_bootstrap_and_platform_email_enabled(): void
+    {
+        Mail::fake();
+        $this->seed(PlanSeeder::class);
+
+        $settings = app(PlatformNotificationSettings::class);
+        $settings->setChannelEnabled('email', true);
+
+        $user = User::factory()->create(['email' => 'owner-notify@example.test']);
+        $plan = Plan::query()->where('slug', 'pro')->firstOrFail();
+        $tenant = $this->createTenantWithActiveDomain('towneremail', [
+            'plan_id' => $plan->id,
+            'owner_user_id' => $user->id,
+        ]);
+        $user->tenants()->attach($tenant->id, ['role' => 'tenant_owner', 'status' => 'active']);
+
+        app(TenantCrmNewRequestEmailDefaults::class)->ensureForTenant($tenant, true);
+
+        $submission = new PublicInboundSubmission(
+            requestType: 'tenant_booking',
+            name: 'Renter',
+            phone: '+79993332211',
+            email: 'renter@example.test',
+            message: 'Hi',
+            source: 'booking_form',
+            channel: 'web',
+        );
+
+        app(CreateCrmRequestFromPublicForm::class)->handle(
+            PublicInboundContext::tenant($tenant->id),
+            $submission,
+        );
+
+        $this->assertSame(1, NotificationDelivery::query()
+            ->where('tenant_id', $tenant->id)
+            ->where('channel_type', NotificationChannelType::Email->value)
+            ->count());
     }
 }

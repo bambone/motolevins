@@ -45,7 +45,12 @@ class SendPlatformContactTelegramNotification implements ShouldQueue
             return;
         }
 
-        $text = PlatformContactTelegramMessage::build($crm);
-        $telegramText->sendPlainText($token, $this->chatId, $text);
+        $content = PlatformContactTelegramMessage::build($crm);
+        $telegramText->sendPlainText(
+            $token,
+            $this->chatId,
+            $content['text'],
+            $content['parse_mode'],
+        );
     }
 }

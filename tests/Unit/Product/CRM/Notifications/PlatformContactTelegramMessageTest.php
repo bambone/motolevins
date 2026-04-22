@@ -18,7 +18,7 @@ class PlatformContactTelegramMessageTest extends TestCase
             'message' => '',
         ]);
 
-        $text = PlatformContactTelegramMessage::build($crm);
+        $text = PlatformContactTelegramMessage::build($crm)['text'];
 
         $this->assertStringNotContainsString('Сообщение:', $text);
     }
@@ -34,8 +34,28 @@ class PlatformContactTelegramMessageTest extends TestCase
             'utm_medium' => '',
         ]);
 
-        $text = PlatformContactTelegramMessage::build($crm);
+        $text = PlatformContactTelegramMessage::build($crm)['text'];
 
         $this->assertStringNotContainsString('UTM', $text);
+    }
+
+    public function test_telegram_contact_value_is_clickable_t_me_link(): void
+    {
+        $crm = new CrmRequest([
+            'id' => 21,
+            'request_type' => 'platform_contact',
+            'name' => 'N',
+            'phone' => '+1',
+            'preferred_contact_channel' => 'telegram',
+            'preferred_contact_value' => 'puhro74',
+        ]);
+
+        $content = PlatformContactTelegramMessage::build($crm);
+
+        $this->assertSame('HTML', $content['parse_mode']);
+        $this->assertStringContainsString(
+            '<a href="https://t.me/puhro74">puhro74</a>',
+            $content['text'],
+        );
     }
 }

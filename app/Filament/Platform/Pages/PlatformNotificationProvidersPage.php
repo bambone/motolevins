@@ -57,6 +57,18 @@ class PlatformNotificationProvidersPage extends Page
                 Section::make('Обычные каналы')
                     ->description('Быстрое отключение канала на всей платформе. Выключенный канал не используется для новых уведомлений.')
                     ->schema([
+                        Placeholder::make('inbound_forms_smtp_note')
+                            ->label('')
+                            ->content(fn (): HtmlString => new HtmlString(
+                                '<p class="text-sm text-gray-600 dark:text-gray-400">'
+                                .'Для <strong>заявок с маркетингового сайта</strong> (получатели копий, From для SMTP) откройте «'
+                                .'<a class="text-primary-600 dark:text-primary-400 underline" href="'
+                                .e(PlatformMarketingSettingsPage::getUrl())
+                                .'">'.e('Маркетинг: контент, почта и аналитика').'</a>»'
+                                .' — раздел <strong>«Почта входящих форм»</strong>.'
+                                .'</p>'
+                            ))
+                            ->columnSpanFull(),
                         Toggle::make('channel_email_enabled')->label('Электронная почта'),
                         Toggle::make('channel_telegram_enabled')->label('Telegram'),
                     ])->columns(2),

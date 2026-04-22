@@ -6,11 +6,11 @@ namespace App\Services\Tenancy;
 
 use App\Models\TemplatePreset;
 use App\Models\Tenant;
+use App\NotificationCenter\TenantCrmNewRequestEmailDefaults;
 use App\Services\Seo\InitializeTenantSeoDefaults;
 use App\Services\TemplateCloningService;
 use App\Tenant\StorageQuota\TenantStorageQuotaService;
 use App\TenantPush\TenantPushFeatureGate;
-use Illuminate\Support\Facades\DB;
 
 /**
  * Единый bootstrap нового клиента после создания записи {@see Tenant}.
@@ -38,5 +38,7 @@ final class TenantProvisioningService
         app(TenantDomainService::class)->createDefaultSubdomain($tenant, $tenant->slug);
 
         app(InitializeTenantSeoDefaults::class)->execute($tenant, false, false);
+
+        app(TenantCrmNewRequestEmailDefaults::class)->ensureForTenant($tenant, true);
     }
 }

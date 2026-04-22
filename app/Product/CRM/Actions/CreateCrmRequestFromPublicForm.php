@@ -7,6 +7,7 @@ use App\Models\CrmRequestActivity;
 use App\Models\Lead;
 use App\Models\Tenant;
 use App\Models\TenantPushEventPreference;
+use App\Models\User;
 use App\NotificationCenter\NotificationEventRecorder;
 use App\NotificationCenter\NotificationRoutingContext;
 use App\NotificationCenter\Presenters\CrmRequestNotificationPresenter;
@@ -123,39 +124,52 @@ final class CreateCrmRequestFromPublicForm
 
     private function notificationRoutingContextForTenant(Tenant $tenant): ?NotificationRoutingContext
     {
+        $userIds = [];
+
+        $ownerId = $tenant->owner_user_id;
+        if ($ownerId !== null) {
+            $owner = User::query()->find($ownerId);
+            if ($owner !== null && $this->isNotifiableUserEmail($owner->email)) {
+                $userIds[] = (int) $ownerId;
+            }
+        }
+
         $gate = $this->tenantPushFeatureGate->evaluate($tenant);
-        if (! $gate->isFeatureEntitled()) {
+        if ($gate->isFeatureEntitled()) {
+            $settings = $this->tenantPushFeatureGate->findSettings($tenant);
+            if ($settings !== null
+                && $settings->is_push_enabled
+                && $settings->providerStatusEnum() === TenantPushProviderStatus::Verified) {
+                $pref = TenantPushEventPreference::query()
+                    ->where('tenant_id', $tenant->id)
+                    ->where('event_key', 'crm_request.created')
+                    ->first();
+                if ($pref !== null && $pref->is_enabled) {
+                    $userIds = array_merge(
+                        $userIds,
+                        $this->tenantPushCrmRequestRecipientResolver->resolveOnesignalRecipientUserIds($tenant)
+                    );
+                }
+            }
+        }
+
+        $userIds = array_values(array_unique(array_filter($userIds, static fn (int $id): bool => $id > 0)));
+        if ($userIds === []) {
             return null;
         }
 
-        $settings = $this->tenantPushFeatureGate->findSettings($tenant);
-        if ($settings === null) {
-            return null;
+        return NotificationRoutingContext::forUsers($userIds);
+    }
+
+    private function isNotifiableUserEmail(?string $email): bool
+    {
+        if ($email === null) {
+            return false;
         }
 
-        if (! $settings->is_push_enabled) {
-            return null;
-        }
+        $e = trim($email);
 
-        if ($settings->providerStatusEnum() !== TenantPushProviderStatus::Verified) {
-            return null;
-        }
-
-        $pref = TenantPushEventPreference::query()
-            ->where('tenant_id', $tenant->id)
-            ->where('event_key', 'crm_request.created')
-            ->first();
-
-        if ($pref === null || ! $pref->is_enabled) {
-            return null;
-        }
-
-        $ids = $this->tenantPushCrmRequestRecipientResolver->resolveOnesignalRecipientUserIds($tenant);
-        if ($ids === []) {
-            return null;
-        }
-
-        return NotificationRoutingContext::forUsers($ids);
+        return $e !== '' && filter_var($e, FILTER_VALIDATE_EMAIL) !== false;
     }
 
     private function createDownstreamLead(CrmRequest $crm, PublicInboundSubmission $submission): Lead

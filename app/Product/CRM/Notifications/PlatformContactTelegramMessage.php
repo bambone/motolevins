@@ -2,43 +2,51 @@
 
 namespace App\Product\CRM\Notifications;
 
+use App\ContactChannels\VisitorContactNormalizer;
 use App\Models\CrmRequest;
 
 /**
- * Plain-text body for platform marketing contact alerts (no Markdown/HTML).
+ * Body for platform marketing contact Telegram alerts.
+ * Uses HTML (escaped) + optional &lt;a&gt; for t.me when the visit left a Telegram handle.
  */
 final class PlatformContactTelegramMessage
 {
-    public static function build(CrmRequest $crm): string
+    /**
+     * @return array{text: string, parse_mode: 'HTML'}
+     */
+    public static function build(CrmRequest $crm): array
     {
-        $lines = ['Новая заявка с маркетингового сайта', ''];
+        $lines = [self::h('Новая заявка с маркетингового сайта'), ''];
 
-        $lines[] = 'ID: '.$crm->id;
-        $lines[] = 'Тип: '.$crm->request_type;
+        $lines[] = 'ID: '.self::h((string) $crm->id);
+        $lines[] = 'Тип: '.self::h($crm->request_type);
 
         $name = trim((string) $crm->name);
         if ($name !== '') {
-            $lines[] = 'Имя: '.$name;
+            $lines[] = 'Имя: '.self::h($name);
         }
 
         $phone = trim((string) $crm->phone);
         if ($phone !== '') {
-            $lines[] = 'Телефон: '.$phone;
+            $lines[] = 'Телефон: '.self::h($phone);
         }
 
         $email = trim((string) ($crm->email ?? ''));
         if ($email !== '') {
-            $lines[] = 'Email: '.$email;
+            $lines[] = 'Email: '.self::h($email);
         }
 
         $pref = trim((string) ($crm->preferred_contact_channel ?? ''));
         if ($pref !== '') {
-            $lines[] = 'Предпочтительный канал: '.$pref;
+            $lines[] = 'Предпочтительный канал: '.self::h($pref);
         }
 
         $prefVal = trim((string) ($crm->preferred_contact_value ?? ''));
         if ($prefVal !== '') {
-            $lines[] = 'Контакт (канал): '.$prefVal;
+            $lines[] = self::contactChannelLine(
+                $pref,
+                $prefVal,
+            );
         }
 
         $payload = is_array($crm->payload_json) ? $crm->payload_json : [];
@@ -47,10 +55,10 @@ final class PlatformContactTelegramMessage
         if ($intent !== '' || $intentLabel !== '') {
             $lines[] = '';
             if ($intent !== '') {
-                $lines[] = 'Intent: '.$intent;
+                $lines[] = 'Intent: '.self::h($intent);
             }
             if ($intentLabel !== '' && $intentLabel !== $intent) {
-                $lines[] = 'Intent (подпись): '.$intentLabel;
+                $lines[] = 'Intent (подпись): '.self::h($intentLabel);
             }
         }
 
@@ -59,7 +67,7 @@ final class PlatformContactTelegramMessage
             $preview = mb_strlen($message) > 1200 ? mb_substr($message, 0, 1197).'…' : $message;
             $lines[] = '';
             $lines[] = 'Сообщение:';
-            $lines[] = $preview;
+            $lines[] = self::h($preview);
         }
 
         $utmLines = self::utmSectionLines($crm);
@@ -69,8 +77,32 @@ final class PlatformContactTelegramMessage
         }
 
         $text = implode("\n", $lines);
+        $text = mb_substr($text, 0, 4096);
 
-        return mb_substr($text, 0, 4096);
+        return [
+            'text' => $text,
+            'parse_mode' => 'HTML',
+        ];
+    }
+
+    private static function contactChannelLine(string $channel, string $rawValue): string
+    {
+        if ($channel === 'telegram') {
+            $handle = VisitorContactNormalizer::normalizeTelegram($rawValue);
+            if ($handle !== null) {
+                $url = 'https://t.me/'.rawurlencode($handle);
+                $label = self::h($rawValue);
+
+                return 'Контакт (канал): <a href="'.self::h($url).'">'.$label.'</a>';
+            }
+        }
+
+        return 'Контакт (канал): '.self::h($rawValue);
+    }
+
+    private static function h(string $s): string
+    {
+        return htmlspecialchars($s, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
     }
 
     /**
@@ -91,9 +123,9 @@ final class PlatformContactTelegramMessage
             return [];
         }
 
-        $out = ['UTM:'];
+        $out = [self::h('UTM:')];
         foreach ($nonEmpty as $label => $value) {
-            $out[] = $label.': '.$value;
+            $out[] = self::h($label).': '.self::h($value);
         }
 
         return $out;
