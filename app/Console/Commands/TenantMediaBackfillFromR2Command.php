@@ -44,10 +44,15 @@ class TenantMediaBackfillFromR2Command extends Command
             return self::FAILURE;
         }
 
-        if (! is_dir($target) && ! mkdir($target, 0775, true) && ! is_dir($target)) {
-            $this->error('Cannot create target directory.');
+        if (! is_dir($target)) {
+            error_clear_last();
+            @mkdir($target, 0775, true);
+            if (! is_dir($target)) {
+                $last = error_get_last();
+                $this->error('Cannot create target directory: '.($last['message'] ?? 'unknown'));
 
-            return self::FAILURE;
+                return self::FAILURE;
+            }
         }
 
         $disk = Storage::disk('r2-public');
@@ -138,11 +143,25 @@ class TenantMediaBackfillFromR2Command extends Command
                 }
 
                 $dir = dirname($localPath);
-                if (! is_dir($dir) && ! mkdir($dir, 0775, true) && ! is_dir($dir)) {
-                    $failed++;
-                    $rows[] = $this->manifestRow($bucket, $key, $localPath, $size, $etag, $lastMod, 'failed', 'mkdir failed');
+                if (! is_dir($dir)) {
+                    error_clear_last();
+                    @mkdir($dir, 0775, true);
+                    if (! is_dir($dir)) {
+                        $failed++;
+                        $last = error_get_last();
+                        $rows[] = $this->manifestRow(
+                            $bucket,
+                            $key,
+                            $localPath,
+                            $size,
+                            $etag,
+                            $lastMod,
+                            'failed',
+                            $last['message'] ?? 'mkdir failed',
+                        );
 
-                    continue;
+                        continue;
+                    }
                 }
 
                 $tmp = null;
