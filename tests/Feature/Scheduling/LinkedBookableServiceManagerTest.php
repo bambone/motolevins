@@ -380,7 +380,7 @@ final class LinkedBookableServiceManagerTest extends TestCase
         $svc = $this->manager()->ensureLinkedServiceForMotorcycle($m, SchedulingScope::Tenant);
         $this->assertFalse($svc->is_active);
         $this->assertSame($m->id, $svc->motorcycle_id);
-        $this->assertDatabaseCount('bookable_services', 1);
+        $this->assertSame(1, BookableService::query()->where('tenant_id', $tenant->id)->where('motorcycle_id', $m->id)->count());
     }
 
     public function test_apply_scheduling_settings_to_service_updates_duration(): void
