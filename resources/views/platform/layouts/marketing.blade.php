@@ -7,7 +7,7 @@
     if ($metaDescription === '') {
         $metaDescription = (string) ($pm['entity_core'] ?? '');
     }
-    $canonical = url()->current();
+    $canonical = platform_marketing_canonical_url();
     $pmContactUrl = platform_marketing_contact_url();
     $pmContactUrlLaunch = platform_marketing_contact_url($pm['intent']['launch'] ?? 'launch');
     $pmContactUrlDiscuss = platform_marketing_contact_url($pm['intent']['custom'] ?? 'custom');
@@ -116,7 +116,7 @@
         <div class="flex flex-col gap-6 md:flex-row md:justify-between">
             <div>
                 <div class="font-semibold text-slate-900">{{ $pm['brand_name'] ?? 'RentBase' }}</div>
-                <p class="mt-2 max-w-sm text-sm text-slate-600">{!! str_replace([' для ', ' с ', ' в ', ' и ', ' — '], [' для&nbsp;', ' с&nbsp;', ' в&nbsp;', ' и&nbsp;', '&nbsp;— '], Str::limit($pm['entity_core'] ?? '', 200)) !!}</p>
+                <p class="mt-2 max-w-sm text-pretty text-sm text-slate-600">{{ \App\Support\Typography\RussianTypography::tiePrepositionsToNextWord(Str::limit((string) ($pm['entity_core'] ?? ''), 200)) }}</p>
             </div>
             <nav class="flex flex-wrap gap-4 text-sm text-slate-700" aria-label="Футер">
                 <a href="{{ url('/features') }}" class="hover:text-blue-700">Возможности</a>

@@ -46,9 +46,13 @@ class TenantFooterSectionResource extends Resource
     public static function getEloquentQuery(): Builder
     {
         $tenant = \currentTenant();
+        $query = parent::getEloquentQuery();
 
-        return parent::getEloquentQuery()
-            ->when($tenant !== null, fn (Builder $q) => $q->where('tenant_id', $tenant->id));
+        if ($tenant === null) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        return $query->where('tenant_id', $tenant->id);
     }
 
     public static function form(Schema $schema): Schema
@@ -99,6 +103,9 @@ class TenantFooterSectionResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->emptyStateDescription(
+                'Пустой список — допустимо: на сайте тогда используется минимальный подвал из настроек сайта, контактов и системных ссылок. Создавайте секции только если нужен расширенный подвал (несколько колонок и блоков).',
+            )
             ->columns([
                 TextColumn::make('type')
                     ->label('Тип')

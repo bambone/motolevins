@@ -21,7 +21,7 @@
     $meta = ($activeIntent !== null && isset($intentConfig[$activeIntent])) ? $intentConfig[$activeIntent] : [];
     $pageTitle = (string) ($meta['title'] ?? ($cp['default_title'] ?? 'Контакты'));
     $pageLead = (string) ($meta['lead'] ?? ($cp['default_lead'] ?? ''));
-    $base = request()->getSchemeAndHttpHost();
+    $base = platform_marketing_canonical_origin() ?: request()->getSchemeAndHttpHost();
     $graph = [
         [
             '@type' => 'ContactPage',

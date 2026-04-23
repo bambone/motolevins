@@ -121,6 +121,26 @@
             padding-bottom: 5rem;
         }
     }
+
+    /*
+     * Внутренние страницы (/features, и т.д.): контент не должен визуально «подлипать» к sticky-шапке
+     * при прокрутке и на вырезах iOS. Чуть больше верхнего ритма, чем у обычного py-10.
+     */
+    .pm-marketing-features {
+        padding-top: max(3.25rem, calc(env(safe-area-inset-top, 0px) + 2.25rem));
+    }
+
+    @media (min-width: 640px) {
+        .pm-marketing-features {
+            padding-top: max(3.5rem, calc(env(safe-area-inset-top, 0px) + 2.5rem));
+        }
+    }
+
+    @media (min-width: 768px) {
+        .pm-marketing-features {
+            padding-top: max(4rem, calc(env(safe-area-inset-top, 0px) + 2.75rem));
+        }
+    }
 }
 
 @layer utilities {

@@ -8,7 +8,7 @@
     if (! empty($seg['cases']) && is_array($seg['cases'])) {
         $pmCases = array_merge($pm, ['cases' => $seg['cases']]);
     }
-    $base = request()->getSchemeAndHttpHost();
+    $base = platform_marketing_canonical_origin() ?: request()->getSchemeAndHttpHost();
     $graph = [
         [
             '@type' => 'Service',

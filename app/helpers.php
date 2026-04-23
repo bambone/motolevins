@@ -417,6 +417,51 @@ if (! function_exists('platform_marketing_demo_url')) {
     }
 }
 
+if (! function_exists('platform_marketing_canonical_origin')) {
+    /**
+     * Канонический origin (scheme + host [+port]) публичного маркетинга платформы для canonical и JSON-LD.
+     * Источник: config('platform_marketing.organization.url'); иначе app.url. Не зависит от хоста текущего запроса.
+     */
+    function platform_marketing_canonical_origin(): string
+    {
+        $raw = trim((string) config('platform_marketing.organization.url', ''));
+        if ($raw === '') {
+            $raw = trim((string) config('app.url', ''));
+        }
+        $parts = parse_url($raw);
+        if ($parts === false || ! isset($parts['host']) || (string) $parts['host'] === '') {
+            return '';
+        }
+        $scheme = isset($parts['scheme']) && $parts['scheme'] !== '' ? (string) $parts['scheme'] : 'https';
+        $host = (string) $parts['host'];
+        $port = isset($parts['port']) ? ':'.$parts['port'] : '';
+
+        return $scheme.'://'.$host.$port;
+    }
+}
+
+if (! function_exists('platform_marketing_canonical_url')) {
+    /**
+     * URL текущей маркетинговой страницы с каноническим хостом (path из запроса, без query).
+     */
+    function platform_marketing_canonical_url(): string
+    {
+        $origin = rtrim(platform_marketing_canonical_origin(), '/');
+        if ($origin === '') {
+            return url()->current();
+        }
+        $path = parse_url(request()->url(), PHP_URL_PATH);
+        if (! is_string($path) || $path === '') {
+            $path = '/';
+        }
+        if (! str_starts_with($path, '/')) {
+            $path = '/'.$path;
+        }
+
+        return $origin.$path;
+    }
+}
+
 if (! function_exists('filament_tenant_spatie_media_preview_url')) {
     /**
      * Same-origin URL для превью в кабинете тенанта (Filament FileUpload делает fetch — без CORS на внешний CDN).

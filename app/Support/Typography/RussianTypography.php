@@ -3,8 +3,8 @@
 namespace App\Support\Typography;
 
 /**
- * Связка коротких предлогов/союзов со следующим словом (неразрывный пробел),
- * чтобы не оставались «висячки» в конце строки (в, на, по, и …).
+ * Связка коротких предлогов/союзов/частицы «не» со следующим словом (неразрывный пробел),
+ * чтобы не оставались «висячки» в конце строки; тире «—» с соседними словами; см. {@see self::wrapPhrase}.
  */
 final class RussianTypography
 {
@@ -14,7 +14,7 @@ final class RussianTypography
      * @var list<string> длиннее одного символа — раньше в alternation
      */
     private const MULTI_WORD_PREFIXES = [
-        'без', 'безо', 'вне', 'для', 'или', 'из', 'ко', 'над', 'об', 'от', 'под', 'при', 'про', 'со', 'во', 'до', 'за', 'на', 'по', 'но', 'да',
+        'без', 'безо', 'вне', 'для', 'или', 'из', 'ко', 'над', 'об', 'от', 'под', 'при', 'про', 'со', 'во', 'до', 'за', 'на', 'по', 'но', 'да', 'не',
     ];
 
     /**
@@ -42,15 +42,53 @@ final class RussianTypography
             return preg_quote($w, '/');
         }, $parts));
 
-        // Только если дальше идёт буква (не цифра/скобка), чтобы не трогать «по 2» и т.п.
-        $pattern = '/(?<=^|[\s'.self::NBSP.'])('.$alt.')\s+(?=\p{L})/iu';
+        // Дальше — начало слова: буква или типографские кавычки/скобка перед буквой (не «по 2»).
+        $afterPrefix = '(?=(?:[«"„(]*\p{L}))';
+        $pattern = '/(?<=^|[\s'.self::NBSP.'])('.$alt.')\s+'.$afterPrefix.'/iu';
 
         $text = (string) preg_replace($pattern, '$1'.self::NBSP, $text);
 
-        // Тире «—» не отрываем от предыдущего слова (перенос строки).
+        // Тире «—» не отрываем от предыдущего слова.
         $text = preg_replace('/\s+—/u', self::NBSP.'—', $text);
 
+        // Тире «—» не отрываем от следующего: слово, цифра или открывающая кавычка.
+        $text = (string) preg_replace('/—\s+(?=[\p{L}\p{N}«"„(])/u', '—'.self::NBSP, (string) $text);
+
         return $text;
+    }
+
+    /**
+     * Оборачивает первое вхождение фразы (с обычными или неразрывными пробелами) в &lt;span class="…"&gt;.
+     * Сопоставление по токенам, разделённым пробелами в $plainPhrase (запятые и косые — часть токена).
+     */
+    public static function wrapPhrase(
+        string $typographed,
+        string $plainPhrase,
+        string $class = 'font-medium text-slate-800',
+    ): string {
+        $typographed = trim($typographed);
+        $plainPhrase = trim($plainPhrase);
+        if ($typographed === '' || $plainPhrase === '') {
+            return $typographed;
+        }
+        $parts = preg_split('/\s+/u', $plainPhrase, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        if ($parts === []) {
+            return $typographed;
+        }
+        $q = array_map(
+            static fn (string $p) => preg_quote($p, '/'),
+            $parts
+        );
+        $flex = '(?:[ \x{00A0}]+)';
+        $pattern = '/(' . implode($flex, $q) . ')/u';
+        $classAttr = htmlspecialchars($class, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $replacement = '<span class="' . $classAttr . '">$1</span>';
+        $replaced = preg_replace($pattern, $replacement, $typographed, 1);
+        if ($replaced === null || $replaced === '') {
+            return $typographed;
+        }
+
+        return $replaced;
     }
 
     /**

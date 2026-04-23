@@ -25,9 +25,21 @@ class RussianTypographyTest extends TestCase
                 'КМС по автоспорту',
                 'КМС по'.$nbsp.'автоспорту',
             ],
-            'em dash stays with previous word' => [
+            'em dash stays with previous and next word' => [
                 'Формат работы — сначала созвон',
-                'Формат работы'.$nbsp.'— сначала созвон',
+                'Формат работы'.$nbsp.'—'.$nbsp.'сначала созвон',
+            ],
+            'не tied to next word' => [
+                'это не маркетинговый текст',
+                'это не'.$nbsp.'маркетинговый текст',
+            ],
+            'em dash with без' => [
+                'Конец — без продолжения',
+                'Конец'.$nbsp.'—'.$nbsp.'без'.$nbsp.'продолжения',
+            ],
+            'без before guillemets' => [
+                'тенанта — без «склейки» сторонних',
+                'тенанта'.$nbsp.'—'.$nbsp.'без'.$nbsp.'«склейки» сторонних',
             ],
         ];
     }
@@ -44,5 +56,13 @@ class RussianTypographyTest extends TestCase
         $input = "Первый абзац в городе\n\nВторой по делу";
         $expected = 'Первый абзац в'.$nbsp.'городе'."\n\n".'Второй по'.$nbsp.'делу';
         $this->assertSame($expected, RussianTypography::tiePrepositionsPerLine($input));
+    }
+
+    public function test_wrap_phrase_handles_nbsp_between_words(): void
+    {
+        $nbsp = "\u{00A0}";
+        $typo = 'Медиа и'.$nbsp.'бренд — логотип.';
+        $expected = '<span class="font-medium text-slate-800">Медиа и'.$nbsp.'бренд</span> — логотип.';
+        $this->assertSame($expected, RussianTypography::wrapPhrase($typo, 'Медиа и бренд'));
     }
 }

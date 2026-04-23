@@ -47,7 +47,12 @@ class ReviewResource extends Resource
 
     public static function form(Schema $schema): Schema
     {
-        $isExpertAuto = static fn (): bool => currentTenant()?->themeKey() === 'expert_auto';
+        /** Показывать привязку отзыва к модели из каталога аренды (motorcycles) — только для мото-витрин. */
+        $showMotorcycleCatalogLink = static fn (): bool => in_array(
+            (string) (currentTenant()?->themeKey() ?? ''),
+            ['moto', 'default'],
+            true,
+        );
 
         return $schema
             ->components([
@@ -154,15 +159,15 @@ class ReviewResource extends Resource
                                 'Иначе поле можно не трогать.',
                             )),
                         Select::make('motorcycle_id')
-                            ->label('Карточка в каталоге техники')
+                            ->label('Модель в каталоге аренды')
                             ->relationship('motorcycle', 'name')
                             ->searchable()
                             ->preload()
-                            ->visible(fn () => ! $isExpertAuto())
+                            ->visible($showMotorcycleCatalogLink)
                             ->hintIcon('heroicon-o-information-circle')
                             ->hintIconTooltip(fn () => HintIconTooltip::lines(
-                                'Для аренды мотопарка: привязка отзыва к модели из каталога.',
-                                'Для сайта инструктора (expert) поле скрыто — не используется.',
+                                'Только для витрин с каталогом мотоциклов в прокат.',
+                                'Для детейлинга, expert и других тем поле скрыто.',
                             )),
                         DatePicker::make('date')
                             ->label('Дата отзыва')
@@ -262,7 +267,14 @@ class ReviewResource extends Resource
                     TextColumn::make('city')->placeholder('—'),
                     TextColumn::make('text')->limit(40)->placeholder('—'),
                     TextColumn::make('rating'),
-                    TextColumn::make('motorcycle.name')->placeholder('—'),
+                    TextColumn::make('motorcycle.name')
+                        ->label('Каталог аренды')
+                        ->placeholder('—')
+                        ->visible(fn (): bool => in_array(
+                            (string) (currentTenant()?->themeKey() ?? ''),
+                            ['moto', 'default'],
+                            true,
+                        )),
                     TextColumn::make('status')->badge()->formatStateUsing(fn (?string $state): string => $state ? (Review::statuses()[$state] ?? $state) : ''),
                     TextColumn::make('submitted_at')->label('Отправлено')->dateTime('d.m.Y H:i')->placeholder('—')->toggleable(isToggledHiddenByDefault: true),
                     IconColumn::make('is_featured')->boolean(),

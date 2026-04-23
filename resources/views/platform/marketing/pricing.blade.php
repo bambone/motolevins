@@ -8,7 +8,7 @@
 
 @php
     $pm = app(\App\Product\Settings\MarketingContentResolver::class)->resolved();
-    $base = request()->getSchemeAndHttpHost();
+    $base = platform_marketing_canonical_origin() ?: request()->getSchemeAndHttpHost();
     $p = $pm['pricing'] ?? [];
     $graph = [
         [

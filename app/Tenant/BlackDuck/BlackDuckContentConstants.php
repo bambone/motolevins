@@ -17,8 +17,8 @@ final class BlackDuckContentConstants
     /** E.164 / форма: +7 (912) 305-00-15 */
     public const PHONE_DISPLAY = '+7 (912) 305-00-15';
 
-    /** Как в карточках; финальная орфография — подтверждение у клиента перед продом. */
-    public const EMAIL = 'blackdackdetailing@gmail.com';
+    /** Рабочий ящик для заявок; перед продом подтвердите у клиента (был опечаточный вариант blackdack…). */
+    public const EMAIL = 'blackduckdetailing@gmail.com';
 
     public const ADDRESS_PUBLIC = 'ул. Артиллерийская, 117/10, Тракторозаводский район, Челябинск, 454007';
 
@@ -34,7 +34,8 @@ final class BlackDuckContentConstants
 
     public const URL_YANDEX_MAPS = 'https://yandex.ru/maps/org/black_duck_detailing/13151504118/?ll=61.436037%2C55.162689&z=15';
 
-    public const URL_INSTAGRAM = 'https://www.instagram.com/';
+    /** Профиль Instagram; пусто — не выводим в контактах/отзывах/JSON-LD (главная instagram.com не подставляем). */
+    public const URL_INSTAGRAM = '';
 
     /** Подставьте ссылку на сообщество VK; пусто — кнопку не показываем из плейсхолдера. */
     public const URL_VK = '';
@@ -49,6 +50,15 @@ final class BlackDuckContentConstants
     public const LOGO_LOGICAL = 'site/brand/logo.jpg';
 
     public const SETTING_FINGERPRINT_KEY = 'black_duck.content_refresh_fingerprint';
+
+    /** {@see general.site_name} */
+    public const PUBLIC_SITE_NAME = 'Black Duck Detailing';
+
+    /** {@see general.short_description} */
+    public const PUBLIC_SHORT_DESCRIPTION = 'Детейлинг-центр в Челябинске: PPF, керамика, тонировка, винил, химчистка, полировка.';
+
+    /** {@see general.footer_tagline} — строка под копирайтом в минимальном подвале */
+    public const PUBLIC_FOOTER_TAGLINE = 'Запись и согласование сложных работ; быстрые услуги — по слотам в расписании.';
 
     /**
      * Матрица Q1: slug существующего лендинга (или #) + подписи для hub.
@@ -83,6 +93,31 @@ final class BlackDuckContentConstants
     public static function looksLikePlaceholderEmail(string $v): bool
     {
         return $v === '' || $v === 'hello@example.local';
+    }
+
+    /**
+     * URL Instagram для публичного вывода: не пустой и не «голая» главная instagram.com.
+     */
+    public static function instagramUrlForPublic(): string
+    {
+        $u = trim(self::URL_INSTAGRAM);
+        if ($u === '') {
+            return '';
+        }
+        $normalized = rtrim(strtolower($u), '/').'/';
+        $genericRoots = [
+            'https://www.instagram.com/',
+            'https://instagram.com/',
+            'http://www.instagram.com/',
+            'http://instagram.com/',
+        ];
+        foreach ($genericRoots as $g) {
+            if ($normalized === $g) {
+                return '';
+            }
+        }
+
+        return rtrim($u, '/');
     }
 
     public static function taglineLong(): string

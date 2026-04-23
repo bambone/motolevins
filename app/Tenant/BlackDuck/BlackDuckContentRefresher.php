@@ -111,13 +111,19 @@ final class BlackDuckContentRefresher
         TenantSetting::setForTenant(
             $tenantId,
             'general.site_name',
-            'Black Duck Detailing',
+            BlackDuckContentConstants::PUBLIC_SITE_NAME,
             'string',
         );
         TenantSetting::setForTenant(
             $tenantId,
             'general.short_description',
-            'Детейлинг-центр в Челябинске: PPF, керамика, тонировка, винил, химчистка, полировка.',
+            BlackDuckContentConstants::PUBLIC_SHORT_DESCRIPTION,
+            'string',
+        );
+        TenantSetting::setForTenant(
+            $tenantId,
+            'general.footer_tagline',
+            BlackDuckContentConstants::PUBLIC_FOOTER_TAGLINE,
             'string',
         );
     }
@@ -349,7 +355,7 @@ final class BlackDuckContentRefresher
             ['name' => 'Игорь', 'headline' => 'Предпродажа', 'text_short' => 'Собрали внешний вид под осмотр покупателю.', 'text_long' => 'Комплекс мойка+косметика+мелкие косяки, отчитались по чек-листу, что важно при продаже.'],
             ['name' => 'Екатерина', 'headline' => 'Консультация', 'text_short' => 'Объяснили варианты без навязывания лишнего.', 'text_long' => 'Разложили, что сейчас смысленно по ЛКП, а что можно отложить — спокойно и по делу.'],
         ];
-        foreach ($curated as $r) {
+        foreach (array_values($curated) as $index => $r) {
             DB::table('reviews')->insert(array_merge($r, [
                 'tenant_id' => $tenantId,
                 'text' => $r['text_long'],
@@ -357,8 +363,8 @@ final class BlackDuckContentRefresher
                 'city' => 'Челябинск',
                 'rating' => 5,
                 'media_type' => 'text',
-                'is_featured' => true,
-                'sort_order' => 10,
+                'is_featured' => $index < 3,
+                'sort_order' => ($index + 1) * 10,
                 'date' => $now->toDateString(),
                 'source' => 'site',
                 'status' => 'published',
@@ -639,18 +645,21 @@ final class BlackDuckContentRefresher
         ], $force, $ifPlaceholder, $forceSection);
         $a2 = htmlspecialchars(BlackDuckContentConstants::URL_2GIS, ENT_QUOTES, 'UTF-8');
         $aY = htmlspecialchars(BlackDuckContentConstants::URL_YANDEX_MAPS, ENT_QUOTES, 'UTF-8');
-        $aI = htmlspecialchars(BlackDuckContentConstants::URL_INSTAGRAM, ENT_QUOTES, 'UTF-8');
+        $links = [
+            '<a href="'.$a2.'" rel="noopener">2ГИС</a>',
+            '<a href="'.$aY.'" rel="noopener">Яндекс.Карты</a>',
+        ];
+        $ig = BlackDuckContentConstants::instagramUrlForPublic();
+        if ($ig !== '') {
+            $links[] = '<a href="'.htmlspecialchars($ig, ENT_QUOTES, 'UTF-8').'" rel="noopener">Instagram</a>';
+        }
         $this->ensureOrUpdateRichTextSection(
             $tenantId,
             'otzyvy',
             'external_social',
             10,
             'Ссылки на отзывы',
-            '<p>Посмотреть отзывы и рейтинги в картосервисах: '
-            .'<a href="'.$a2.'" rel="noopener">2ГИС</a> · '
-            .'<a href="'.$aY.'" rel="noopener">Яндекс.Карты</a> · '
-            .'<a href="'.$aI.'" rel="noopener">Instagram</a>'
-            .'.</p>',
+            '<p>Посмотреть отзывы и рейтинги в картосервисах: '.implode(' · ', $links).'.</p>',
             $force,
             $ifPlaceholder,
             $forceSection,
@@ -663,6 +672,7 @@ final class BlackDuckContentRefresher
         bool $ifPlaceholder,
         ?string $forceSection,
     ): void {
+        $igPublic = BlackDuckContentConstants::instagramUrlForPublic();
         $data = [
             'heading' => 'Контакты',
             'description' => 'Звонок, мессенджер или заявка на сайте. Точка въезда и смена согласуются с менеджером.',
@@ -679,7 +689,7 @@ final class BlackDuckContentRefresher
             'map_input_mode' => MapInputMode::Auto->value,
             'map_display_mode' => MapDisplayMode::EmbedAndButton->value,
             'map_title' => 'Как добраться',
-            'social_note' => 'Instagram: '.BlackDuckContentConstants::URL_INSTAGRAM,
+            'social_note' => $igPublic !== '' ? 'Instagram: '.$igPublic : '',
         ];
         $this->updateSectionData($tenantId, 'contacts', 'contacts', $data, $force, $ifPlaceholder, $forceSection);
         $this->updateSectionData($tenantId, 'contacts', 'contact_faq', [
@@ -794,7 +804,7 @@ final class BlackDuckContentRefresher
         $sameAs = array_values(array_filter([
             BlackDuckContentConstants::URL_2GIS,
             BlackDuckContentConstants::URL_YANDEX_MAPS,
-            BlackDuckContentConstants::URL_INSTAGRAM,
+            BlackDuckContentConstants::instagramUrlForPublic(),
         ]));
         if ($sameAs !== []) {
             $org['sameAs'] = $sameAs;
