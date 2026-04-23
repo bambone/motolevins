@@ -6,6 +6,8 @@
     $sub = $data['subheading'] ?? '';
     $btn = $data['button_text'] ?? '';
     $url = $data['button_url'] ?? '#';
+    $btn2 = trim((string) ($data['secondary_button_text'] ?? ''));
+    $url2 = trim((string) ($data['secondary_button_url'] ?? ''));
     $bgRaw = is_string($data['background_image'] ?? null) ? trim((string) $data['background_image']) : '';
     $bgUrl = $bgRaw !== ''
         ? TenantPublicAssetResolver::resolveForCurrentTenant($bgRaw)
@@ -45,8 +47,15 @@
             @if (filled($sub))
                 <p class="mt-3 text-pretty text-base leading-relaxed text-zinc-300 sm:text-lg">{{ $sub }}</p>
             @endif
-            @if (filled($btn))
-                <a href="{{ e($url) }}" class="mt-6 inline-flex min-h-11 items-center rounded-xl bg-[#36C7FF] px-5 py-2.5 text-sm font-semibold text-carbon transition hover:bg-[#5ad2ff]">{{ $btn }}</a>
+            @if (filled($btn) || filled($btn2))
+                <div class="mt-6 flex flex-wrap items-center gap-3">
+                    @if (filled($btn))
+                        <a href="{{ e($url) }}" class="inline-flex min-h-11 items-center rounded-xl bg-[#36C7FF] px-5 py-2.5 text-sm font-semibold text-carbon transition hover:bg-[#5ad2ff]">{{ $btn }}</a>
+                    @endif
+                    @if (filled($btn2) && filled($url2))
+                        <a href="{{ e($url2) }}" class="inline-flex min-h-11 items-center rounded-xl border border-white/25 bg-white/5 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10">{{ $btn2 }}</a>
+                    @endif
+                </div>
             @endif
             @if (! $videoDeferred && filled($vSrcUrl) && filled($vPosterUrl))
                 <div class="mt-8 w-full max-w-3xl sm:mt-10">

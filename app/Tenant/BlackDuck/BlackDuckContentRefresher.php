@@ -339,6 +339,9 @@ final class BlackDuckContentRefresher
         if ($this->shouldRunReviews($id, $force, $ifPlaceholder)) {
             $this->replaceReviews($id);
         }
+        if ($this->shouldSeedBlackDuckMapsCuratedReviews($id, $force)) {
+            $this->seedBlackDuckMapsCuratedReviews($id);
+        }
 
         $this->updateHomeSections($id, $force, $ifPlaceholder, $forceSection);
         if ($tenant->theme_key === 'black_duck') {
@@ -493,6 +496,17 @@ final class BlackDuckContentRefresher
                 'faq_category' => $slug,
                 'items' => [],
             ]);
+            $ins($pId, 'service_review_feed', 'review_feed', 'Отзывы', 27, [
+                'heading' => 'Отзывы клиентов',
+                'subheading' => 'Выдержки с 2ГИС и Яндекс Карт по этой услуге.',
+                'layout' => 'service_maps_compact',
+                'limit' => BlackDuckMapsReviewCatalog::REVIEWS_PER_LANDING,
+                'category_key' => $slug,
+                'section_id' => 'bd-service-reviews',
+                'maps_link_2gis' => BlackDuckContentConstants::URL_2GIS_REVIEWS_TAB,
+                'maps_link_yandex' => BlackDuckContentConstants::URL_YANDEX_MAPS_REVIEWS_TAB,
+                'show_maps_cta' => true,
+            ]);
             $ins($pId, 'service_final_cta', 'rich_text', 'Заявка', 50, [
                 'content' => '<p class="text-zinc-300">Нужен расчёт или запись? <a class="font-medium text-[#36C7FF] underline" href="'.e(BlackDuckContentConstants::PRIMARY_LEAD_URL).'">Оставьте заявку</a> — согласуем детали.</p>',
             ]);
@@ -599,26 +613,54 @@ final class BlackDuckContentRefresher
     private function seedServiceLandingFaqStubs(int $tenantId): void
     {
         $now = now();
+        $prioritySlugs = array_flip(BlackDuckServiceRegistry::priorityLandingSlugsForRichFaq());
         foreach (BlackDuckServiceRegistry::all() as $row) {
             if (! $row['has_landing'] || str_starts_with((string) $row['slug'], '#')) {
                 continue;
             }
             $slug = (string) $row['slug'];
-            $exists = DB::table('faqs')
-                ->where('tenant_id', $tenantId)
-                ->where('category', $slug)
-                ->exists();
-            if ($exists) {
-                continue;
-            }
             $title = (string) $row['title'];
             $leadUrl = BlackDuckContentConstants::PRIMARY_LEAD_URL;
-            $pairs = [
+            $stubPairs = [
                 ['Как записаться на «'.$title.'»?', 'Оставьте заявку на сайте ('.$leadUrl.') или позвоните — согласуем осмотр и окно.'],
                 ['Как понять итоговую цену и срок?', 'Ориентир до осмотра; точная смета и срок после осмотра или по согласованному чек-листу.'],
             ];
-            $sort = 0;
+            $hasAny = DB::table('faqs')
+                ->where('tenant_id', $tenantId)
+                ->where('category', $slug)
+                ->exists();
+            if (! isset($prioritySlugs[$slug]) && $hasAny) {
+                continue;
+            }
+            $ordered = isset($prioritySlugs[$slug])
+                ? array_merge(BlackDuckPriorityServiceFaq::pairsForSlug($slug), $stubPairs)
+                : $stubPairs;
+            $seen = [];
+            $pairs = [];
+            foreach ($ordered as [$q, $a]) {
+                $k = mb_strtolower(trim($q));
+                if (isset($seen[$k])) {
+                    continue;
+                }
+                $seen[$k] = true;
+                $pairs[] = [$q, $a];
+            }
+            $existingLower = DB::table('faqs')
+                ->where('tenant_id', $tenantId)
+                ->where('category', $slug)
+                ->pluck('question')
+                ->map(static fn ($q): string => mb_strtolower(trim((string) $q)))
+                ->all();
+            $existingSet = array_fill_keys($existingLower, true);
+            $sort = (int) (DB::table('faqs')
+                ->where('tenant_id', $tenantId)
+                ->where('category', $slug)
+                ->max('sort_order') ?? 0);
             foreach ($pairs as [$q, $a]) {
+                $k = mb_strtolower(trim($q));
+                if (isset($existingSet[$k])) {
+                    continue;
+                }
                 DB::table('faqs')->insert([
                     'tenant_id' => $tenantId,
                     'question' => $q,
@@ -630,6 +672,7 @@ final class BlackDuckContentRefresher
                     'created_at' => $now,
                     'updated_at' => $now,
                 ]);
+                $existingSet[$k] = true;
             }
         }
     }
@@ -662,6 +705,7 @@ final class BlackDuckContentRefresher
         if (! Schema::hasTable('reviews')) {
             return;
         }
+        // Не трогаем {@see BlackDuckMapsReviewCatalog::SOURCE}: отзывы с карт и правки в админке.
         DB::table('reviews')->where('tenant_id', $tenantId)->whereIn('source', ['site', 'import'])->delete();
         $now = now();
         $curated = [
@@ -685,6 +729,47 @@ final class BlackDuckContentRefresher
                 'date' => $now->toDateString(),
                 'source' => 'site',
                 'status' => 'published',
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]));
+        }
+    }
+
+    private function shouldSeedBlackDuckMapsCuratedReviews(int $tenantId, bool $force): bool
+    {
+        if (! $this->isBlackDuckTenant($tenantId) || ! Schema::hasTable('reviews')) {
+            return false;
+        }
+        if ($force) {
+            return true;
+        }
+
+        return (int) DB::table('reviews')
+            ->where('tenant_id', $tenantId)
+            ->where('source', BlackDuckMapsReviewCatalog::SOURCE)
+            ->count() < 1;
+    }
+
+    private function seedBlackDuckMapsCuratedReviews(int $tenantId): void
+    {
+        if (! Schema::hasTable('reviews')) {
+            return;
+        }
+        DB::table('reviews')
+            ->where('tenant_id', $tenantId)
+            ->where('source', BlackDuckMapsReviewCatalog::SOURCE)
+            ->delete();
+        $rows = BlackDuckMapsReviewCatalog::rowsForDatabaseSeed();
+        if ($rows === []) {
+            return;
+        }
+        $now = now();
+        foreach ($rows as $row) {
+            $meta = $row['meta_json'] ?? [];
+            unset($row['meta_json']);
+            DB::table('reviews')->insert(array_merge($row, [
+                'tenant_id' => $tenantId,
+                'meta_json' => json_encode(is_array($meta) ? $meta : [], JSON_UNESCAPED_UNICODE),
                 'created_at' => $now,
                 'updated_at' => $now,
             ]));
@@ -813,18 +898,18 @@ final class BlackDuckContentRefresher
         $isBlackDuck = $this->isBlackDuckTenant($tenantId);
         $hero = [
             'heading' => 'Black Duck Detailing',
-            'subheading' => 'Доверяйте свой автомобиль только профессионалам',
+            'subheading' => 'Аккуратный детейлинг: честная оценка объёма, сроки и спокойный результат на ЛКП и в салоне',
             'description' => BlackDuckContentConstants::taglineLong(),
             'hero_eyebrow' => 'Детейлинг · Челябинск',
             'hero_image_alt' => 'Black Duck Detailing, детейлинг-центр в Челябинске',
             'primary_cta_label' => 'Записаться',
             'primary_cta_anchor' => BlackDuckContentConstants::PRIMARY_LEAD_URL,
-            'secondary_cta_label' => 'Получить расчёт',
-            'secondary_cta_anchor' => BlackDuckContentConstants::PRIMARY_LEAD_URL,
+            'secondary_cta_label' => 'Смотреть работы',
+            'secondary_cta_anchor' => BlackDuckContentConstants::WORKS_PAGE_URL,
             'trust_badges' => [
                 ['text' => 'Челябинск, Артиллерийская 117/10'],
-                ['text' => 'Запись и согласование сложных работ'],
-                ['text' => 'Онлайн-заявка и короткие слоты по расписанию'],
+                ['text' => 'Осмотр и смета до старта сложных работ'],
+                ['text' => 'Портфолио на сайте — ракурсы работ, не обещания'],
             ],
         ];
         $bundle = BlackDuckHomeHeroBundle::heroSectionFragmentForTenant($tenantId);
@@ -854,7 +939,7 @@ final class BlackDuckContentRefresher
 
         $this->updateSectionData($tenantId, 'home', 'messenger', [
             'title' => 'Связь с центром',
-            'subheading' => 'Заявка — основной путь. Быстрые ответы в мессенджерах.',
+            'subheading' => 'Заявка или звонок — согласуем осмотр и окно. Мессенджеры для коротких вопросов.',
             'show_whatsapp' => true,
             'show_telegram' => true,
             'show_call' => true,
@@ -876,15 +961,19 @@ final class BlackDuckContentRefresher
                 $img = BlackDuckServiceImages::firstExistingPublicPath($tenantId, $slug);
             }
             $sub = (string) ($previewSub[$slug] ?? $row['blurb']);
+            $anchor = BlackDuckServiceRegistry::publicPriceAnchorForSlug($slug);
+            $priceFrom = $anchor ?? (str_starts_with($slug, '#') ? 'по запросу' : 'по оценке');
             $hubItems[] = [
                 'title' => $row['title'],
                 'card_subtitle' => $sub,
-                'price_from' => 'по задаче',
+                'price_from' => $priceFrom,
                 'duration' => 'по плану',
                 'online_booking' => $row['slug'] === 'detejling-mojka',
                 'needs_confirmation' => $row['slug'] !== 'detejling-mojka',
                 'booking_mode' => (string) $row['booking_mode'],
                 'cta_url' => $cta,
+                'book_url' => BlackDuckContentConstants::serviceLandingBookIntentUrl($slug),
+                'service_slug' => $slug,
                 'image_url' => $img ?? '',
             ];
         }
@@ -898,12 +987,14 @@ final class BlackDuckContentRefresher
             if ($homeBa !== []) {
                 $this->updateSectionData($tenantId, 'home', 'before_after', [
                     'heading' => 'Результат в деталях',
+                    'subheading' => 'Одна пара до/после с объекта — без визуального шума. Полный каталог кадров в портфолио.',
                     'proof_works_cta_label' => 'Смотреть работы',
                     'proof_works_cta_href' => BlackDuckContentConstants::WORKS_PAGE_URL,
                     'pairs' => $homeBa,
                 ], $force, $ifPlaceholder, $forceSection);
                 $this->updateSectionData($tenantId, 'home', 'case_cards', [
                     'heading' => 'Свежие проекты',
+                    'subheading' => 'Короткие описания задач; детали и ракурсы — в разделе работ.',
                     'proof_works_cta_label' => 'Смотреть работы',
                     'proof_works_cta_href' => BlackDuckContentConstants::WORKS_PAGE_URL,
                     'items' => [],
@@ -911,12 +1002,14 @@ final class BlackDuckContentRefresher
             } else {
                 $this->updateSectionData($tenantId, 'home', 'before_after', [
                     'heading' => 'Результат в деталях',
+                    'subheading' => 'Пару «до/после» добавим после приёмки медиа в каталоге; пока смотрите свежие проекты ниже или в портфолио.',
                     'proof_works_cta_label' => 'Смотреть работы',
                     'proof_works_cta_href' => BlackDuckContentConstants::WORKS_PAGE_URL,
                     'pairs' => [],
                 ], $force, $ifPlaceholder, $forceSection);
                 $this->updateSectionData($tenantId, 'home', 'case_cards', [
                     'heading' => 'Свежие проекты',
+                    'subheading' => 'Короткие описания задач; детали и ракурсы — в разделе работ.',
                     'proof_works_cta_label' => 'Смотреть работы',
                     'proof_works_cta_href' => BlackDuckContentConstants::WORKS_PAGE_URL,
                     'items' => BlackDuckMediaCatalog::homeCaseCardItems($tenantId),
@@ -926,6 +1019,7 @@ final class BlackDuckContentRefresher
             $baKeep = $this->readHomeSectionDataArray($tenantId, 'home', 'before_after');
             $this->updateSectionData($tenantId, 'home', 'before_after', [
                 'heading' => 'Результат в деталях',
+                'subheading' => 'Одна пара до/после или подборка кейсов — по материалам в каталоге.',
                 'proof_works_cta_label' => 'Смотреть работы',
                 'proof_works_cta_href' => BlackDuckContentConstants::WORKS_PAGE_URL,
                 'pairs' => is_array($baKeep['pairs'] ?? null) ? $baKeep['pairs'] : [],
@@ -933,6 +1027,7 @@ final class BlackDuckContentRefresher
 
             $this->updateSectionData($tenantId, 'home', 'case_cards', [
                 'heading' => 'Свежие проекты',
+                'subheading' => 'Короткие описания задач; детали — в разделе работ.',
                 'proof_works_cta_label' => 'Смотреть работы',
                 'proof_works_cta_href' => BlackDuckContentConstants::WORKS_PAGE_URL,
                 'items' => [
@@ -960,9 +1055,10 @@ final class BlackDuckContentRefresher
 
         $this->updateSectionData($tenantId, 'home', 'reviews', [
             'heading' => 'Отзывы',
-            'subheading' => 'Короткие отзывы на сайте; полные оценки и детальные ленты — в картах (см. страницу «Отзывы»).',
+            'subheading' => 'Короткие впечатления на сайте; развёрнутые оценки — в карточках карт (страница «Отзывы»).',
             'layout' => 'grid',
             'limit' => 6,
+            'category_key' => 'service',
         ], $force, $ifPlaceholder, $forceSection);
     }
 
@@ -982,16 +1078,20 @@ final class BlackDuckContentRefresher
                 $img = BlackDuckServiceImages::firstExistingPublicPath($tenantId, $slug);
             }
             $cta = str_starts_with($slug, '#') ? BlackDuckContentConstants::PRIMARY_LEAD_URL : '/'.$slug;
+            $anchor = BlackDuckServiceRegistry::publicPriceAnchorForSlug($slug);
+            $priceFrom = $anchor ?? (str_starts_with($slug, '#') ? 'по запросу' : 'по оценке');
 
             return [
                 'title' => $row['title'],
                 'card_subtitle' => (string) $row['blurb'],
-                'price_from' => 'по оценке',
+                'price_from' => $priceFrom,
                 'duration' => 'по плану',
                 'online_booking' => $slug === 'detejling-mojka',
                 'needs_confirmation' => $slug !== 'detejling-mojka',
                 'booking_mode' => (string) $row['booking_mode'],
                 'cta_url' => $cta,
+                'book_url' => BlackDuckContentConstants::serviceLandingBookIntentUrl($slug),
+                'service_slug' => $slug,
                 'image_url' => $img ?? '',
             ];
         };
@@ -1060,8 +1160,10 @@ final class BlackDuckContentRefresher
                     'variant' => 'full_background',
                     'heading' => $name,
                     'subheading' => $lead,
-                    'button_text' => 'Оставить заявку',
-                    'button_url' => BlackDuckContentConstants::PRIMARY_LEAD_URL,
+                    'button_text' => 'Состав и этапы',
+                    'button_url' => '#bd-service-included',
+                    'secondary_button_text' => 'Записаться',
+                    'secondary_button_url' => BlackDuckContentConstants::serviceLandingBookIntentUrl($slug),
                     'overlay_dark' => true,
                 ];
                 $bg = BlackDuckServiceImages::firstServiceLandingShadePath($tenantId)
@@ -1102,7 +1204,7 @@ final class BlackDuckContentRefresher
                 $this->updateSectionData($tenantId, $slug, 'body', [
                     'content' => '',
                 ], $force, $ifPlaceholder, $forceSection);
-                $this->updatePageSectionVisibility($tenantId, $slug, 'body', false);
+                $this->updatePageSectionVisibility($tenantId, $slug, 'body', false, $forceSection);
                 $this->updateSectionData($tenantId, $slug, 'service_faq', [
                     'section_heading' => 'Вопросы по услуге',
                     'source' => 'faqs_table_service',
@@ -1114,9 +1216,28 @@ final class BlackDuckContentRefresher
                     ->where('category', $slug)
                     ->where('status', 'published')
                     ->count();
-                $this->updatePageSectionVisibility($tenantId, $slug, 'service_faq', $faqN > 0);
+                $this->updatePageSectionVisibility($tenantId, $slug, 'service_faq', $faqN > 0, $forceSection);
+                $this->updateSectionData($tenantId, $slug, 'service_review_feed', [
+                    'heading' => 'Отзывы клиентов',
+                    'subheading' => 'Выдержки с 2ГИС и Яндекс Карт по этой услуге. Пятая карточка — ссылки на полные подборки на картах.',
+                    'layout' => 'service_maps_compact',
+                    'limit' => BlackDuckMapsReviewCatalog::REVIEWS_PER_LANDING,
+                    'category_key' => $slug,
+                    'section_id' => 'bd-service-reviews',
+                    'maps_link_2gis' => BlackDuckContentConstants::URL_2GIS_REVIEWS_TAB,
+                    'maps_link_yandex' => BlackDuckContentConstants::URL_YANDEX_MAPS_REVIEWS_TAB,
+                    'show_maps_cta' => true,
+                ], $force, $ifPlaceholder, $forceSection);
+                $mapsRevN = (int) DB::table('reviews')
+                    ->where('tenant_id', $tenantId)
+                    ->where('category_key', $slug)
+                    ->where('source', BlackDuckMapsReviewCatalog::SOURCE)
+                    ->where('status', 'published')
+                    ->count();
+                $this->updatePageSectionVisibility($tenantId, $slug, 'service_review_feed', $mapsRevN > 0, $forceSection);
+                $inquiry = BlackDuckContentConstants::contactsInquiryUrlForServiceSlug($slug);
                 $this->updateSectionData($tenantId, $slug, 'service_final_cta', [
-                    'content' => '<p class="text-zinc-300">Нужен расчёт или запись? <a class="font-medium text-[#36C7FF] underline" href="'.e(BlackDuckContentConstants::PRIMARY_LEAD_URL).'">Оставьте заявку</a> — согласуем детали.</p>',
+                    'content' => '<p class="text-zinc-300">Нужен расчёт или запись? <a class="font-medium text-[#36C7FF] underline" href="'.e($inquiry).'">Оставьте заявку</a> — в форме уже будет выбрана услуга «'.e($name).'».</p>',
                 ], $force, $ifPlaceholder, $forceSection);
             }
 
@@ -1255,12 +1376,19 @@ final class BlackDuckContentRefresher
             ->update(['is_visible' => $visible, 'updated_at' => now()]);
     }
 
+    /**
+     * @param  ?string  $forceSection  при непустом {@see $forceSection} обновляем только если совпал {@see $sectionKey} (как в {@see updateSectionData}).
+     */
     private function updatePageSectionVisibility(
         int $tenantId,
         string $pageSlug,
         string $sectionKey,
         bool $visible,
+        ?string $forceSection = null,
     ): void {
+        if (! $this->sectionMatch($sectionKey, $forceSection)) {
+            return;
+        }
         $pageId = (int) DB::table('pages')->where('tenant_id', $tenantId)->where('slug', $pageSlug)->value('id');
         if ($pageId < 1) {
             return;
@@ -1371,7 +1499,7 @@ final class BlackDuckContentRefresher
                 'primary_cta_href' => BlackDuckContentConstants::PRIMARY_LEAD_URL,
             ], $force, $ifPlaceholder, $forceSection);
             if ($this->sectionMatch('works_portfolio', $forceSection)) {
-                $this->updatePageSectionVisibility($tenantId, 'raboty', 'works_portfolio', $grid !== []);
+                $this->updatePageSectionVisibility($tenantId, 'raboty', 'works_portfolio', $grid !== [], $forceSection);
             }
 
             $story = BlackDuckMediaCatalog::worksStoryCardItems($tenantId, 12);
@@ -1382,7 +1510,7 @@ final class BlackDuckContentRefresher
                 'items' => $story,
             ], $force, $ifPlaceholder, $forceSection);
             if ($this->sectionMatch('case_list', $forceSection)) {
-                $this->updatePageSectionVisibility($tenantId, 'raboty', 'case_list', $story !== []);
+                $this->updatePageSectionVisibility($tenantId, 'raboty', 'case_list', $story !== [], $forceSection);
             }
         } else {
             $this->updateSectionData($tenantId, 'raboty', 'case_list', [

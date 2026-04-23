@@ -100,6 +100,7 @@ class ReviewResource extends Resource
                                 'Связь с программой или темой для фильтра/бейджа на сайте.',
                                 'Обычно slug из «Каталог → Программы» (например single-session, city-driving, counter-emergency).',
                                 'Короткие ключи для бейджа: parking, city, winter-driving, confidence, motorsport.',
+                                'Тема black_duck: для отзыва на посадочной услуге укажите slug страницы (ppf, predprodazhnaya, …); для блока на главной часто используют service.',
                                 'Пусто — отзыв без привязки к теме.',
                             )),
                         Textarea::make('text_short')
@@ -202,6 +203,17 @@ class ReviewResource extends Resource
                             ->hintIconTooltip(fn () => HintIconTooltip::lines(
                                 'Квадратное или портретное фото лица; лучше не меньше 400×400 px.',
                                 'Показывается в карточке отзыва.',
+                                'Если задан URL ниже — файл важнее для вывода.',
+                            )),
+                        TextInput::make('meta_json.avatar_external_url')
+                            ->label('URL аватара (внешний)')
+                            ->url()
+                            ->maxLength(2048)
+                            ->placeholder('https://…')
+                            ->hintIcon('heroicon-o-information-circle')
+                            ->hintIconTooltip(fn () => HintIconTooltip::lines(
+                                'Необязательно: лицо с публичного профиля (например Яндекс/2ГИС).',
+                                'На сайте подгружается лениво (loading=lazy), без обязательного файла в медиатеке.',
                             )),
                         TextInput::make('sort_order')
                             ->label('Порядок в списке')

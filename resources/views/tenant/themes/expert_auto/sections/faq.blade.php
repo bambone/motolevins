@@ -33,7 +33,17 @@
     @endif
     <dl class="expert-faq-list mx-auto min-w-0 max-w-5xl space-y-2 sm:space-y-4 lg:space-y-5 xl:max-w-6xl">
         @foreach($items as $i => $item)
-            @php $fid = $faqIdPrefix.'-'.$i; @endphp
+            @php
+                $fid = $faqIdPrefix.'-'.$i;
+                $ansRaw = (string) ($item['answer'] ?? '');
+                // DB может хранить и plain text, и куски HTML (см. BlackDuckContentRefresher::replaceFaqs). e() на всём — ломает <p>…</p> в пользу.
+                $answerLooksLikeHtml = preg_match('/<[a-z][\s\S]*>/i', $ansRaw) === 1;
+                if ($answerLooksLikeHtml) {
+                    $ansOut = strip_tags($ansRaw, '<p><br><strong><em><b><i><u><ul><ol><li><span>');
+                } else {
+                    $ansOut = e($ansRaw);
+                }
+            @endphp
             <div class="expert-faq-item overflow-hidden rounded-[1.15rem] border border-white/[0.05] bg-white/[0.015] backdrop-blur-sm transition-all duration-300 hover:border-white/[0.1] hover:bg-white/[0.03] sm:rounded-[1.5rem]">
                 <dt>
                     <button type="button" class="group flex w-full min-w-0 min-h-[3.25rem] items-center justify-between gap-3 px-4 py-3.5 text-left sm:min-h-0 sm:gap-5 sm:px-8 sm:py-6 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moto-amber" aria-expanded="false" aria-controls="{{ $fid }}" data-expert-faq-toggle>
@@ -45,7 +55,11 @@
                 </dt>
                 <dd id="{{ $fid }}" class="expert-faq-panel hidden px-4 pb-5 pt-0 sm:px-8 sm:pb-8">
                     <div class="border-t border-white/[0.06] pt-4 sm:pt-6">
-                        <div class="max-w-4xl text-[15px] font-medium leading-[1.75] text-silver/85 text-pretty sm:text-[16px]">{!! nl2br(e($item['answer'] ?? '')) !!}</div>
+                        @if($answerLooksLikeHtml)
+                            <div class="expert-faq-answer max-w-4xl text-[15px] font-medium leading-[1.75] text-silver/85 text-pretty sm:text-[16px] [&_p]:mb-3 [&_p:last-child]:mb-0">{!! $ansOut !!}</div>
+                        @else
+                            <div class="max-w-4xl text-[15px] font-medium leading-[1.75] text-silver/85 text-pretty sm:text-[16px]">{!! nl2br($ansOut) !!}</div>
+                        @endif
                     </div>
                 </dd>
             </div>

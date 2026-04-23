@@ -108,8 +108,18 @@ class Review extends Model implements HasMedia
         if ($media) {
             return $media->getUrl();
         }
+        $meta = $this->meta_json;
+        if (is_array($meta)) {
+            $ext = trim((string) ($meta['avatar_external_url'] ?? ''));
+            if ($ext !== '' && preg_match('#^https?://#i', $ext) === 1) {
+                return $ext;
+            }
+        }
         if ($this->avatar) {
             $path = ltrim((string) $this->avatar, '/');
+            if (preg_match('#^https?://#i', $path) === 1) {
+                return $path;
+            }
             $fromLegacy = theme_platform_url_from_legacy_public_path($path);
             if ($fromLegacy !== null && $fromLegacy !== '') {
                 return $fromLegacy;
@@ -141,6 +151,9 @@ class Review extends Model implements HasMedia
         $raw = $this->avatar_url;
         if ($raw === null || $raw === '') {
             return null;
+        }
+        if (preg_match('#^https?://#i', $raw) === 1) {
+            return $raw;
         }
 
         return TenantPublicAssetResolver::resolve($raw, (int) $this->tenant_id) ?? $raw;

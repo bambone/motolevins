@@ -97,6 +97,14 @@
         : 'font-serif text-[clamp(1.35rem,2.4vw,1.75rem)] font-semibold leading-snug tracking-tight text-[rgb(22_25_30)]';
     $textareaMinClass = ($compact && $variant === 'advocate') ? 'min-h-[7.5rem] max-h-[10rem]' : 'min-h-[6rem]';
     $submitWrapPt = ($compact && $variant === 'advocate') ? 'pt-0' : 'pt-2';
+    $prefillMessage = trim((string) ($data['prefill_message'] ?? ''));
+    $inquiryServiceSlug = trim((string) request()->query('service', ''));
+    if ($prefillMessage === '' && $inquiryServiceSlug !== '' && $tenant->theme_key === 'black_duck') {
+        $reg = \App\Tenant\BlackDuck\BlackDuckServiceRegistry::rowBySlug($inquiryServiceSlug);
+        if ($reg !== null) {
+            $prefillMessage = 'Запись на услугу: «'.(string) ($reg['title'] ?? $inquiryServiceSlug).'».'."\n\n";
+        }
+    }
 @endphp
 <section id="{{ e($sectionId) }}" class="rb-contact-inquiry w-full min-w-0 {{ $compact ? 'scroll-mt-20' : 'scroll-mt-24' }}" data-page-section-type="contact_inquiry">
     <div id="rb-ci-root-{{ $section->id }}" data-rb-contact-inquiry-root>
@@ -145,6 +153,7 @@
                 data-rb-contact-inquiry-field-error-class="{{ e($fieldErrorClass) }}"
                 data-rb-contact-inquiry-consent="{{ $consentEnabled ? '1' : '0' }}"
                 data-rb-contact-inquiry-show-preferred="{{ $showPreferred ? '1' : '0' }}"
+                data-rb-contact-inquiry-prefill-message="{{ e($prefillMessage) }}"
             >
                 @csrf
                 <input type="hidden" name="page_section_id" value="{{ (int) $section->id }}">

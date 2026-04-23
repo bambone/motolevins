@@ -22,4 +22,18 @@ class BlackDuckContentConstantsTest extends TestCase
         );
         $this->assertSame(BlackDuckContentConstants::HOME_SERVICE_PREVIEW_SLUGS, $slugs);
     }
+
+    public function test_contacts_inquiry_url_includes_service_query(): void
+    {
+        $this->assertSame(
+            '/contacts?service=ppf#contact-inquiry',
+            BlackDuckContentConstants::contactsInquiryUrlForServiceSlug('ppf'),
+        );
+        $this->assertSame(BlackDuckContentConstants::PRIMARY_LEAD_URL, BlackDuckContentConstants::contactsInquiryUrlForServiceSlug('#x'));
+    }
+
+    public function test_service_landing_book_intent_url(): void
+    {
+        $this->assertSame('/detejling-mojka?book=1', BlackDuckContentConstants::serviceLandingBookIntentUrl('detejling-mojka'));
+    }
 }

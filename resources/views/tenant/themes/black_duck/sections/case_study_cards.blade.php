@@ -5,6 +5,7 @@
     $d = is_array($data ?? null) ? $data : [];
     $items = is_array($d['items'] ?? null) ? $d['items'] : [];
     $heading = (string) ($d['heading'] ?? 'Кейсы');
+    $subheading = trim((string) ($d['subheading'] ?? ''));
     $compactGallery = isset($section) && ($section->section_key ?? '') === 'service_proof';
     $visualItems = [];
     foreach ($items as $it) {
@@ -27,7 +28,12 @@
 @else
 <section class="bd-section" aria-labelledby="bd-cases-heading">
     <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <h2 id="bd-cases-heading" class="text-2xl font-semibold text-[var(--ex-ink)]">{{ $heading }}</h2>
+        <div class="min-w-0">
+            <h2 id="bd-cases-heading" class="text-2xl font-semibold text-[var(--ex-ink)]">{{ $heading }}</h2>
+            @if ($subheading !== '')
+                <p class="mt-1 max-w-prose text-sm text-zinc-400">{{ $subheading }}</p>
+            @endif
+        </div>
         @if ($workLabel !== '' && $workHref !== '')
             <a href="{{ e($workHref) }}" class="shrink-0 text-sm font-medium text-[#36C7FF] underline-offset-2 hover:underline">{{ $workLabel }}</a>
         @endif

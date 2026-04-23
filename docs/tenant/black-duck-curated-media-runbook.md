@@ -10,6 +10,11 @@
 4. `tenant:black-duck:refresh-content {tenant} --force`.
 5. Визуальный QA: главная, `/raboty` (сетка **не менее 12** пунктов в `works_portfolio` для приёмки — см. `BlackDuckServiceRegistry::MIN_WORKS_PORTFOLIO_ITEMS_ACCEPTANCE`), `/uslugi`, посадочные, отсутствие внешних URL в proof.
 
+## Hub `/uslugi` (MVP, вариант A)
+
+- **Группы** (`groups` в `data_json` секции `service_hub`) формируются **только** в `BlackDuckContentRefresher::updateServiceHub()` из `BlackDuckServiceRegistry` при `tenant:black-duck:refresh-content`. Оператор **не** перенастраивает бизнес-группы через page builder: поле `groups` в UI не отражает то, что уйдёт на публикуемую страницу после refresh.
+- Ручное редактирование **плоского** `data_json.items` в Filament (если доступно) не подменяет сгруппированный рендер у Black Duck; для смены состава/групп правьте реестр услуг и снова запускайте refresh.
+
 **Этап 2 (отдельная задача):** при необходимости — Filament-редактор `media-catalog.json` с валидацией v3. Не блокирует приёмку контента по SOP выше.
 
 ## Идея

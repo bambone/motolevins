@@ -1,0 +1,3 @@
+filename,service_slug_or_guess,asset_type,role_candidates,quality_high_medium_reject,duplicate_of,notes
+example-001.jpg,ppf,result,"works_gallery;service_gallery",high,,крупный план кромки
+example-002.mp4,,video,"works_featured_video;service_featured_video",medium,,нужен poster.jpg

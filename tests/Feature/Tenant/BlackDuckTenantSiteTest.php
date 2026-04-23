@@ -44,6 +44,19 @@ final class BlackDuckTenantSiteTest extends TestCase
         ]);
     }
 
+    public function test_home_general_faq_answers_stored_with_html_render_as_markup_not_escaped_text(): void
+    {
+        $tid = (int) DB::table('tenants')->where('slug', BlackDuckBootstrap::SLUG)->value('id');
+        $host = (string) DB::table('tenant_domains')->where('tenant_id', $tid)->value('host');
+        $html = $this->get('http://'.$host.'/')->assertOk()->getContent();
+        $this->assertStringContainsString(
+            '<p>Короткие работы',
+            $html,
+            'replaceFaqs() writes <p> for general/home FAQ; response must not double-encode tags'
+        );
+        $this->assertStringNotContainsString('&lt;p&gt;Короткие работы', $html);
+    }
+
     public function test_public_home_renders_for_black_duck_host(): void
     {
         $tid = (int) DB::table('tenants')->where('slug', BlackDuckBootstrap::SLUG)->value('id');
@@ -313,8 +326,12 @@ final class BlackDuckTenantSiteTest extends TestCase
         $this->assertTrue((bool) ($heroData['video_deferred'] ?? false));
         $ppfHtml = (string) $this->call('GET', 'http://'.$host.'/ppf')->getContent();
         $this->assertStringContainsString('t-ppf-1.jpg', $ppfHtml);
-        $this->assertStringContainsString(BlackDuckContentConstants::PRIMARY_LEAD_URL, $ppfHtml);
+        $this->assertStringContainsString('/contacts?service=ppf', $ppfHtml);
+        $this->assertStringContainsString('contact-inquiry', $ppfHtml);
         $this->assertStringContainsString('Что входит', $ppfHtml);
+        $this->assertStringContainsString('bd-service-included', $ppfHtml);
+        $bookHtml = (string) $this->call('GET', 'http://'.$host.'/ppf?book=1')->getContent();
+        $this->assertStringContainsString('bd-book-intent-banner', $bookHtml);
     }
 
     /**
@@ -390,6 +407,61 @@ final class BlackDuckTenantSiteTest extends TestCase
         $this->assertSame('/ppf', $p['source_page'] ?? null);
         $this->assertSame('question_request', $p['client_crm_type_hint'] ?? null);
         $this->assertSame('price_quote', $p['inquiry_intent'] ?? null);
+    }
+
+    public function test_ppf_landing_renders_service_faq_from_faqs_table_by_category_ppf(): void
+    {
+        $tid = (int) DB::table('tenants')->where('slug', BlackDuckBootstrap::SLUG)->value('id');
+        $host = (string) DB::table('tenant_domains')->where('tenant_id', $tid)->value('host');
+        $html = $this->get('http://'.$host.'/ppf')->assertOk()->getContent();
+        $this->assertStringContainsString('Вопросы по услуге', $html);
+        $this->assertStringContainsString('Как записаться на «Антигравий PPF»', $html);
+    }
+
+    public function test_predprodazhnaya_landing_has_book_cta_and_service_reviews_block(): void
+    {
+        $tid = (int) DB::table('tenants')->where('slug', BlackDuckBootstrap::SLUG)->value('id');
+        $host = (string) DB::table('tenant_domains')->where('tenant_id', $tid)->value('host');
+        $html = $this->get('http://'.$host.'/predprodazhnaya')->assertOk()->getContent();
+        $this->assertStringContainsString('Записаться', $html);
+        $this->assertStringContainsString('?book=1', $html);
+        $this->assertStringContainsString('bd-service-reviews', $html);
+        $this->assertStringContainsString('Отзывы клиентов', $html);
+    }
+
+    public function test_refresh_content_force_section_hero_does_not_recompute_body_or_service_faq_visibility_on_ppf_landing(): void
+    {
+        $tid = (int) DB::table('tenants')->where('slug', BlackDuckBootstrap::SLUG)->value('id');
+        $pageId = (int) DB::table('pages')->where('tenant_id', $tid)->where('slug', 'ppf')->value('id');
+        $this->assertGreaterThan(0, $pageId);
+        DB::table('page_sections')
+            ->where('tenant_id', $tid)
+            ->where('page_id', $pageId)
+            ->where('section_key', 'body')
+            ->update(['is_visible' => true]);
+        DB::table('page_sections')
+            ->where('tenant_id', $tid)
+            ->where('page_id', $pageId)
+            ->where('section_key', 'service_faq')
+            ->update(['is_visible' => false]);
+
+        Artisan::call('tenant:black-duck:refresh-content', [
+            'tenant' => BlackDuckBootstrap::SLUG,
+            '--force' => true,
+            '--force-section' => 'hero',
+        ]);
+        $bodyVisible = (bool) DB::table('page_sections')
+            ->where('tenant_id', $tid)
+            ->where('page_id', $pageId)
+            ->where('section_key', 'body')
+            ->value('is_visible');
+        $faqVisible = (bool) DB::table('page_sections')
+            ->where('tenant_id', $tid)
+            ->where('page_id', $pageId)
+            ->where('section_key', 'service_faq')
+            ->value('is_visible');
+        $this->assertTrue($bodyVisible, 'only hero: body visibility must not be forced to hidden');
+        $this->assertFalse($faqVisible, 'only hero: service_faq visibility must not follow FAQ count');
     }
 
     public function test_bookable_services_api_lists_instant_wash(): void

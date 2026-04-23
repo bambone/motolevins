@@ -163,23 +163,20 @@ final class BlackDuckCuratedProofImporter
             }
             $importedFiles[] = $logical;
 
-            $asset = [
-                'role' => $role,
-                'service_slug' => $canonicalRole['service_slug'],
-                'page_slug' => $canonicalRole['page_slug'],
-                'sort_order' => (int) ($row['sort_order'] ?? $canonicalRole['sort_order']),
-                'is_featured' => (bool) ($row['is_featured'] ?? $canonicalRole['is_featured']),
-                'caption' => trim((string) ($row['caption'] ?? $canonicalRole['caption'])),
-                'alt' => trim((string) ($row['alt'] ?? $canonicalRole['alt'])),
-                'before_after_group' => $canonicalRole['before_after_group'],
-                'logical_path' => $logical,
-                'poster_logical_path' => $posterLogical ?? ($canonicalRole['poster_logical_path'] ?? null),
-                'source_ref' => isset($row['source_ref']) ? trim((string) $row['source_ref']) : $canonicalRole['source_ref'],
-                'kind' => $isVideo ? 'video' : 'image',
-            ];
-            if (($asset['poster_logical_path'] ?? null) === '') {
-                $asset['poster_logical_path'] = null;
+            // Первый normalize уже включил $row (title, tags, show_on_*, …); подставляем реальные пути файлов.
+            $asset = $canonicalRole;
+            $asset['logical_path'] = $logical;
+            $asset['sort_order'] = (int) ($row['sort_order'] ?? $canonicalRole['sort_order']);
+            $asset['is_featured'] = (bool) ($row['is_featured'] ?? $canonicalRole['is_featured']);
+            $asset['caption'] = trim((string) ($row['caption'] ?? $canonicalRole['caption']));
+            $asset['alt'] = trim((string) ($row['alt'] ?? $canonicalRole['alt']));
+            if (array_key_exists('source_ref', $row)) {
+                $sr = trim((string) $row['source_ref']);
+                $asset['source_ref'] = $sr === '' ? null : $sr;
             }
+            $pl = $posterLogical ?? ($canonicalRole['poster_logical_path'] ?? null);
+            $asset['poster_logical_path'] = ($pl === null || $pl === '') ? null : $pl;
+            $asset['kind'] = $isVideo ? 'video' : 'image';
             $normalized = BlackDuckMediaCatalog::normalizeAssetRow($asset, $tid);
             if ($normalized !== null) {
                 $incomingNormalized[] = $normalized;

@@ -20,6 +20,7 @@ use App\Scheduling\Enums\SchedulingScope;
 use App\Scheduling\Enums\TentativeEventsPolicy;
 use App\Scheduling\Enums\UnconfirmedRequestsPolicy;
 use App\Tenant\BlackDuck\BlackDuckContentConstants;
+use App\Tenant\BlackDuck\BlackDuckMapsReviewCatalog;
 use App\Tenant\BlackDuck\BlackDuckMediaCatalog;
 use App\Tenant\StorageQuota\TenantStorageQuotaService;
 use App\TenantSiteSetup\BookingNotificationsQuestionnaireRepository;
@@ -120,6 +121,7 @@ final class BlackDuckBootstrap extends Seeder
         $this->insertAllPages($tenantId, $now);
         $this->seedFaqs($tenantId, $now);
         $this->seedReviews($tenantId, $now);
+        $this->seedBlackDuckMapsReviews($tenantId, $now);
         $this->ensureFormConfig($tenantId, $now);
         $this->applySeoForPages($tenantId, $now);
         $this->ensureBookingQuestionnaireDefaults($tenantId);
@@ -140,6 +142,7 @@ final class BlackDuckBootstrap extends Seeder
         if (Schema::hasTable('reviews') && (int) DB::table('reviews')->where('tenant_id', $tenantId)->count() < 1) {
             $this->seedReviews($tenantId, $now);
         }
+        $this->seedBlackDuckMapsReviews($tenantId, $now);
         $this->ensureFormConfig($tenantId, $now);
         $this->applySeoForPages($tenantId, $now);
         $this->ensureBookingQuestionnaireDefaults($tenantId);
@@ -376,8 +379,10 @@ final class BlackDuckBootstrap extends Seeder
                 'variant' => 'full_background',
                 'heading' => $name,
                 'subheading' => $lead,
-                'button_text' => 'Оставить заявку',
-                'button_url' => BlackDuckContentConstants::PRIMARY_LEAD_URL,
+                'button_text' => 'Состав и этапы',
+                'button_url' => '#bd-service-included',
+                'secondary_button_text' => 'Записаться',
+                'secondary_button_url' => BlackDuckContentConstants::serviceLandingBookIntentUrl($slug),
                 'overlay_dark' => true,
             ]),
             $this->sec('body_intro', 'rich_text', 'О услуге', 8, [
@@ -399,6 +404,17 @@ final class BlackDuckBootstrap extends Seeder
                 'faq_category' => $slug,
                 'items' => [],
             ]),
+            $this->sec('service_review_feed', 'review_feed', 'Отзывы', 27, [
+                'heading' => 'Отзывы клиентов',
+                'subheading' => 'Выдержки с 2ГИС и Яндекс Карт по этой услуге.',
+                'layout' => 'service_maps_compact',
+                'limit' => BlackDuckMapsReviewCatalog::REVIEWS_PER_LANDING,
+                'category_key' => $slug,
+                'section_id' => 'bd-service-reviews',
+                'maps_link_2gis' => BlackDuckContentConstants::URL_2GIS_REVIEWS_TAB,
+                'maps_link_yandex' => BlackDuckContentConstants::URL_YANDEX_MAPS_REVIEWS_TAB,
+                'show_maps_cta' => true,
+            ]),
         ];
         if (in_array($slug, BlackDuckMediaCatalog::SERVICE_PROOF_LANDING_SLUGS, true)) {
             $sections[] = $this->sec('service_proof', 'case_study_cards', 'На фото', 40, [
@@ -406,8 +422,9 @@ final class BlackDuckBootstrap extends Seeder
                 'items' => [],
             ]);
         }
+        $inquiry = BlackDuckContentConstants::contactsInquiryUrlForServiceSlug($slug);
         $sections[] = $this->sec('service_final_cta', 'rich_text', 'Заявка', 50, [
-            'content' => '<p class="text-zinc-300">Нужен расчёт или запись? <a class="font-medium text-[#36C7FF] underline" href="'.e(BlackDuckContentConstants::PRIMARY_LEAD_URL).'">Оставьте заявку</a> — согласуем детали.</p>',
+            'content' => '<p class="text-zinc-300">Нужен расчёт или запись? <a class="font-medium text-[#36C7FF] underline" href="'.e($inquiry).'">Оставьте заявку</a> — в форме уже будет выбрана услуга «'.e($name).'».</p>',
         ]);
 
         return [
@@ -679,6 +696,7 @@ final class BlackDuckBootstrap extends Seeder
                 'subheading' => 'Что говорят владельцы авто',
                 'layout' => 'grid',
                 'limit' => 6,
+                'category_key' => 'service',
             ]),
             $this->sec('faq', 'faq', 'FAQ', 60, [
                 'section_heading' => 'Частые вопросы',
@@ -849,6 +867,30 @@ final class BlackDuckBootstrap extends Seeder
                 'date' => $now->toDateString(),
                 'source' => 'site',
                 'status' => 'published',
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]));
+        }
+    }
+
+    private function seedBlackDuckMapsReviews(int $tenantId, $now): void
+    {
+        if (! Schema::hasTable('reviews')) {
+            return;
+        }
+        if ((int) DB::table('reviews')->where('tenant_id', $tenantId)->where('source', BlackDuckMapsReviewCatalog::SOURCE)->count() > 0) {
+            return;
+        }
+        $batch = BlackDuckMapsReviewCatalog::rowsForDatabaseSeed();
+        if ($batch === []) {
+            return;
+        }
+        foreach ($batch as $row) {
+            $meta = $row['meta_json'] ?? [];
+            unset($row['meta_json']);
+            DB::table('reviews')->insert(array_merge($row, [
+                'tenant_id' => $tenantId,
+                'meta_json' => json_encode(is_array($meta) ? $meta : [], JSON_UNESCAPED_UNICODE),
                 'created_at' => $now,
                 'updated_at' => $now,
             ]));

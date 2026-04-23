@@ -2,6 +2,7 @@
     $d = is_array($data ?? null) ? $data : [];
     $pairs = is_array($d['pairs'] ?? null) ? $d['pairs'] : [];
     $heading = (string) ($d['heading'] ?? 'До / после');
+    $subheading = trim((string) ($d['subheading'] ?? ''));
     $usable = 0;
     foreach ($pairs as $p) {
         if (! is_array($p)) {
@@ -21,7 +22,12 @@
 @if ($usable >= 1)
 <section class="bd-section" aria-labelledby="bd-ba-heading">
     <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <h2 id="bd-ba-heading" class="text-2xl font-semibold text-[var(--ex-ink)]">{{ $heading }}</h2>
+        <div class="min-w-0">
+            <h2 id="bd-ba-heading" class="text-2xl font-semibold text-[var(--ex-ink)]">{{ $heading }}</h2>
+            @if ($subheading !== '')
+                <p class="mt-1 max-w-prose text-sm text-zinc-400">{{ $subheading }}</p>
+            @endif
+        </div>
         <div class="flex flex-wrap items-center gap-3 sm:justify-end">
             @if ($leadLabel !== '' && $leadHref !== '')
                 <a href="{{ e($leadHref) }}" class="shrink-0 text-sm font-medium text-[#36C7FF] underline-offset-2 hover:underline">{{ $leadLabel }}</a>

@@ -26,6 +26,25 @@
             && in_array($firstExtra->section_key, ['hero', 'works_hero'], true);
     @endphp
     <div class="mx-auto px-3 pb-12 pt-24 sm:px-4 sm:pb-16 sm:pt-28 {{ $pageShell }}">
+        @if (tenant()?->themeKey() === 'black_duck' && request()->boolean('book'))
+            @php
+                $bdBookReg = \App\Tenant\BlackDuck\BlackDuckServiceRegistry::rowBySlug((string) $page->slug);
+                $bdBookInquiry = $bdBookReg !== null
+                    ? \App\Tenant\BlackDuck\BlackDuckContentConstants::contactsInquiryUrlForServiceSlug((string) $page->slug)
+                    : \App\Tenant\BlackDuck\BlackDuckContentConstants::PRIMARY_LEAD_URL;
+                $bdBookTitle = $bdBookReg !== null ? (string) ($bdBookReg['title'] ?? $page->name) : $page->name;
+            @endphp
+            @if ($bdBookReg !== null)
+                <div class="bd-book-intent-banner mb-6 rounded-2xl border border-[#36C7FF]/25 bg-[#36C7FF]/10 px-4 py-4 sm:px-5 sm:py-5" role="status">
+                    <p class="text-sm font-medium text-white sm:text-base">Запись на услугу: {{ $bdBookTitle }}</p>
+                    <p class="mt-1 text-sm text-zinc-300">Форма на отдельной странице — услуга уже подставлена в текст обращения.</p>
+                    <div class="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                        <a href="{{ e($bdBookInquiry) }}" class="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#36C7FF] px-5 text-sm font-semibold text-carbon hover:bg-[#5ad2ff]">Перейти к форме</a>
+                        <a href="{{ e(url($page->slug)) }}" class="inline-flex min-h-11 items-center justify-center rounded-xl border border-white/15 px-5 text-sm font-medium text-zinc-200 hover:bg-white/5">Обычный просмотр страницы</a>
+                    </div>
+                </div>
+            @endif
+        @endif
         @unless ($skipShellH1)
             <h1 class="mb-6 text-balance text-2xl font-bold leading-tight text-white sm:mb-8 sm:text-3xl md:text-4xl">{{ ($resolvedSeo ?? null)?->h1 ?? $page->name }}</h1>
         @endunless

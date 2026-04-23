@@ -22,8 +22,17 @@ final class BlackDuckContentConstants
     /** E.164 / форма: +7 (912) 305-00-15 */
     public const PHONE_DISPLAY = '+7 (912) 305-00-15';
 
-    /** Рабочий ящик для заявок; перед продом подтвердите у клиента (был опечаточный вариант blackdack…). */
+    /**
+     * Рабочий ящик для заявок и {@see BlackDuckContentRefresher}: канон для настроек тенанта.
+     * Перед релизом сверить с заказчиком относительно {@see self::EMAIL_AS_LISTED_ON_2GIS}.
+     */
     public const EMAIL = 'blackduckdetailing@gmail.com';
+
+    /**
+     * Вариант, который может отображаться в карточке 2ГИС; не подставляется в код автоматически.
+     * Чеклист: выбрать один канонический ящик с бизнесом и обновить {@see self::EMAIL} при необходимости.
+     */
+    public const EMAIL_AS_LISTED_ON_2GIS = 'blackdackdetailing@gmail.com';
 
     public const ADDRESS_PUBLIC = 'ул. Артиллерийская, 117/10, Тракторозаводский район, Челябинск, 454007';
 
@@ -44,25 +53,56 @@ final class BlackDuckContentConstants
     public const WORKS_PAGE_URL = '/raboty';
 
     /**
+     * Форма заявки на /contacts с привязкой к посадочной услуге (slug страницы).
+     */
+    public static function contactsInquiryUrlForServiceSlug(string $servicePageSlug): string
+    {
+        $s = trim($servicePageSlug);
+        if ($s === '' || str_starts_with($s, '#')) {
+            return self::PRIMARY_LEAD_URL;
+        }
+
+        return '/contacts?service='.rawurlencode($s).'#contact-inquiry';
+    }
+
+    /**
+     * URL посадочной с флагом записи: на странице услуги показываем подсказку и ведём на форму с {@see contactsInquiryUrlForServiceSlug()}.
+     */
+    public static function serviceLandingBookIntentUrl(string $servicePageSlug): string
+    {
+        $s = trim($servicePageSlug);
+        if ($s === '' || str_starts_with($s, '#')) {
+            return self::PRIMARY_LEAD_URL;
+        }
+
+        return '/'.$s.'?book=1';
+    }
+
+    /**
      * Slug витринных карточек на home (6–8), без полного каталога. Порядок = порядок на главной.
      * Включает только сущности с лендингом или осмысленный CTA на заявку.
      *
      * @var list<string>
      */
     public const HOME_SERVICE_PREVIEW_SLUGS = [
-        'detejling-mojka',
         'ppf',
         'keramika',
         'himchistka-salona',
         'polirovka-kuzova',
+        'detejling-mojka',
         'tonirovka',
-        'predprodazhnaya',
         'pdr',
+        'predprodazhnaya',
     ];
 
     public const URL_2GIS = 'https://2gis.ru/chelyabinsk/inside/2111698024786654/query/%D0%B4%D0%B5%D1%82%D0%B5%D0%B9%D0%BB%D0%B8%D0%BD%D0%B3/firm/70000001053335703';
 
+    /** Вкладка отзывов (для ссылок «ещё на карте»). */
+    public const URL_2GIS_REVIEWS_TAB = 'https://2gis.ru/chelyabinsk/firm/70000001053335703/tab/reviews';
+
     public const URL_YANDEX_MAPS = 'https://yandex.ru/maps/org/black_duck_detailing/13151504118/?ll=61.436037%2C55.162689&z=15';
+
+    public const URL_YANDEX_MAPS_REVIEWS_TAB = 'https://yandex.ru/maps/org/black_duck_detailing/13151504118/reviews/';
 
     /** Профиль Instagram; пусто — не выводим в контактах/отзывах/JSON-LD (главная instagram.com не подставляем). */
     public const URL_INSTAGRAM = '';
@@ -162,14 +202,14 @@ final class BlackDuckContentConstants
     public static function homeServiceCardPreviewSubtitlesBySlug(): array
     {
         return [
-            'detejling-mojka' => 'Быстрые слоты, когда расписание включено.',
             'ppf' => 'Защита ЛКП: зоны и кромка под задачу.',
             'keramika' => 'Глянец и уход: план с мастером.',
             'himchistka-salona' => 'Салон и материалы — после осмотра.',
             'polirovka-kuzova' => 'Абразив и финиш по состоянию ЛКП.',
+            'detejling-mojka' => 'Быстрые слоты, когда расписание включено.',
             'tonirovka' => 'Комфорт и внешний вид стёкол/оптики.',
-            'predprodazhnaya' => 'Внешний вид под осмотр покупателя.',
             'pdr' => 'Вмятины без окраса — оценка на месте.',
+            'predprodazhnaya' => 'Внешний вид под осмотр покупателя.',
         ];
     }
 
@@ -226,7 +266,7 @@ final class BlackDuckContentConstants
 
     public static function taglineLong(): string
     {
-        return 'Доверяйте свой автомобиль только профессионалам. Комплекс услуг по изменению внешнего вида и уходу: винил, PPF, тонировка и оптика, кожа и салон, полировка, керамика, химчистка, предпродажа. '
-            .'Консультация и честные рекомендации с опытом — под задачу и реальное состояние ЛКП и салона.';
+        return 'Детейлинг в Челябинске: аккуратная работа с ЛКП и салоном, честный объём и сроки. PPF, керамика, тонировка и оптика, химчистка и кожа, полировка, предпродажа и винил по заявке. '
+            .'Осмотр и понятная смета до старта сложных работ — без громких обещаний, с упором на аккуратный визуальный результат.';
     }
 }

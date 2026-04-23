@@ -2,8 +2,12 @@
     $title = $data['title'] ?? '';
     $variant = $data['variant'] ?? 'bullets';
     $items = is_array($data['items'] ?? null) ? $data['items'] : [];
+    $sectionAnchor = '';
+    if (tenant()?->themeKey() === 'black_duck' && ($section->section_key ?? '') === 'service_included') {
+        $sectionAnchor = 'bd-service-included';
+    }
 @endphp
-<section class="w-full min-w-0" data-page-section-type="{{ $section->section_type }}">
+<section @if ($sectionAnchor !== '') id="{{ e($sectionAnchor) }}" class="w-full min-w-0 scroll-mt-28" @else class="w-full min-w-0" @endif data-page-section-type="{{ $section->section_type }}">
     @if(filled($title))
         <h2 class="mb-4 text-balance text-xl font-semibold text-white sm:text-2xl">{{ $title }}</h2>
     @endif

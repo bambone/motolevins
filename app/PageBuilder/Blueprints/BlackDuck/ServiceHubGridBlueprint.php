@@ -23,7 +23,7 @@ final class ServiceHubGridBlueprint extends BlackDuckSectionBlueprint
 
     public function description(): string
     {
-        return 'Карточки услуг с ценой «от», сроком и метками онлайн/по подтверждению.';
+        return 'Карточки услуг с ценой «от», сроком и метками. Для тенанта Black Duck группы на /uslugi наполняет refresh-content из BlackDuckServiceRegistry; структура хаба в Filament (поле groups) в MVP не является источником правды — см. runbook.';
     }
 
     public function icon(): string
@@ -50,6 +50,7 @@ final class ServiceHubGridBlueprint extends BlackDuckSectionBlueprint
         return [
             TextInput::make('data_json.heading')
                 ->label('Заголовок секции')
+                ->helperText('Black Duck: бизнес-группы и порядок карточек на /uslugi задаёт `tenant:black-duck:refresh-content` и PHP-реестр услуг; «Карточки» ниже — независимый плоский список для других сценариев, не путайте с группами хаба.')
                 ->maxLength(255)
                 ->columnSpanFull(),
             Repeater::make('data_json.items')

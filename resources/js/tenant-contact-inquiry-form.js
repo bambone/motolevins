@@ -391,6 +391,11 @@ function bootContactInquiryForm(form) {
     const consentRequired = form.getAttribute('data-rb-contact-inquiry-consent') === '1';
 
     initPhoneUi(form);
+    const msgEl = form.querySelector('[name="message"]');
+    const prefillMsg = form.getAttribute('data-rb-contact-inquiry-prefill-message') || '';
+    if (msgEl && prefillMsg && !String(msgEl.value || '').trim()) {
+        msgEl.value = prefillMsg;
+    }
     let syncChannel = () => {};
     const showPreferred = form.getAttribute('data-rb-contact-inquiry-show-preferred') !== '0';
     if (showPreferred && meta.length > 0) {
