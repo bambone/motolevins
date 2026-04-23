@@ -57,6 +57,16 @@ final class BlackDuckTenantSiteTest extends TestCase
         $this->assertStringNotContainsString('&lt;p&gt;Короткие работы', $html);
     }
 
+    public function test_faq_page_lists_only_show_on_home_general_items_not_service_stubs(): void
+    {
+        $tid = (int) DB::table('tenants')->where('slug', BlackDuckBootstrap::SLUG)->value('id');
+        $host = (string) DB::table('tenant_domains')->where('tenant_id', $tid)->value('host');
+        $html = $this->get('http://'.$host.'/faq')->assertOk()->getContent();
+        $this->assertStringContainsString('Можно ли записаться онлайн?', $html, 'General FAQ from replaceFaqs()');
+        $this->assertStringContainsString('винил и PPF', $html, 'Another general question');
+        $this->assertStringNotContainsString('Как записаться на «Химчистка кузова»', $html, 'Service-only FAQ must not appear on /faq');
+    }
+
     public function test_public_home_renders_for_black_duck_host(): void
     {
         $tid = (int) DB::table('tenants')->where('slug', BlackDuckBootstrap::SLUG)->value('id');
@@ -99,7 +109,7 @@ final class BlackDuckTenantSiteTest extends TestCase
         $this->assertIsArray($d);
         $items = is_array($d['items'] ?? null) ? $d['items'] : [];
         $this->assertCount(
-            count(BlackDuckContentConstants::HOME_SERVICE_PREVIEW_SLUGS),
+            count(BlackDuckContentConstants::serviceMatrixHomePreview()),
             $items,
         );
     }
@@ -278,7 +288,7 @@ final class BlackDuckTenantSiteTest extends TestCase
             ->value('data_json');
         $hubData = is_string($hub) ? json_decode($hub, true) : $hub;
         $this->assertIsArray($hubData);
-        $this->assertCount(count(BlackDuckContentConstants::HOME_SERVICE_PREVIEW_SLUGS), $hubData['items'] ?? []);
+        $this->assertCount(count(BlackDuckContentConstants::serviceMatrixHomePreview()), $hubData['items'] ?? []);
 
         $raboty = (string) $this->call('GET', 'http://'.$host.'/raboty')->getContent();
         $this->assertStringContainsString('<video', $raboty);
@@ -301,7 +311,12 @@ final class BlackDuckTenantSiteTest extends TestCase
         $this->assertGreaterThanOrEqual(5, count($uslugiData['groups'] ?? []), 'Ожидаются бизнес-группы услуг на /uslugi');
         $ppfCard = collect($uslugiData['items'] ?? [])->firstWhere('cta_url', '/ppf');
         $this->assertIsArray($ppfCard);
-        $this->assertStringContainsString('t-hub-ppf.jpg', (string) ($ppfCard['image_url'] ?? ''));
+        $ppfImg = (string) ($ppfCard['image_url'] ?? '');
+        $this->assertTrue(
+            str_contains($ppfImg, 'site/brand/services/ppf.')
+                || str_contains($ppfImg, 't-hub-ppf.jpg'),
+            'PPF hub cover: prefer on-disk services/*, else curated catalog',
+        );
         $ppfInGroup = false;
         foreach ($uslugiData['groups'] ?? [] as $gr) {
             foreach (is_array($gr['items'] ?? null) ? $gr['items'] : [] as $c) {

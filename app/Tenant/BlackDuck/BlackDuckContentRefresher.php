@@ -585,6 +585,7 @@ final class BlackDuckContentRefresher
             ->delete();
         $now = now();
         $rows = [
+            ['Можно ли записаться онлайн?', '<p>Короткие услуги с онлайн-расписанием (например, детейлинг-мойка) — через свободные слоты на сайте, когда бокс и расписание подключены. Многоэтапные работы (PPF, керамика, крупная химчистка, тонировка) согласуются сменой: оставьте заявку в разделе «Контакты» или позвоните — подберём окно визита и план. Срочные вопросы в рабочее время — по телефону на сайте.</p>'],
             ['Как записаться и что быстрее: мойка или керамика?', '<p>Короткие работы (в т.ч. детейлинг-мойка) — по свободным слотам в онлайн-записи, когда расписание включено. Многоэтапные работы (керамика, PPF, крупная химчистка) согласуются сменой и планом после заявки или осмотра.</p>'],
             ['Нужен ли осмотр до фиксирования цены?', '<p>Для защитных и кузовных работ с разными зонами ЛКП — да, по согласованию: на месте или по договорённости по фото. Типовые пакеты можно оценить ориентировочно в переписке.</p>'],
             ['Как сочетаются винил и PPF?', '<p>Это разные задачи: винил — дизайн/переклейка, PPF — прозрачная защита лака. Состав пакета выбираем под цель, комбинировать можно — порядок слоёв и сроки согласуем в центре.</p>'],
@@ -620,10 +621,15 @@ final class BlackDuckContentRefresher
             }
             $slug = (string) $row['slug'];
             $title = (string) $row['title'];
-            $leadUrl = BlackDuckContentConstants::PRIMARY_LEAD_URL;
+            $mode = (string) ($row['booking_mode'] ?? 'confirm');
+            $bookingHow = match ($mode) {
+                'instant' => 'Когда на сайте включены слоты и онлайн-запись — бронируйте свободное окно. Если слотов нет или нужны уточнения, напишите через раздел «Контакты» или позвоните — согласуем визит.',
+                'quote' => 'Оставьте заявку в разделе «Контакты» с кратким описанием задачи — согласуем объём, сроки и смету, после чего назначим визит или осмотр.',
+                default => 'Оставьте заявку в разделе «Контакты» или позвоните: согласуем удобное окно визита и при необходимости осмотр до старта работ.',
+            };
             $stubPairs = [
-                ['Как записаться на «'.$title.'»?', 'Оставьте заявку на сайте ('.$leadUrl.') или позвоните — согласуем осмотр и окно.'],
-                ['Как понять итоговую цену и срок?', 'Ориентир до осмотра; точная смета и срок после осмотра или по согласованному чек-листу.'],
+                ['Как записаться на «'.$title.'»?', $bookingHow],
+                ['Как понять итоговую цену и срок?', 'Ориентир «от» и рамки по прайсу или в переписке; точная смета и срок — после осмотра или по согласованному чек-листу, без скрытых позиций.'],
             ];
             $hasAny = DB::table('faqs')
                 ->where('tenant_id', $tenantId)
@@ -955,8 +961,7 @@ final class BlackDuckContentRefresher
             $slug = (string) $row['slug'];
             $cta = str_starts_with($slug, '#') ? BlackDuckContentConstants::PRIMARY_LEAD_URL : '/'.$slug;
             if ($isBlackDuck) {
-                $img = BlackDuckMediaCatalog::homeServiceHubImage($tenantId, $slug)
-                    ?? BlackDuckServiceImages::firstExistingPublicPath($tenantId, $slug);
+                $img = BlackDuckServiceImages::firstServiceHubCardPublicPath($tenantId, $slug);
             } else {
                 $img = BlackDuckServiceImages::firstExistingPublicPath($tenantId, $slug);
             }
@@ -978,7 +983,7 @@ final class BlackDuckContentRefresher
             ];
         }
         $this->updateSectionData($tenantId, 'home', 'service_hub', [
-            'heading' => 'Ключевые направления',
+            'heading' => 'Услуги детейлинга',
             'items' => $hubItems,
         ], $force, $ifPlaceholder, $forceSection);
 
@@ -1072,8 +1077,7 @@ final class BlackDuckContentRefresher
         $buildCard = function (array $row) use ($tenantId, $isBlackDuck): array {
             $slug = (string) $row['slug'];
             if ($isBlackDuck) {
-                $img = BlackDuckMediaCatalog::serviceHubCatalogCover($tenantId, $slug)
-                    ?? BlackDuckServiceImages::firstExistingPublicPath($tenantId, $slug);
+                $img = BlackDuckServiceImages::firstServiceHubCardPublicPath($tenantId, $slug);
             } else {
                 $img = BlackDuckServiceImages::firstExistingPublicPath($tenantId, $slug);
             }
@@ -1348,6 +1352,33 @@ final class BlackDuckContentRefresher
             }
         }
         $hasCase = $visual !== [];
+        $singleSection = $forceSection !== null && $forceSection !== ''
+            && ($this->sectionMatch('before_after', $forceSection) xor $this->sectionMatch('case_cards', $forceSection));
+        if ($singleSection) {
+            if ($this->sectionMatch('before_after', $forceSection)) {
+                $this->setPageSectionVisibilityById((int) $baRow->id, $hasBa);
+
+                return;
+            }
+            if ($this->sectionMatch('case_cards', $forceSection)) {
+                if ($hasCase && ! $hasBa) {
+                    $cc['items'] = $visual;
+                    $cc['proof_works_cta_label'] = $cc['proof_works_cta_label'] ?? 'Смотреть работы';
+                    $cc['proof_works_cta_href'] = $cc['proof_works_cta_href'] ?? BlackDuckContentConstants::WORKS_PAGE_URL;
+                    DB::table('page_sections')
+                        ->where('id', (int) $ccRow->id)
+                        ->update([
+                            'data_json' => json_encode($cc, JSON_UNESCAPED_UNICODE) ?: '{}',
+                            'is_visible' => true,
+                            'updated_at' => now(),
+                        ]);
+                } else {
+                    $this->setPageSectionVisibilityById((int) $ccRow->id, false);
+                }
+
+                return;
+            }
+        }
         if ($hasBa) {
             $this->setPageSectionVisibilityById((int) $baRow->id, true);
             $this->setPageSectionVisibilityById((int) $ccRow->id, false);

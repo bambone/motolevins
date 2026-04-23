@@ -87,14 +87,15 @@ final class BlackDuckHomeHeroBundle
         if ($resolved === []) {
             return null;
         }
-        $preview = $resolved['jpg'] ?? $resolved['w1916'] ?? $resolved['w1600'] ?? $resolved['w900'] ?? $resolved['w900_1200'] ?? null;
+        // WebP — канон для шапки; JPEG оставляем для превью/SEO, но не перетягиваем им кадр, если есть 1916.webp
+        $preview = $resolved['w1916'] ?? $resolved['w1600'] ?? $resolved['jpg'] ?? $resolved['w900'] ?? $resolved['w900_1200'] ?? null;
         if ($preview === null) {
             return null;
         }
 
         return [
             'hero_responsive' => $resolved,
-            'hero_image_url' => $resolved['jpg'] ?? $resolved['w1916'] ?? $resolved['w1600'] ?? $resolved['w900'] ?? $preview,
+            'hero_image_url' => $resolved['w1916'] ?? $resolved['w1600'] ?? $resolved['jpg'] ?? $resolved['w900'] ?? $preview,
         ];
     }
 

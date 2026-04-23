@@ -13,6 +13,7 @@ class TenantPublicFaqController extends Controller
 
         $faqs = Faq::query()
             ->where('status', 'published')
+            ->forPublicHubAndFaqPage()
             ->orderBy('sort_order')
             ->orderBy('id')
             ->get();

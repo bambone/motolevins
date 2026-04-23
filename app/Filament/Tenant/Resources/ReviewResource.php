@@ -277,7 +277,10 @@ class ReviewResource extends Resource
                     TextColumn::make('id')->sortable(),
                     TextColumn::make('name')->searchable()->sortable(),
                     TextColumn::make('city')->placeholder('—'),
-                    TextColumn::make('text')->limit(40)->placeholder('—'),
+                    TextColumn::make('display_body')
+                        ->label('Текст')
+                        ->limit(40)
+                        ->placeholder('—'),
                     TextColumn::make('rating'),
                     TextColumn::make('motorcycle.name')
                         ->label('Каталог аренды')

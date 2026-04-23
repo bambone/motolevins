@@ -222,6 +222,7 @@ final class TenantSeoJsonLdFactory
         $faqs = Faq::query()
             ->where('tenant_id', $tenant->id)
             ->where('status', 'published')
+            ->forPublicHubAndFaqPage()
             ->orderBy('sort_order')
             ->orderBy('id')
             ->limit($max)

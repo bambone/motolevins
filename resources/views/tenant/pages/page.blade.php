@@ -60,7 +60,12 @@
                     $viewName = $sectionResolver->resolveViewName($section);
                 @endphp
                 @if($viewName !== null)
-                    @include($viewName, ['section' => $section, 'data' => $data, 'page' => $page])
+                    @include($viewName, [
+                        'section' => $section,
+                        'data' => $data,
+                        'page' => $page,
+                        'isFirstVisibleExtra' => $loop->first,
+                    ])
                 @else
                     @if($data !== [])
                         @if(! empty($data['content']))

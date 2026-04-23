@@ -14,13 +14,20 @@ class BlackDuckContentConstantsTest extends TestCase
         $this->assertSame('', BlackDuckContentConstants::instagramUrlForPublic());
     }
 
-    public function test_home_service_preview_preserves_constants_order(): void
+    public function test_home_service_preview_is_full_q1_excluding_hash_slugs(): void
     {
+        $expected = [];
+        foreach (BlackDuckContentConstants::serviceMatrixQ1() as $row) {
+            $s = (string) $row['slug'];
+            if ($s !== '' && ! str_starts_with($s, '#')) {
+                $expected[] = $s;
+            }
+        }
         $slugs = array_map(
             static fn (array $row): string => (string) $row['slug'],
             BlackDuckContentConstants::serviceMatrixHomePreview(),
         );
-        $this->assertSame(BlackDuckContentConstants::HOME_SERVICE_PREVIEW_SLUGS, $slugs);
+        $this->assertSame($expected, $slugs);
     }
 
     public function test_contacts_inquiry_url_includes_service_query(): void

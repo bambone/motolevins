@@ -158,12 +158,14 @@ function initPreferredChannelSync(form, meta) {
         }
     };
 
-    form.addEventListener('change', (e) => {
+    const onPreferredChange = (e) => {
         const t = e.target;
         if (t && t.matches('input[name="preferred_contact_channel"]')) {
             sync();
         }
-    });
+    };
+    form.addEventListener('change', onPreferredChange);
+    form.addEventListener('input', onPreferredChange);
 
     sync();
 
@@ -377,7 +379,10 @@ function bootContactInquiryForm(form) {
     }
     form.dataset.rbContactInquiryBound = '1';
 
-    const metaEl = form.querySelector('[data-rb-contact-inquiry-channel-meta]');
+    const root = form.closest('[data-rb-contact-inquiry-root]');
+    const metaEl =
+        form.querySelector('[data-rb-contact-inquiry-channel-meta]') ??
+        (root && root.querySelector('[data-rb-contact-inquiry-channel-meta]'));
     let meta = [];
     try {
         meta = JSON.parse(metaEl?.textContent || '[]');
@@ -432,6 +437,7 @@ function bootContactInquiryForm(form) {
             submitBtn.innerHTML = 'Отправка…';
         }
         let submissionOk = false;
+        let successUiShown = false;
         try {
             const res = await fetch(endpoint, {
                 method: 'POST',
@@ -468,11 +474,19 @@ function bootContactInquiryForm(form) {
                 leadEl.textContent = lead;
                 successPanel.classList.remove('hidden');
                 form.classList.add('hidden');
+                successUiShown = true;
                 if (alertEl) {
                     alertEl.classList.add('hidden');
                 }
                 rbFocusPublicSuccessRoot(successPanel);
                 rbDispatchPublicFormSuccess({ kind: 'contact_inquiry', endpoint });
+            } else {
+                if (alertEl) {
+                    alertEl.textContent = lead;
+                    alertEl.classList.remove('hidden');
+                } else {
+                    window.alert(lead);
+                }
             }
             form.reset();
             syncChannel();
@@ -490,7 +504,7 @@ function bootContactInquiryForm(form) {
                 alertEl.classList.remove('hidden');
             }
         } finally {
-            if (submitBtn && !submissionOk) {
+            if (submitBtn && (!submissionOk || !successUiShown)) {
                 submitBtn.disabled = false;
                 submitBtn.removeAttribute('aria-busy');
                 submitBtn.innerHTML = submitBtnDefaultHtml;

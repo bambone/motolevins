@@ -142,8 +142,6 @@
                 @endif
             @endif
 
-            <script type="application/json" data-rb-contact-inquiry-channel-meta>@json($contactChannelOptions)</script>
-
             <form
                 class="relative {{ $formStackClass }}"
                 novalidate
@@ -156,6 +154,8 @@
                 data-rb-contact-inquiry-prefill-message="{{ e($prefillMessage) }}"
             >
                 @csrf
+                {{-- JSON внутри form: tenant-contact-inquiry-form.js читает meta; как в expert_lead_form. --}}
+                <script type="application/json" data-rb-contact-inquiry-channel-meta>@json($contactChannelOptions)</script>
                 <input type="hidden" name="page_section_id" value="{{ (int) $section->id }}">
                 <input type="hidden" name="page_url" value="{{ url()->current() }}">
 

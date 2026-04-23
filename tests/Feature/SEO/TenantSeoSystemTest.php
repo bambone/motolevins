@@ -303,6 +303,7 @@ class TenantSeoSystemTest extends TestCase
             'question' => 'Вопрос?',
             'answer' => '<p>Ответ.</p>',
             'status' => 'published',
+            'show_on_home' => true,
             'sort_order' => 1,
         ]);
 

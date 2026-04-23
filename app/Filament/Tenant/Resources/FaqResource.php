@@ -43,7 +43,7 @@ class FaqResource extends Resource
         return $schema
             ->components([
                 Section::make('Текст на сайте')
-                    ->description('Вопрос и ответ выводятся на публичной странице /faq и при необходимости в блоке FAQ на главной (если включено ниже).')
+                    ->description('Вопрос и ответ попадают в общий FAQ (страница /faq и блок на главной), если ниже включено «В общий FAQ». Вопросы только для посадочной услуги храните с выключенным флажком и укажите категорию (slug услуги).')
                     ->icon('heroicon-o-chat-bubble-left-right')
                     ->schema([
                         TextInput::make('question')
@@ -104,11 +104,11 @@ class FaqResource extends Resource
                                 'Черновик и «Скрыт» остаются в админке.',
                             )),
                         Toggle::make('show_on_home')
-                            ->label('Показывать на главной')
+                            ->label('В общий FAQ (главная и /faq)')
                             ->hintIcon('heroicon-o-information-circle')
                             ->hintIconTooltip(fn () => HintIconTooltip::lines(
-                                'Если включено, пункт может попасть в блок FAQ на главной (секция темы / конструктор страницы).',
-                                'Полный список вопросов — всегда на странице /faq.',
+                                'Включено — вопрос в общем списке на странице /faq и доступен для блока FAQ на главной (если секция подключена).',
+                                'Выключено — только для группировки в админке и для выборки по категории на посадочных (например service_faq по slug).',
                             )),
                     ])
                     ->columns(2),
@@ -124,7 +124,9 @@ class FaqResource extends Resource
                     TextColumn::make('question')->searchable()->limit(50),
                     TextColumn::make('category')->placeholder('—'),
                     TextColumn::make('status')->badge()->formatStateUsing(fn (?string $state): string => $state ? (Faq::statuses()[$state] ?? $state) : ''),
-                    IconColumn::make('show_on_home')->boolean(),
+                    IconColumn::make('show_on_home')
+                        ->label('Общий FAQ')
+                        ->boolean(),
                     TextColumn::make('sort_order')->sortable(),
                 ])
                 ->filters([
@@ -133,7 +135,7 @@ class FaqResource extends Resource
                 ->defaultSort('sort_order')
                 ->recordActions([EditAction::make()]),
             'Вопросов в базе пока нет',
-            'Добавьте пункты FAQ — они появятся на странице /faq и в блоках конструктора.'
+            'Добавьте пункты с включённым «В общий FAQ» — они появятся на /faq и в блоке на главной; вопросы только для посадочной оставьте с выключенным флажком и категорией-услугой.'
                 .AdminEmptyState::hintFiltersAndSearch(),
             'heroicon-o-question-mark-circle',
             [CreateAction::make()->label('Добавить вопрос')],

@@ -52,6 +52,12 @@
 
 После изменений: `php artisan tenant:black-duck:refresh-content blackduck --force`.
 
+## Продакшен: почему «пусто» или старая картинка
+
+1. **Файлы должны быть на том же public-хранилище**, с которого читает приложение: ключи вида `tenants/{id}/public/site/brand/...` на диске `config('tenant_storage.public_disk')` (часто локально это `storage/app/public`, либо R2). Копия только в `C:\OSPanel\home\rentbase-media\...` без зеркала на сервер/бакет **не обновит** сайт.
+2. После заливки: `php artisan tenant:black-duck:refresh-content blackduck --force` на **проде** и сброс кеша пейлоуда главной (команда это делает).
+3. **Hero:** приоритет отображения — `hero-1916.webp` (и прочие WebP слайса), **не** `hero-1916.jpg`. Старый JPEG на проде раньше перекрывал WebP в разметке; исправлено в `BlackDuckHomeHeroBundle` и `expert_hero.blade.php`. Всё равно удобно удалить устаревший `hero-1916.jpg`, если он не нужен для превью.
+
 ## Проверка содержимого файла
 
 Если кадр по факту не совпадает с ожиданием по номеру — править привязку в `publish-media-tenant4.ps1` и перезапускать скрипты выше.

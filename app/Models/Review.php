@@ -65,10 +65,8 @@ class Review extends Model implements HasMedia
                 $plain = trim(preg_replace('/\s+/', ' ', strip_tags($long)) ?? '');
                 $review->text_short = Str::limit($plain, 240, '…');
             }
-            $legacy = trim((string) ($review->text ?? ''));
-            if ($legacy === '') {
-                $review->text = $long !== '' ? $long : (string) ($review->text_short ?? '');
-            }
+            $short = trim((string) ($review->text_short ?? ''));
+            $review->text = $long !== '' ? $long : $short;
         });
     }
 

@@ -120,7 +120,7 @@ final class BlackDuckServiceImages
     public static function firstHomeExpertHeroLogicalPath(int $tenantId): ?string
     {
         $ts = TenantStorage::forTrusted($tenantId);
-        foreach (['site/brand/hero-1916.jpg', 'site/brand/hero-1916.webp', 'site/brand/hero-1600.webp'] as $p) {
+        foreach (['site/brand/hero-1916.webp', 'site/brand/hero-1600.webp', 'site/brand/hero-1916.jpg'] as $p) {
             if ($ts->existsPublic($p)) {
                 return $p;
             }
@@ -171,5 +171,18 @@ final class BlackDuckServiceImages
         }
 
         return null;
+    }
+
+    /**
+     * Обложка карточки хаба (главная, /uslugi): сначала {@code site/brand/services/{slug}.*}, иначе каталог.
+     */
+    public static function firstServiceHubCardPublicPath(int $tenantId, string $matrixSlug): ?string
+    {
+        $disk = self::firstExistingPublicPath($tenantId, $matrixSlug);
+        if ($disk !== null) {
+            return $disk;
+        }
+
+        return BlackDuckMediaCatalog::homeServiceHubImage($tenantId, $matrixSlug);
     }
 }

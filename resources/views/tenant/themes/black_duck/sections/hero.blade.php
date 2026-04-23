@@ -20,6 +20,9 @@
     $isWorksHero = ($section->section_key ?? '') === 'works_hero';
     $videoDeferred = ! empty($data['video_deferred']) && ! $isWorksHero;
     $bgFetchHigh = $hasCustomBg && ! ($videoDeferred && $vSrcUrl !== '' && $vPosterUrl !== '');
+    /** Один h1 на странице: h1 только если shell в page.blade не рендерит h1 (первый блок — hero/works_hero). */
+    $bdHeroH1 = ($isFirstVisibleExtra ?? false)
+        && in_array((string) ($section->section_key ?? ''), ['hero', 'works_hero'], true);
 @endphp
 <section class="relative min-h-[min(52vh,28rem)] overflow-hidden rounded-2xl border border-white/10 bg-carbon/90 sm:min-h-[min(44vh,26rem)]">
     @if (filled($bgUrl))
@@ -42,7 +45,11 @@
     <div class="relative z-10 flex flex-col p-6 sm:p-10">
         <div class="max-w-2xl">
             @if (filled($heading))
-                <h1 class="text-balance text-2xl font-bold text-white sm:text-3xl lg:text-4xl">{{ $heading }}</h1>
+                @if ($bdHeroH1)
+                    <h1 class="text-balance text-2xl font-bold text-white sm:text-3xl lg:text-4xl">{{ $heading }}</h1>
+                @else
+                    <h2 class="text-balance text-2xl font-bold text-white sm:text-3xl lg:text-4xl">{{ $heading }}</h2>
+                @endif
             @endif
             @if (filled($sub))
                 <p class="mt-3 text-pretty text-base leading-relaxed text-zinc-300 sm:text-lg">{{ $sub }}</p>

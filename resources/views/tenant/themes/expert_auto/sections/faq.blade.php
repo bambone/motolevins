@@ -39,7 +39,7 @@
                 // DB может хранить и plain text, и куски HTML (см. BlackDuckContentRefresher::replaceFaqs). e() на всём — ломает <p>…</p> в пользу.
                 $answerLooksLikeHtml = preg_match('/<[a-z][\s\S]*>/i', $ansRaw) === 1;
                 if ($answerLooksLikeHtml) {
-                    $ansOut = strip_tags($ansRaw, '<p><br><strong><em><b><i><u><ul><ol><li><span>');
+                    $ansOut = strip_tags($ansRaw, '<p><br><a><strong><em><b><i><u><ul><ol><li><span>');
                 } else {
                     $ansOut = e($ansRaw);
                 }

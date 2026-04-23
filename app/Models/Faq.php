@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\BelongsToTenant;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
 class Faq extends Model
@@ -30,5 +31,15 @@ class Faq extends Model
             'published' => 'Опубликован',
             'hidden' => 'Скрыт',
         ];
+    }
+
+    /**
+     * Общий FAQ: главная (блок) и публичная страница /faq. Вопросы по одной услуге (категория = slug) остаются с show_on_home = false.
+     *
+     * @param  Builder<static>  $query
+     */
+    public function scopeForPublicHubAndFaqPage(Builder $query): Builder
+    {
+        return $query->where('show_on_home', true);
     }
 }

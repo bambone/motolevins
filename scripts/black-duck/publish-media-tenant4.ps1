@@ -1,4 +1,10 @@
-# Sync WebP: proof, services, hero, work grid (wg-01..25). Tenant 4.
+# Sync WebP: proof, services, work grid (wg-01..25). Tenant 4.
+# Hero: site/brand/hero-1916.webp is NOT filled from proof by default — put your branded splash there by hand
+# (or pass -HeroFromProof8 to copy XXXL (8) as a one-off test only).
+param(
+    [switch]$HeroFromProof8
+)
+
 $ErrorActionPreference = "Stop"
 $srcProof = "C:\OSPanel\home\rentbase-media\tenants\4\public\site\brand\proof"
 $mediaBrand = "C:\OSPanel\home\rentbase-media\tenants\4\public\site\brand"
@@ -12,8 +18,10 @@ Ensure-Dir "$mediaBrand\services"
 
 Copy-Item -Path "$srcProof\*.webp" -Destination "$localBrand\proof\" -Force
 
-Copy-Item -Path "$srcProof\XXXL (8).webp" -Destination "$localBrand\hero-1916.webp" -Force
-Copy-Item -Path "$srcProof\XXXL (8).webp" -Destination "$mediaBrand\hero-1916.webp" -Force
+if ($HeroFromProof8) {
+    Copy-Item -Path "$srcProof\XXXL (8).webp" -Destination "$localBrand\hero-1916.webp" -Force
+    Copy-Item -Path "$srcProof\XXXL (8).webp" -Destination "$mediaBrand\hero-1916.webp" -Force
+}
 
 $serviceMap = [ordered]@{
     "polirovka-kuzova" = "XXXL (21).webp"
@@ -80,6 +88,13 @@ foreach ($row in $workGrid) {
     $base = "wg-{0:D2}.webp" -f $row.n
     Copy-Item -Path $src -Destination "$localBrand\proof\$base" -Force
     Copy-Item -Path $src -Destination "$mediaBrand\proof\$base" -Force
+}
+
+# hero-1916.webp = JPEG hero (w1916 slot); do not leave stale webp (e.g. from old proof import)
+$regenHero = Join-Path $PSScriptRoot "regen-hero-1916-webp-tenant4.php"
+if ((Test-Path "$mediaBrand\hero-1916.jpg") -and (Test-Path $regenHero)) {
+  & php $regenHero
+  if ($LASTEXITCODE -ne 0) { throw "regen-hero-1916-webp-tenant4.php failed (exit $LASTEXITCODE)" }
 }
 
 Write-Host "OK"

@@ -13,8 +13,8 @@
         <div class="mx-auto px-3 sm:px-4 {{ $__faqShell }}">
             <h1 class="text-balance text-2xl font-bold leading-tight tracking-tight text-white sm:text-3xl md:text-4xl">{{ ($resolvedSeo ?? null)?->h1 ?? 'Часто задаваемые вопросы' }}</h1>
             <p class="tenant-page-faq__lead mt-4 max-w-2xl text-sm leading-relaxed text-silver sm:text-base">
-                Краткие ответы на типовые вопросы до консультации. Формулировки обобщённые: итог по делу всегда зависит от обстоятельств и доказательств.
-                Уточнить ситуацию можно на <a href="{{ route('contacts') }}" class="font-semibold text-moto-amber underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moto-amber">странице контактов</a>.
+                Кратко о записи, сроках и порядке работ. Точный план и смета по вашему авто — после осмотра или согласованной заявки.
+                Написать и договориться о визите можно в <a href="{{ route('contacts') }}" class="font-semibold text-moto-amber underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moto-amber">разделе «Контакты»</a>.
             </p>
         </div>
     </section>
@@ -35,8 +35,21 @@
                                     </span>
                                 </span>
                             </summary>
-                            <div class="tenant-page-faq__answer mt-3 border-t border-white/10 pt-3 text-sm leading-relaxed text-silver sm:text-base">
-                                {!! nl2br(e($faq->answer)) !!}
+                            @php
+                                $ansRaw = (string) $faq->answer;
+                                $answerLooksLikeHtml = preg_match('/<[a-z][\s\S]*>/i', $ansRaw) === 1;
+                                if ($answerLooksLikeHtml) {
+                                    $ansOut = strip_tags($ansRaw, '<p><br><a><strong><em><b><i><u><ul><ol><li><span>');
+                                } else {
+                                    $ansOut = e($ansRaw);
+                                }
+                            @endphp
+                            <div class="tenant-page-faq__answer mt-3 border-t border-white/10 pt-3 text-sm leading-relaxed text-silver sm:text-base [&_a]:font-semibold [&_a]:text-moto-amber [&_a]:underline-offset-2 hover:[&_a]:underline">
+                                @if($answerLooksLikeHtml)
+                                    {!! $ansOut !!}
+                                @else
+                                    {!! nl2br($ansOut) !!}
+                                @endif
                             </div>
                         </details>
                     @endforeach

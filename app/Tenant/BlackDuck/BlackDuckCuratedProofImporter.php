@@ -107,6 +107,7 @@ final class BlackDuckCuratedProofImporter
             $bytes = null;
             $contentType = null;
 
+            $posterLogical = null;
             if ($isVideo) {
                 if ($role !== BlackDuckMediaRole::WorksFeaturedVideo->value
                     && $role !== BlackDuckMediaRole::ServiceFeaturedVideo->value) {
@@ -114,13 +115,42 @@ final class BlackDuckCuratedProofImporter
                 }
                 $raw = @file_get_contents($abs);
                 if (! is_string($raw) || $raw === '') {
-                    continue;
+                    throw new RuntimeException('Пустой или нечитаемый видеофайл: '.$rel);
                 }
                 $bytes = $raw;
                 $vidExt = $ext === 'webm' ? 'webm' : 'mp4';
                 $contentType = $ext === 'webm' ? 'video/webm' : 'video/mp4';
                 $stem = self::safeStem($rel, $idx, $vidExt);
                 $logical = self::PROOF_PREFIX.'/'.$stem;
+
+                $posterRel = trim((string) ($row['poster_source'] ?? ''));
+                if ($posterRel === '') {
+                    throw new RuntimeException(
+                        'Для video-ролей ('.$role.') в манифесте обязателен непустой poster_source; файл: '.$rel
+                    );
+                }
+                $pAbs = $dir.DIRECTORY_SEPARATOR.str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $posterRel);
+                if (! is_readable($pAbs)) {
+                    throw new RuntimeException('Постер не найден или не читается: '.$posterRel);
+                }
+                $pn = BlackDuckProofImageNormalizer::normalizeFile($pAbs);
+                if ($pn === null) {
+                    throw new RuntimeException('Постер не удалось нормализовать как изображение: '.$posterRel);
+                }
+                [$pBytes, $pCt] = $pn;
+                $pExt = BlackDuckProofImageNormalizer::outputExtensionForContentType($pCt);
+                $pStem = self::safeStem($posterRel, $idx + 1000, $pExt);
+                $posterLogical = self::PROOF_PREFIX.'/'.$pStem;
+                if (! $force && $ts->existsPublic($posterLogical)) {
+                    throw new RuntimeException('Постер уже есть (используйте --force): '.$posterLogical);
+                }
+                if (! $ts->putPublic($posterLogical, $pBytes, [
+                    'ContentType' => $pCt,
+                    'visibility' => 'public',
+                ])) {
+                    throw new RuntimeException('Не удалось записать постер: '.$posterLogical);
+                }
+                $importedFiles[] = $posterLogical;
             } else {
                 $norm = BlackDuckProofImageNormalizer::normalizeFile($abs);
                 if ($norm === null) {
@@ -130,26 +160,6 @@ final class BlackDuckCuratedProofImporter
                 $outExt = BlackDuckProofImageNormalizer::outputExtensionForContentType($contentType);
                 $stem = self::safeStem($rel, $idx, $outExt);
                 $logical = self::PROOF_PREFIX.'/'.$stem;
-            }
-
-            $posterLogical = null;
-            $posterRel = trim((string) ($row['poster_source'] ?? ''));
-            if ($posterRel !== '' && ($role === BlackDuckMediaRole::WorksFeaturedVideo->value || $role === BlackDuckMediaRole::ServiceFeaturedVideo->value)) {
-                $pAbs = $dir.DIRECTORY_SEPARATOR.str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $posterRel);
-                $pn = BlackDuckProofImageNormalizer::normalizeFile($pAbs);
-                if ($pn !== null) {
-                    [$pBytes, $pCt] = $pn;
-                    $pExt = BlackDuckProofImageNormalizer::outputExtensionForContentType($pCt);
-                    $pStem = self::safeStem($posterRel, $idx + 1000, $pExt);
-                    $posterLogical = self::PROOF_PREFIX.'/'.$pStem;
-                    if (! $ts->putPublic($posterLogical, $pBytes, [
-                        'ContentType' => $pCt,
-                        'visibility' => 'public',
-                    ])) {
-                        throw new RuntimeException('Не удалось записать постер: '.$posterLogical);
-                    }
-                    $importedFiles[] = $posterLogical;
-                }
             }
 
             if (! $force && $ts->existsPublic($logical)) {
@@ -176,6 +186,9 @@ final class BlackDuckCuratedProofImporter
             }
             $pl = $posterLogical ?? ($canonicalRole['poster_logical_path'] ?? null);
             $asset['poster_logical_path'] = ($pl === null || $pl === '') ? null : $pl;
+            if ($isVideo && ($asset['poster_logical_path'] === null || $asset['poster_logical_path'] === '')) {
+                throw new RuntimeException('После импорта пустой poster_logical_path для video-роли: '.$rel);
+            }
             $asset['kind'] = $isVideo ? 'video' : 'image';
             $normalized = BlackDuckMediaCatalog::normalizeAssetRow($asset, $tid);
             if ($normalized !== null) {

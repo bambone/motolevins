@@ -30,7 +30,8 @@
         $heroUrl = trim((string) ($data['hero_image_slot']['url'] ?? ''));
     }
     if ($useBlackDuckPicture) {
-        $heroUrl = $bdHero['jpg'] ?? $bdHero['w1916'] ?? $bdHero['w1600'] ?? $bdHero['w900'] ?? $heroUrl;
+        // Совпадает с {@see BlackDuckHomeHeroBundle}: сначала WebP 1916/1600, старый JPEG не перекрывает новую заставку
+        $heroUrl = $bdHero['w1916'] ?? $bdHero['w1600'] ?? $bdHero['jpg'] ?? $bdHero['w900'] ?? $heroUrl;
     }
     if ($isBlackDuck && $heroUrl === '') {
         $heroUrl = trim((string) (\tenant_branding_hero_url() ?? ''));
@@ -117,7 +118,7 @@
                             <source type="image/webp" srcset="{{ e($bdHero['w1600']) }}" media="(min-width: 1024px)">
                         @endif
                         <img
-                            src="{{ e($bdHero['jpg'] ?? $bdHero['w1916'] ?? $bdHero['w1600'] ?? $bdHero['w900'] ?? $heroUrl) }}"
+                            src="{{ e($bdHero['w1916'] ?? $bdHero['w1600'] ?? $bdHero['jpg'] ?? $bdHero['w900'] ?? $heroUrl) }}"
                             alt="{{ e($heroAlt) }}"
                             class="expert-hero-cinematic__photo"
                             width="1916"
