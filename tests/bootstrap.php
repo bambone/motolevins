@@ -24,4 +24,12 @@ if (! filter_var(getenv('RENTBASE_TEST_USE_ENV_DATABASE') ?: '', FILTER_VALIDATE
     putenv('DB_URL=');
 }
 
+// If a developer (or a script) ran `config:cache`, `bootstrap/cache/config.php` bakes .env
+// and overrides phpunit.xml / TestCase putenv. Tests must see testing env (e.g. TENANCY_CENTRAL_DOMAINS).
+// Drop the cache file before the framework loads so every test run is consistent.
+$configCache = dirname(__DIR__).'/bootstrap/cache/config.php';
+if (is_file($configCache)) {
+    @unlink($configCache);
+}
+
 require dirname(__DIR__).'/vendor/autoload.php';

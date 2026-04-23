@@ -22,6 +22,10 @@ class ResolveTenantFromDomain
         $request->attributes->set('tenant', $current->tenant);
 
         if (! $current->isNonTenantHost && ! $current->hasTenant()) {
+            if (is_request_under_machine_webhook_path_prefix($request)) {
+                return $next($request);
+            }
+
             return response()->view('errors.domain-not-connected', [], 404);
         }
 

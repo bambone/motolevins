@@ -51,4 +51,15 @@ return [
         'pick_cache_ttl' => (int) env('NOMINATIM_PICK_CACHE_TTL', 86400),
     ],
 
+    /*
+    | Telegram: не смешивать с токеном платформенного бота (БД, провайдеры). Здесь — только
+    | отдельные сценарии, например уведомления о лидах с публичного сайта (SendLeadTelegramNotification).
+    | Webhook для команд бота: TELEGRAM_WEBHOOK_SECRET + путь config('telegram.webhook_path').
+    */
+    'telegram' => [
+        'webhook_secret' => env('TELEGRAM_WEBHOOK_SECRET'),
+        'bot_token' => env('TELEGRAM_BOT_TOKEN'),
+        'chat_id' => env('TELEGRAM_CHAT_ID'),
+    ],
+
 ];

@@ -5,6 +5,7 @@ use App\Http\Controllers\BookingController;
 use App\Http\Controllers\ContactInquiryController;
 use App\Http\Controllers\ExpertInquiryController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\Integrations\TelegramWebhookController;
 use App\Http\Controllers\LeadController;
 use App\Http\Controllers\LocationLandingController;
 use App\Http\Controllers\MotorcycleController;
@@ -30,6 +31,7 @@ use App\Http\Controllers\TenantPublicReviewsController;
 use App\Http\Controllers\TenantPublicReviewSubmitController;
 use App\Http\Controllers\TenantPublicStorageFileController;
 use App\Http\Controllers\ThemePlatformAssetController;
+use App\Http\Middleware\EnsureTelegramWebhookHost;
 use App\Http\Middleware\EnsureTenantContext;
 use App\Http\Middleware\RememberTenantCatalogLocation;
 use App\Http\Middleware\ResolveTenantPublicSeo;
@@ -45,13 +47,16 @@ foreach (config('tenancy.central_domains', []) as $h) {
 }
 
 // Корень PLATFORM_HOST обрабатывает Filament (гость → /login, после входа — домашняя страница панели).
+// routes/web.php подключается с группой web; не оборачивайте пути в Route::middleware('web') — дублирует stack.
 
-Route::middleware('web')->group(function () {
-    Route::get('/scheduling/oauth/google', [GoogleCalendarOAuthController::class, 'redirect'])
-        ->name('scheduling.oauth.google.redirect');
-    Route::get('/scheduling/oauth/google/callback', [GoogleCalendarOAuthController::class, 'callback'])
-        ->name('scheduling.oauth.google.callback');
-});
+$telegramWebhookPath = ltrim((string) config('telegram.webhook_path', 'webhooks/telegram'), '/');
+Route::post($telegramWebhookPath, TelegramWebhookController::class)
+    ->middleware(EnsureTelegramWebhookHost::class)
+    ->name('webhooks.telegram');
+Route::get('/scheduling/oauth/google', [GoogleCalendarOAuthController::class, 'redirect'])
+    ->name('scheduling.oauth.google.redirect');
+Route::get('/scheduling/oauth/google/callback', [GoogleCalendarOAuthController::class, 'callback'])
+    ->name('scheduling.oauth.google.callback');
 
 if ($marketingHosts !== []) {
     foreach ($marketingHosts as $index => $domain) {

@@ -20,6 +20,14 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // withMiddleware() is invoked for ConsoleKernel before `config` is bound (artisan) — do not call config() there.
+        if (app()->bound('config')) {
+            $telegramWebhook = ltrim((string) config('telegram.webhook_path', 'webhooks/telegram'), '/');
+            if ($telegramWebhook !== '') {
+                $middleware->validateCsrfTokens(except: [$telegramWebhook]);
+            }
+        }
+
         $middleware->append(UseRequestOriginForUrls::class);
 
         $middleware->web(prepend: [

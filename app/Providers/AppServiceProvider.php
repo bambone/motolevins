@@ -60,6 +60,10 @@ use App\Services\Notifications\TelegramTextSender;
 use App\Services\PageBuilder\PageSectionOperationsService;
 use App\Services\PageBuilder\SectionViewResolver;
 use App\Services\Platform\PlatformNotificationSettings;
+use App\Services\Telegram\TelegramBotContentResolver;
+use App\Services\Telegram\TelegramCommandParser;
+use App\Services\Telegram\TelegramWebhookHandler;
+use App\Services\Telegram\TelegramWebhookUrlBuilder;
 use App\Services\Tenancy\TenantAdvocateEditorialFooterData;
 use App\Services\Tenancy\TenantMainMenuPages;
 use App\Services\Tenancy\TenantMotoRentalLegalUrls;
@@ -144,6 +148,10 @@ class AppServiceProvider extends ServiceProvider
 
         $this->app->singleton(PlatformNotificationSettings::class);
         $this->app->singleton(TelegramTextSender::class);
+        $this->app->singleton(TelegramBotContentResolver::class);
+        $this->app->singleton(TelegramCommandParser::class);
+        $this->app->singleton(TelegramWebhookHandler::class);
+        $this->app->singleton(TelegramWebhookUrlBuilder::class);
         $this->app->singleton(TelegramPlatformInboundNotificationChannel::class);
         $this->app->tag([TelegramPlatformInboundNotificationChannel::class], 'platform_inbound_notification_channels');
         $this->app->singleton(PlatformInboundStaffNotifier::class, static function ($app): PlatformInboundStaffNotifier {

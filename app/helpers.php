@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Middleware\RedirectMiddleware;
+use App\Http\Middleware\ResolveTenantFromDomain;
 use App\Models\Tenant;
 use App\Models\TenantDomain;
 use App\Models\TenantSetting;
@@ -16,6 +18,7 @@ use App\Terminology\TerminologyHumanizer;
 use App\Themes\ThemeRegistry;
 use Illuminate\Contracts\View\View;
 use Illuminate\Filesystem\FilesystemAdapter;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
@@ -66,6 +69,24 @@ if (! function_exists('currentTenant')) {
     function currentTenant(): ?Tenant
     {
         return tenant();
+    }
+}
+
+if (! function_exists('is_request_under_machine_webhook_path_prefix')) {
+    /**
+     * Paths under config('telegram.machine_webhook_path_prefix') (e.g. webhooks/telegram, webhooks/vk) —
+     * same rule as {@see RedirectMiddleware} and {@see ResolveTenantFromDomain}.
+     */
+    function is_request_under_machine_webhook_path_prefix(Request $request): bool
+    {
+        $machinePrefix = ltrim((string) config('telegram.machine_webhook_path_prefix', 'webhooks'), '/');
+        if ($machinePrefix === '') {
+            return false;
+        }
+
+        $path = $request->path();
+
+        return str_starts_with($path, $machinePrefix.'/') || $path === $machinePrefix;
     }
 }
 
