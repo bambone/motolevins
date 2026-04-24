@@ -142,11 +142,14 @@
                     </div>
 
                     @if(!empty($bullets) && is_array($bullets))
-                        <ul class="relative z-[5] mt-5 space-y-2.5 border-t border-slate-100 pt-5 text-left" aria-label="Возможности в системе">
-                            @foreach($bullets as $line)
-                                <li class="text-sm leading-snug text-slate-700">{{ $line }}</li>
-                            @endforeach
-                        </ul>
+                        <div class="relative z-[5] mt-5 flex flex-1 flex-col border-t border-slate-100 pt-5 text-left">
+                            <ul class="space-y-2.5" aria-label="Возможности в системе">
+                                @foreach($bullets as $line)
+                                    <li class="text-sm leading-snug text-slate-700">{{ $line }}</li>
+                                @endforeach
+                            </ul>
+                            <div class="flex-1" aria-hidden="true"></div>
+                        </div>
                     @endif
 
                     @if($footer !== '')
@@ -154,7 +157,6 @@
                     @endif
 
                     @if($caseIsLink)
-                        <div class="min-h-2 flex-1" aria-hidden="true"></div>
                         <p class="pointer-events-none relative z-[11] pt-3 text-sm font-bold text-pm-accent opacity-0 transition-opacity duration-300 group-hover:opacity-100 group-focus-within:opacity-100">
                             Открыть сайт →
                         </p>
