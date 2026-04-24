@@ -1,9 +1,12 @@
 @php
     use App\Support\Storage\TenantPublicAssetResolver;
+    use App\Support\Typography\RussianTypography;
     use App\Tenant\Expert\ExpertBrandMediaUrl;
 
     $heading = $data['heading'] ?? '';
     $sub = $data['subheading'] ?? '';
+    $headingTied = filled($heading) ? RussianTypography::tiePrepositionsToNextWord($heading) : '';
+    $subTied = filled($sub) ? RussianTypography::tiePrepositionsToNextWord($sub) : '';
     $btn = $data['button_text'] ?? '';
     $url = $data['button_url'] ?? '#';
     $btn2 = trim((string) ($data['secondary_button_text'] ?? ''));
@@ -46,13 +49,13 @@
         <div class="max-w-2xl">
             @if (filled($heading))
                 @if ($bdHeroH1)
-                    <h1 class="text-balance text-2xl font-bold text-white sm:text-3xl lg:text-4xl">{{ $heading }}</h1>
+                    <h1 class="text-balance text-2xl font-bold text-white sm:text-3xl lg:text-4xl">{{ $headingTied }}</h1>
                 @else
-                    <h2 class="text-balance text-2xl font-bold text-white sm:text-3xl lg:text-4xl">{{ $heading }}</h2>
+                    <h2 class="text-balance text-2xl font-bold text-white sm:text-3xl lg:text-4xl">{{ $headingTied }}</h2>
                 @endif
             @endif
             @if (filled($sub))
-                <p class="mt-3 text-pretty text-base leading-relaxed text-zinc-300 sm:text-lg">{{ $sub }}</p>
+                <p class="mt-3 text-pretty text-base leading-relaxed text-zinc-300 sm:text-lg">{{ $subTied }}</p>
             @endif
             @if (filled($btn) || filled($btn2))
                 <div class="mt-6 flex flex-wrap items-center gap-3">

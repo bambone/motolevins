@@ -45,13 +45,9 @@
             @php
                 $fid = $faqIdPrefix.'-'.$i;
                 $ansRaw = (string) ($item['answer'] ?? '');
-                // DB может хранить и plain text, и куски HTML (см. BlackDuckContentRefresher::replaceFaqs). e() на всём — ломает <p>…</p> в пользу.
-                $answerLooksLikeHtml = preg_match('/<[a-z][\s\S]*>/i', $ansRaw) === 1;
-                if ($answerLooksLikeHtml) {
-                    $ansOut = strip_tags($ansRaw, '<p><br><a><strong><em><b><i><u><ul><ol><li><span>');
-                } else {
-                    $ansOut = e($ansRaw);
-                }
+                $faqBody = \App\Support\FaqAnswerForPublicView::fromStoredAnswer($ansRaw);
+                $answerLooksLikeHtml = $faqBody['is_html'];
+                $ansOut = $faqBody['body'];
             @endphp
             <div class="expert-faq-item overflow-hidden rounded-[1.15rem] border border-white/[0.05] bg-white/[0.015] backdrop-blur-sm transition-all duration-300 hover:border-white/[0.1] hover:bg-white/[0.03] sm:rounded-[1.5rem]">
                 <dt>

@@ -6,15 +6,19 @@
 ])
 
 @php
+    use App\Support\Typography\RussianTypography;
+
     $subPlain = $subheading ?? 'Премиальная техника для любого стиля. Ограниченное количество мотоциклов — бронируйте заранее.';
+    $headingTied = RussianTypography::tiePrepositionsToNextWord($heading);
+    $subTied = RussianTypography::tiePrepositionsToNextWord($subPlain);
 @endphp
 
 <section id="catalog" class="relative z-10 border-t border-white/[0.02] bg-[#0c0c0e] py-16 sm:py-20 lg:py-28">
     <div class="mx-auto max-w-7xl px-3 sm:px-4 md:px-8">
         <div class="mb-10 flex w-full min-w-0 flex-col gap-4 border-b border-white/5 pb-6 sm:mb-12 md:flex-row md:items-end md:justify-between">
             <div class="min-w-0 w-full max-w-full">
-                <h2 class="mb-3 text-balance text-2xl font-bold leading-tight text-white sm:text-3xl md:text-4xl">{{ $heading }}</h2>
-                <p class="max-w-2xl text-sm leading-relaxed text-silver/80 sm:text-base md:text-lg">{{ $subPlain }}</p>
+                <h2 class="mb-3 text-balance text-2xl font-bold leading-tight text-white sm:text-3xl md:text-4xl">{{ $headingTied }}</h2>
+                <p class="max-w-2xl text-sm leading-relaxed text-silver/80 sm:text-base md:text-lg">{{ $subTied }}</p>
             </div>
         </div>
 

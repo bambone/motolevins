@@ -9,8 +9,10 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Filesystem\FilesystemAdapter;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Throwable;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 use Spatie\MediaLibrary\MediaCollections\MediaCollection;
@@ -144,6 +146,35 @@ class Review extends Model implements HasMedia
     /**
      * Аватар для публичного сайта с учётом delivery=local (переписывание CDN → /media/…).
      */
+    /**
+     * Дата для строки «город · дата» на публичной карточке: сначала `date`, иначе `submitted_at`.
+     * Каст полей в модели может кинуть при битом значении в БД — тогда смотрим следующее поле. Итог — пустая строка, если ничего нельзя отформатировать.
+     */
+    public function publicReviewDateFormatted(): string
+    {
+        foreach (['date', 'submitted_at'] as $key) {
+            try {
+                $when = $this->getAttribute($key);
+            } catch (Throwable) {
+                continue;
+            }
+            if (blank($when)) {
+                continue;
+            }
+            try {
+                if ($when instanceof \DateTimeInterface) {
+                    return Carbon::instance($when)->format('d.m.Y');
+                }
+
+                return Carbon::parse((string) $when)->format('d.m.Y');
+            } catch (Throwable) {
+                continue;
+            }
+        }
+
+        return '';
+    }
+
     public function publicAvatarUrl(): ?string
     {
         $raw = $this->avatar_url;

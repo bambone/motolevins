@@ -1,16 +1,20 @@
 @props(['section' => null, 'reviews' => []])
 @php
+    use App\Support\Typography\RussianTypography;
+
     $sectionData = is_array($section ?? null) ? $section : [];
-    $heading = ($sectionData['heading'] ?? null) ?: 'Отзывы райдеров';
-    $subheading = ($sectionData['subheading'] ?? null) ?: 'Реальные эмоции с южных трасс. Фото, имена, города.';
+    $heading = ($sectionData['heading'] ?? null) ?: 'Отзывы клиентов';
+    $subheading = ($sectionData['subheading'] ?? null) ?: 'Публичные отзывы: имена, города, даты — по мере публикации в кабинете.';
+    $headingTied = RussianTypography::tiePrepositionsToNextWord($heading);
+    $subheadingTied = RussianTypography::tiePrepositionsToNextWord($subheading);
     $reviewList = collect($reviews ?? []);
     $useReviews = $reviewList->isNotEmpty();
 @endphp
 <section class="relative z-10 border-t border-white/[0.02] bg-carbon py-16 sm:py-20 lg:py-28">
     <div class="mx-auto max-w-7xl px-3 sm:px-4 md:px-8">
         <div class="mb-10 max-w-2xl sm:mb-12">
-            <h2 class="mb-3 text-balance text-2xl font-bold leading-tight text-white sm:text-3xl md:text-4xl">{{ $heading }}</h2>
-            <p class="text-sm leading-relaxed text-zinc-300 sm:text-base md:text-lg">{{ $subheading }}</p>
+            <h2 class="mb-3 text-balance text-2xl font-bold leading-tight text-white sm:text-3xl md:text-4xl">{{ $headingTied }}</h2>
+            <p class="text-sm leading-relaxed text-zinc-300 sm:text-base md:text-lg">{{ $subheadingTied }}</p>
         </div>
 
         <div class="grid grid-cols-1 gap-5 sm:gap-6 md:grid-cols-3 md:gap-6 lg:gap-8">
@@ -35,7 +39,16 @@
                             </div>
                             <div>
                                 <span class="block text-white font-bold text-sm">{{ $review->name }}</span>
-                                <span class="block text-zinc-300 text-xs mt-0.5">{{ $review->city ?? '' }}</span>
+                                @php
+                                    $dateStr = $review->publicReviewDateFormatted();
+                                    $metaParts = array_values(array_filter([
+                                        trim((string) ($review->city ?? '')),
+                                        $dateStr,
+                                    ]));
+                                @endphp
+                                @if($metaParts !== [])
+                                <span class="block text-zinc-300 text-xs mt-0.5">{{ implode(' · ', $metaParts) }}</span>
+                                @endif
                             </div>
                         </div>
                     </div>
@@ -51,16 +64,16 @@
                         <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z"/></svg>
                         <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z"/></svg>
                     </div>
-                    <p class="text-white/95 text-[15px] sm:text-base leading-relaxed mb-8 font-medium">«Огонь! Выдали за 10 минут, шлемы новые. Закат на побережье — разрыв.»</p>
+                    <p class="text-white/95 text-[15px] sm:text-base leading-relaxed mb-8 font-medium">«Всё чётко по срокам, без сюрпризов по цене. Сервис спокойный, рекомендую.»</p>
                 </div>
                 <div class="border-t border-white/5 pt-5 flex items-center gap-4">
                     <div class="w-12 h-12 rounded-full overflow-hidden border-2 border-white/10 shrink-0 shadow-lg flex items-center justify-center bg-moto-amber/20">
-                        <img src="{{ theme_platform_asset_url('avatars/avatar-1.png') }}" alt="Алексей М." class="w-full h-full object-cover" loading="lazy" decoding="async" fetchpriority="low" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden')">
-                        <span class="text-moto-amber font-bold text-sm hidden">АМ</span>
+                        <img src="{{ theme_platform_asset_url('avatars/avatar-1.png') }}" alt="" class="w-full h-full object-cover" loading="lazy" decoding="async" fetchpriority="low" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden')">
+                        <span class="text-moto-amber font-bold text-sm hidden">А</span>
                     </div>
                     <div>
                         <span class="block text-white font-bold text-sm">Алексей М.</span>
-                        <span class="block text-zinc-300 text-xs mt-0.5">Геленджик</span>
+                        <span class="block text-zinc-300 text-xs mt-0.5">Москва · 12.09.2024</span>
                     </div>
                 </div>
             </div>
@@ -75,16 +88,16 @@
                         <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z"/></svg>
                         <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z"/></svg>
                     </div>
-                    <p class="text-white/95 text-[15px] sm:text-base leading-relaxed mb-8 font-medium">«Никаких доплат по факту. Мот бодрый, тормоза цепкие. Следующий раз — на неделю.»</p>
+                    <p class="text-white/95 text-[15px] sm:text-base leading-relaxed mb-8 font-medium">«Понравилось, что договорились заранее и без “доп. работ”. Вернусь.»</p>
                 </div>
                 <div class="border-t border-white/5 pt-5 flex items-center gap-4">
                     <div class="w-12 h-12 rounded-full overflow-hidden border-2 border-white/10 shrink-0 shadow-lg flex items-center justify-center bg-moto-amber/20">
-                        <img src="{{ theme_platform_asset_url('avatars/avatar-2.png') }}" alt="Игорь С." class="w-full h-full object-cover" loading="lazy" decoding="async" fetchpriority="low" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden')">
-                        <span class="text-moto-amber font-bold text-sm hidden">ИС</span>
+                        <img src="{{ theme_platform_asset_url('avatars/avatar-2.png') }}" alt="" class="w-full h-full object-cover" loading="lazy" decoding="async" fetchpriority="low" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden')">
+                        <span class="text-moto-amber font-bold text-sm hidden">И</span>
                     </div>
                     <div>
-                        <span class="block text-white font-bold text-sm">Игорь С.</span>
-                        <span class="block text-zinc-300 text-xs mt-0.5">Анапа</span>
+                        <span class="block text-white font-bold text-sm">Ирина С.</span>
+                        <span class="block text-zinc-300 text-xs mt-0.5">Санкт-Петербург · 04.10.2024</span>
                     </div>
                 </div>
             </div>
@@ -99,16 +112,16 @@
                         <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z"/></svg>
                         <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z"/></svg>
                     </div>
-                    <p class="text-white/95 text-[15px] sm:text-base leading-relaxed mb-8 font-medium">«Пригнали к отелю, сдали там же. Мотик ухоженный. Абрау-Дюрсо на закате — нечто.»</p>
+                    <p class="text-white/95 text-[15px] sm:text-base leading-relaxed mb-8 font-medium">«Удобно, что всё в одном месте на сайте: условия, контакты, ответы в FAQ.»</p>
                 </div>
                 <div class="border-t border-white/5 pt-5 flex items-center gap-4">
                     <div class="w-12 h-12 rounded-full overflow-hidden border-2 border-white/10 shrink-0 shadow-lg flex items-center justify-center bg-moto-amber/20">
-                        <img src="{{ theme_platform_asset_url('avatars/avatar-3.png') }}" alt="Анна В." class="w-full h-full object-cover" loading="lazy" decoding="async" fetchpriority="low" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden')">
-                        <span class="text-moto-amber font-bold text-sm hidden">АВ</span>
+                        <img src="{{ theme_platform_asset_url('avatars/avatar-3.png') }}" alt="" class="w-full h-full object-cover" loading="lazy" decoding="async" fetchpriority="low" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden')">
+                        <span class="text-moto-amber font-bold text-sm hidden">А</span>
                     </div>
                     <div>
                         <span class="block text-white font-bold text-sm">Анна В.</span>
-                        <span class="block text-zinc-300 text-xs mt-0.5">Новороссийск</span>
+                        <span class="block text-zinc-300 text-xs mt-0.5">Нижний Новгород · 18.11.2024</span>
                     </div>
                 </div>
             </div>

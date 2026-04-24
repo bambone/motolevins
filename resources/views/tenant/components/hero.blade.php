@@ -1,6 +1,8 @@
 @props(['section' => null])
+{{-- Семейство default/moto: герой = лендинг + booking bar + (опц.) видео. Для других ниш план — отдельный layout или секции без <x-booking-bar />. --}}
 @php
     use App\Support\Storage\TenantPublicAssetResolver;
+    use App\Support\Typography\RussianTypography;
 
     $section = is_array($section) ? $section : [];
     $tenant = tenant();
@@ -48,9 +50,10 @@
     $hasHeroVideo = $heroVideoUrl !== null && $heroVideoUrl !== '';
     $videoSrc = $hasHeroVideo ? $heroVideoUrl : '';
 
-    $heading = $section['heading'] ?? 'Аренда мотоциклов на Чёрном море';
-    $subheading = $section['subheading'] ?? 'от 4 000 ₽/сутки';
-    $description = $section['description'] ?? 'Геленджик · Анапа · Новороссийск — без скрытых платежей, экипировка и страховка включены';
+    $heading = $section['heading'] ?? 'Услуги в вашем городе';
+    $subheading = $section['subheading'] ?? '';
+    $description = $section['description'] ?? 'Свяжитесь с нами — подскажем по условиям, срокам и формату работы.';
+    $videoAriaLabel = $section['video_aria_label'] ?? 'Фоновое видео для главной страницы';
 @endphp
 <section x-data="heroVideo({ heroHasVideo: @js($hasHeroVideo) })"
          x-init="init()"
@@ -77,7 +80,7 @@
                playsinline preload="none"
                poster="{{ $videoPoster }}"
                @ended="onVideoEnded"
-               aria-label="POV-поездка на мотоцикле по южным дорогам">
+               aria-label="{{ e($videoAriaLabel) }}">
             <source src="{{ $videoSrc }}" type="video/mp4">
         </video>
         @endif
@@ -122,15 +125,17 @@
         <div class="max-w-6xl mx-auto w-full" :class="videoPlaying && 'opacity-0 pointer-events-none'">
             <h1 class="mb-6 text-[clamp(1.75rem,6vw+0.5rem,2.75rem)] font-extrabold leading-[1.1] tracking-tight text-white sm:text-5xl md:text-6xl md:leading-[1.08] lg:text-[4.25rem] xl:text-[5rem]"
                 style="text-shadow: 0 4px 16px rgba(0,0,0,0.8);">
-                {!! nl2br(e($heading)) !!}
-                <span class="block mt-1 md:mt-2 text-transparent bg-clip-text bg-gradient-to-r from-moto-amber via-orange-400 to-orange-500">{{ $subheading }}</span>
+                {!! nl2br(e(RussianTypography::tiePrepositionsPerLine($heading))) !!}
+                @if(filled(trim((string) $subheading)))
+                <span class="block mt-1 md:mt-2 text-transparent bg-clip-text bg-gradient-to-r from-moto-amber via-orange-400 to-orange-500">{{ RussianTypography::tiePrepositionsToNextWord($subheading) }}</span>
+                @endif
             </h1>
         </div>
 
         <div class="max-w-2xl mx-auto w-full mb-8" :class="videoPlaying && 'opacity-0 pointer-events-none'">
             <p class="text-base md:text-lg text-white/90 font-medium leading-relaxed max-w-2xl mx-auto"
                style="text-shadow: 0 2px 8px rgba(0,0,0,0.6);">
-                {{ $description }}
+                {{ RussianTypography::tiePrepositionsToNextWord($description) }}
             </p>
         </div>
 
