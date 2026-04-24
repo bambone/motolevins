@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tenant\BlackDuck;
 
 use App\Support\Storage\TenantStorage;
+use App\Support\Storage\TenantStorageDisks;
 
 /**
  * JSON {@code site/brand/media-catalog.json}: единый curated-манифест. Внешние URL недопустимы в logical_path для proof.
@@ -124,7 +125,20 @@ final class BlackDuckMediaCatalog
         $ts = TenantStorage::forTrusted($tenantId);
         $path = self::normalizeLogicalKey($logicalPath);
 
-        return $ts->existsPublic($path);
+        if ($ts->existsPublic($path)) {
+            return true;
+        }
+
+        // Зеркало может отставать от R2; для curated-каталога учитываем объект в реплике (тот же object key).
+        try {
+            $fullKey = $ts->publicPath($path);
+            if (TenantStorageDisks::replicaPublicDisk()->exists($fullKey)) {
+                return true;
+            }
+        } catch (\Throwable) {
+        }
+
+        return false;
     }
 
     public static function looksLikeRemoteUrl(string $v): bool
@@ -728,9 +742,11 @@ final class BlackDuckMediaCatalog
             }
         }
         $out = [];
-        if ($video !== '' && $poster !== '') {
+        if ($video !== '') {
             $out['video'] = $video;
-            $out['poster'] = $poster;
+            if ($poster !== '') {
+                $out['poster'] = $poster;
+            }
         }
 
         return $out;

@@ -11,7 +11,8 @@ use Throwable;
  * Разрешение значений из JSON секций / настроек в публичный URL для img и CSS background.
  * Поддерживает legacy http(s) URL и object keys вида {@code tenants/{id}/public/...}.
  *
- * При {@see MediaDeliveryMode::Local} — same-origin путь {@code /media/tenants/{id}/public/...} (nginx или dev-fallback).
+ * При {@see MediaDeliveryMode::Local} — same-origin путь {@code /media/tenants/{id}/public/...} (nginx или dev-fallback);
+ * если файла на зеркале нет, но ключ есть в реплике R2, URL строится к CDN/R2 (см. {@see publicAssetUrlForRequestContext}).
  * При {@see MediaDeliveryMode::R2} — прямой URL объекта (CDN/R2) как раньше.
  *
  * Для **админского** focal-превью: абсолютные чужие URL всё ещё могут попасть в &lt;img src&gt; (Referrer,
@@ -307,6 +308,27 @@ final class TenantPublicAssetResolver
         if ($delivery === MediaDeliveryMode::Local) {
             $objectKey = 'tenants/'.$tenantId.'/public/'.$pathUnderPublicSegment;
             TenantPublicObjectKey::assertWebExposedTenantPublicKey($objectKey, $tenantId);
+
+            $ts = TenantStorage::forTrusted($tenantId);
+            if (! $ts->existsPublic($pathUnderPublicSegment)) {
+                $onReplica = false;
+                try {
+                    $onReplica = TenantStorageDisks::replicaPublicDisk()->exists($ts->publicPath($pathUnderPublicSegment));
+                } catch (Throwable) {
+                    $onReplica = false;
+                }
+                if ($onReplica) {
+                    $r2Base = $modes->r2PublicBaseUrl();
+                    if ($r2Base !== '') {
+                        return self::appendPublicUrlVersion($r2Base.'/'.$objectKey);
+                    }
+                    $cdn = rtrim((string) config('tenant_storage.public_cdn_base_url', ''), '/');
+                    if ($cdn !== '') {
+                        return self::appendPublicUrlVersion($cdn.'/'.$objectKey);
+                    }
+                }
+            }
+
             $basePath = $modes->localPublicBasePath();
             $relativeUrl = $basePath.'/'.ltrim($objectKey, '/');
             if ($forceAbsolute && $tenant !== null) {

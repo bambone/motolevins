@@ -64,29 +64,29 @@
                     @endif
                 </div>
             @endif
-            @if (! $videoDeferred && filled($vSrcUrl) && filled($vPosterUrl))
+            @if (! $videoDeferred && filled($vSrcUrl))
                 <div class="mt-8 w-full max-w-3xl sm:mt-10">
                     <video
                         class="w-full overflow-hidden rounded-xl border border-white/10"
                         controls
                         playsinline
                         preload="metadata"
-                        poster="{{ e($vPosterUrl) }}"
+                        @if (filled($vPosterUrl)) poster="{{ e($vPosterUrl) }}" @endif
                     >
                         <source src="{{ e($vSrcUrl) }}" type="{{ str_ends_with(strtolower($vSrc), '.webm') ? 'video/webm' : 'video/mp4' }}" />
                     </video>
                 </div>
             @endif
         </div>
-        @if ($videoDeferred && filled($vSrcUrl) && filled($vPosterUrl))
-            {{-- Услуги: видео ниже текстового блока, без конкуренции с первым экраном; poster обязателен, без autoplay. --}}
+        @if ($videoDeferred && filled($vSrcUrl))
+            {{-- Услуги: видео ниже текстового блока; poster по возможности, без autoplay. --}}
             <div class="relative z-10 mt-10 w-full max-w-4xl border-t border-white/10 pt-8">
                 <video
                     class="w-full overflow-hidden rounded-xl border border-white/10"
                     controls
                     playsinline
                     preload="none"
-                    poster="{{ e($vPosterUrl) }}"
+                    @if (filled($vPosterUrl)) poster="{{ e($vPosterUrl) }}" @endif
                 >
                     <source src="{{ e($vSrcUrl) }}" type="{{ str_ends_with(strtolower($vSrc), '.webm') ? 'video/webm' : 'video/mp4' }}" />
                 </video>
