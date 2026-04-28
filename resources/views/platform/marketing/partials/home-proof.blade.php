@@ -7,7 +7,7 @@
     ];
     $proofFooter = trim((string) ($prf['footer_line'] ?? ''));
 @endphp
-<section id="proof" class="pm-section-anchor pm-section-y bg-slate-900" aria-labelledby="proof-heading">
+<section id="proof" class="pm-section-anchor bg-slate-900 pt-16 pb-10 lg:pt-20 lg:pb-12" aria-labelledby="proof-heading">
     <div class="mx-auto max-w-6xl px-4 md:px-6">
         <div class="grid grid-cols-1 gap-12 lg:grid-cols-2 lg:items-start lg:gap-16">
             <div>
@@ -143,7 +143,7 @@
         </div>
 
         @if($proofFooter !== '')
-            <p class="fade-reveal mx-auto mt-12 max-w-3xl border-t border-white/10 pt-8 text-center text-balance text-lg font-bold leading-snug text-white [transition-delay:450ms] sm:mt-14 sm:text-xl">
+            <p class="fade-reveal mx-auto mt-6 max-w-3xl border-t border-white/10 pt-5 text-center text-balance text-base font-bold leading-snug text-white [transition-delay:450ms] sm:mt-8 sm:pt-6 sm:text-lg">
                 {!! $proofFooter !!}
             </p>
         @endif

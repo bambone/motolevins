@@ -176,6 +176,35 @@
     .pm-reveal-cases-3 { transition-delay: 650ms; }
     .pm-reveal-cases-4 { transition-delay: 800ms; }
 
+    /* Кейсы: фильтр — кнопки с aria-pressed (не табы без role=\"tab\") */
+    button.pm-case-tab {
+        @apply inline-flex shrink-0 items-center rounded-full border border-transparent py-2 text-sm font-semibold ring-1 ring-inset transition-colors;
+    }
+    button.pm-case-tab[aria-pressed='true'] {
+        @apply bg-slate-900 text-white shadow-sm ring-slate-900;
+    }
+    button.pm-case-tab[aria-pressed='false'] {
+        @apply bg-white text-slate-700 ring-slate-200 hover:border-slate-300 hover:bg-slate-50;
+    }
+
+    /* Компактные кейсы: flex-wrap по центру; размеры только здесь — не дублировать max-w/flex-* в Blade */
+    .pm-cases-compact {
+        gap: clamp(1rem, 2.5vw, 1.5rem);
+    }
+    .pm-cases-compact-card {
+        flex: 1 1 22rem;
+        max-width: min(42rem, 100%);
+        min-width: 0;
+        width: 100%;
+    }
+
+    /*
+     | Один видимый spotlight-кейс: не оставляем «пол-пустую» строку lg.
+    */
+    .pm-cases-featured.pm-cases-featured--solo {
+        @apply max-w-5xl lg:grid-cols-1;
+    }
+
     .pm-reveal-kpi-0 { transition-delay: 300ms; }
     .pm-reveal-kpi-1 { transition-delay: 450ms; }
     .pm-reveal-kpi-2 { transition-delay: 600ms; }

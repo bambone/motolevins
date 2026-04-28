@@ -45,9 +45,8 @@
     @include('platform.marketing.partials.home-how', ['pm' => $pm])
     @include('platform.marketing.partials.home-niches', ['pm' => $pm])
     @include('platform.marketing.partials.home-proof', ['pm' => $pm])
-    @include('platform.marketing.partials.home-cta-strip', ['pm' => $pm, 'headline' => $pm['landing_cta_strip_2'] ?? '', 'variant' => 'slate'])
 
-    {{-- Social Proof & Cases --}}
+    {{-- Social Proof & Cases (mid CTA внутри home-cases; отдельная полоса landing_cta_strip_2 перед кейсами не выводим) --}}
     @include('platform.marketing.partials.home-cases', ['pm' => $pm])
     @include('platform.marketing.partials.home-kpi', ['pm' => $pm])
     @include('platform.marketing.partials.home-pricing-bridge', ['pm' => $pm])

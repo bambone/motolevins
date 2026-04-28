@@ -495,10 +495,136 @@ const initPmContactSubmitBuildOverlay = () => {
     });
 };
 
+/**
+ * Фильтр кейсов на главной: кнопки (aria-pressed), не вкладки без tablist — синхронизация блоков по data-pm-case-cat.
+ * Первичная синхронизация не шлёт pm:analytics (cases_filter_reset).
+ */
+const initPmCasesFilter = () => {
+    const primery = document.getElementById('primery');
+    if (!primery) {
+        return;
+    }
+
+    const toolbar = primery.querySelector('[data-pm-cases-toolbar]');
+    const filterButtons = toolbar ? toolbar.querySelectorAll('button.pm-case-tab[data-pm-case-filter]') : [];
+    const panels = Array.from(primery.querySelectorAll('[data-pm-case-cat]'));
+    if (!panels.length) {
+        return;
+    }
+
+    const featuredWrap = document.getElementById('pm-cases-featured');
+    const compactWrap = document.getElementById('pm-cases-grid');
+    const emptyBox = document.getElementById('pm-cases-empty');
+
+    const syncLayoutState = () => {
+        if (featuredWrap) {
+            const vis = featuredWrap.querySelectorAll(':scope > article:not(.hidden)');
+            const n = vis.length;
+            featuredWrap.classList.toggle('pm-cases-featured--solo', n === 1 && !featuredWrap.classList.contains('hidden'));
+        }
+    };
+
+    /** @param {string} filterId */
+    /** @param {HTMLElement | undefined} focusBtn */
+    /** @param {boolean} notifyAnalytics */
+    const syncFilter = (filterId, focusBtn, notifyAnalytics) => {
+        let anyFeatured = false;
+        let anyCompact = false;
+
+        panels.forEach((panel) => {
+            const cat = (panel.getAttribute('data-pm-case-cat') || '').trim();
+            const show =
+                filterId === 'all' ||
+                cat === filterId ||
+                (filterId === 'other' && (cat === '' || cat === 'other'));
+            panel.classList.toggle('hidden', !show);
+            if (!show) {
+                return;
+            }
+            if (panel.closest('#pm-cases-featured')) {
+                anyFeatured = true;
+            } else if (panel.closest('#pm-cases-grid')) {
+                anyCompact = true;
+            }
+        });
+
+        const anyPanels = Boolean(anyFeatured || anyCompact);
+
+        if (featuredWrap) {
+            featuredWrap.classList.toggle('hidden', !anyFeatured);
+        }
+        if (compactWrap) {
+            compactWrap.classList.toggle('hidden', !anyCompact);
+        }
+        if (emptyBox) {
+            emptyBox.classList.toggle('hidden', anyPanels);
+        }
+
+        syncLayoutState();
+
+        filterButtons.forEach((btn) => {
+            const id = btn.getAttribute('data-pm-case-filter') || 'all';
+            const isOn = id === filterId;
+            btn.setAttribute('aria-pressed', isOn ? 'true' : 'false');
+        });
+
+        if (focusBtn) {
+            focusBtn.focus();
+        }
+
+        if (notifyAnalytics) {
+            pmDispatch(filterId === 'all' ? 'cases_filter_reset' : 'cases_filter_apply', {
+                filter: filterId,
+                location: 'cases_filter',
+            });
+        }
+    };
+
+    primery.addEventListener('click', (e) => {
+        const t = /** @type {HTMLElement | null} */ (e.target);
+        const hit = t?.closest?.('[data-pm-case-filter]');
+        if (!hit || !primery.contains(hit)) {
+            return;
+        }
+        if (!hit.closest('[data-pm-cases-toolbar]') && hit.id !== 'pm-cases-empty-reset') {
+            return;
+        }
+        const id = hit.getAttribute('data-pm-case-filter') || 'all';
+        syncFilter(id, hit, true);
+    });
+
+    filterButtons.forEach((btn) => {
+        btn.addEventListener('keydown', (e) => {
+            const tabs = [...filterButtons];
+            const i = tabs.indexOf(btn);
+            if (i < 0) {
+                return;
+            }
+
+            /** @type HTMLElement | undefined */
+            let next;
+            if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                next = tabs[i + 1] ?? tabs[0];
+            } else if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                next = tabs[i - 1] ?? tabs[tabs.length - 1];
+            }
+            if (next) {
+                const id = next.getAttribute('data-pm-case-filter') || 'all';
+                syncFilter(id, next, true);
+            }
+        });
+    });
+
+    syncFilter('all', undefined, false);
+};
+
 const initPlatformMarketing = () => {
     initPmAnchorScroll();
     initPmMobileNav();
     initPmScrollReveal();
+    initPmCasesFilter();
     initPmAnalyticsClicks();
     initPmContactSuccess();
     initPmScrollDepth();
