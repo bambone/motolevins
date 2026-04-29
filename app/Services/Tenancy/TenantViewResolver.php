@@ -46,6 +46,9 @@ final class TenantViewResolver
         if ($themeKeyNormalized !== '') {
             $candidates[] = "tenant.themes.{$themeKeyNormalized}.{$logicalName}";
         }
+        if ($themeKeyNormalized === 'expert_pr') {
+            $candidates[] = "tenant.themes.expert_auto.{$logicalName}";
+        }
         if ($themeKeyNormalized === 'black_duck') {
             $candidates[] = "tenant.themes.expert_auto.{$logicalName}";
         }
@@ -119,6 +122,9 @@ final class TenantViewResolver
         $candidates = [];
         if ($themeKeyNormalized !== '') {
             $candidates[] = "tenant.themes.{$themeKeyNormalized}.{$logicalName}";
+        }
+        if ($themeKeyNormalized === 'expert_pr') {
+            $candidates[] = "tenant.themes.expert_auto.{$logicalName}";
         }
         if ($themeKeyNormalized === 'black_duck') {
             $candidates[] = "tenant.themes.expert_auto.{$logicalName}";

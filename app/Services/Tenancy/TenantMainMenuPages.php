@@ -24,9 +24,16 @@ final class TenantMainMenuPages
             ->orderBy('main_menu_sort_order')
             ->orderBy('name')
             ->get()
-            ->map(fn (Page $page): array => [
-                'label' => $page->name,
-                'url' => route('page.show', ['slug' => $page->slug]),
-            ]);
+            ->map(function (Page $page): array {
+                $slug = (string) $page->slug;
+                $url = $slug === ''
+                    ? url('/')
+                    : url('/'.ltrim(str_replace('\\', '/', $slug), '/'));
+
+                return [
+                    'label' => $page->name,
+                    'url' => $url,
+                ];
+            });
     }
 }

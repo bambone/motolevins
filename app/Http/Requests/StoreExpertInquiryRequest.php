@@ -79,6 +79,9 @@ class StoreExpertInquiryRequest extends FormRequest
         if ($tenant !== null && $tenant->themeKey() === 'black_duck') {
             $needsPrivacy = true;
         }
+        if ($tenant !== null && $tenant->themeKey() === 'expert_pr') {
+            $needsPrivacy = true;
+        }
 
         return [
             'name' => ['required', 'string', 'max:255'],
@@ -134,6 +137,11 @@ class StoreExpertInquiryRequest extends FormRequest
                     'expert_service_inquiry',
                 ]),
             ],
+            'company' => ['nullable', 'string', 'max:255'],
+            'briefing_website' => ['nullable', 'string', 'max:500'],
+            'industry' => ['nullable', 'string', 'max:255'],
+            'budget_band' => ['nullable', 'string', 'max:120'],
+            'timeline_horizon' => ['nullable', 'string', 'max:160'],
             'inquiry_intent' => [
                 'nullable',
                 'string',

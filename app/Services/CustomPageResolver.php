@@ -19,14 +19,20 @@ class CustomPageResolver
      */
     public function resolveView(string $slug, ?Tenant $tenant = null): string
     {
-        // Must normalize slug and prevent path traversal
-        $slug = Str::slug($slug);
+        // Slugs may contain "/" for nested public paths (e.g. services/media-outreach). Normalize for logical view lookup.
+        $normalized = strtolower(trim(str_replace('\\', '/', $slug), '/'));
+        if ($normalized === '') {
+            return 'pages.page';
+        }
+        // Path-safe custom view id: slashes → hyphens (pages.custom.foo-bar-baz).
+        $viewSlug = preg_replace('#/+#', '-', $normalized);
+        $viewSlug = (string) Str::slug($viewSlug);
 
-        if (empty($slug)) {
+        if ($viewSlug === '') {
             return 'pages.page';
         }
 
-        $customLogicalName = "pages.custom.{$slug}";
+        $customLogicalName = "pages.custom.{$viewSlug}";
 
         if ($this->viewResolver->exists($customLogicalName, $tenant)) {
             return $customLogicalName;

@@ -4,21 +4,25 @@ declare(strict_types=1);
 
 namespace App\Filament\Tenant\Resources;
 
-use App\Filament\Tenant\Resources\ReviewImportSourceResource\Pages;
 use App\Filament\Tenant\Resources\ReviewImportSourceResource\RelationManagers\CandidatesRelationManager;
+use App\Filament\Tenant\Resources\Resource as TenantResource;
 use App\Models\ReviewImportSource;
 use App\Reviews\Import\ReviewImportSourceStatus;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
-use Filament\Resources\Resource;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Model;
 use UnitEnum;
 
-class ReviewImportSourceResource extends Resource
+/**
+ * Источники импорта: UI под {@see ReviewResource} (вкладка «Источники»).
+ * Собственных страниц нет — URL см. {@see self::getUrl()} и вложенные маршруты {@see ReviewResource}.
+ */
+class ReviewImportSourceResource extends TenantResource
 {
     protected static ?string $model = ReviewImportSource::class;
 
@@ -74,12 +78,17 @@ class ReviewImportSourceResource extends Resource
                 TextColumn::make('provider')->badge(),
                 TextColumn::make('status')->badge(),
                 TextColumn::make('last_synced_at')->dateTime('d.m.Y H:i')->placeholder('—'),
-                TextColumn::make('candidates_count')->counts('candidates')->label('Кандидаты'),
+                TextColumn::make('cnt_new')->label('Новые')->sortable(),
+                TextColumn::make('cnt_selected')->label('Выбранные')->sortable(),
+                TextColumn::make('cnt_imported')->label('Импортированы')->sortable(),
+                TextColumn::make('cnt_ignored')->label('Отклонённые')->sortable(),
+                TextColumn::make('candidates_count')->counts('candidates')->label('Всего')->sortable()->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('last_error_code')->placeholder('—')->toggleable(isToggledHiddenByDefault: true),
             ])
             ->defaultSort('id', 'desc')
             ->recordActions([
-                EditAction::make(),
+                EditAction::make()
+                    ->url(fn (ReviewImportSource $record): string => static::getUrl('edit', ['record' => $record])),
             ])
             ->emptyStateHeading('Источников пока нет')
             ->emptyStateDescription('Добавьте ссылку на VK или ручной источник; для 2ГИС и Яндекса доступен только ручной импорт текстов.')
@@ -93,13 +102,35 @@ class ReviewImportSourceResource extends Resource
         ];
     }
 
+    public static function getIndexUrl(array $parameters = [], bool $isAbsolute = true, ?string $panel = null, ?Model $tenant = null, bool $shouldGuessMissingParameters = false): string
+    {
+        return ReviewResource::getUrl('import_sources', $parameters, $isAbsolute, $panel, $tenant, $shouldGuessMissingParameters);
+    }
+
+    public static function getUrl(?string $name = null, array $parameters = [], bool $isAbsolute = true, ?string $panel = null, ?Model $tenant = null, bool $shouldGuessMissingParameters = false, ?string $configuration = null): string
+    {
+        if (filled($configuration)) {
+            return parent::getUrl($name, $parameters, $isAbsolute, $panel, $tenant, $shouldGuessMissingParameters, $configuration);
+        }
+
+        $name ??= 'index';
+
+        return match ($name) {
+            'index' => ReviewResource::getUrl('import_sources', $parameters, $isAbsolute, $panel, $tenant, $shouldGuessMissingParameters),
+            'create' => ReviewResource::getUrl('import_sources_create', $parameters, $isAbsolute, $panel, $tenant, $shouldGuessMissingParameters),
+            'edit' => ReviewResource::getUrl('import_sources_edit', $parameters, $isAbsolute, $panel, $tenant, $shouldGuessMissingParameters),
+            default => parent::getUrl($name, $parameters, $isAbsolute, $panel, $tenant, $shouldGuessMissingParameters),
+        };
+    }
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        return false;
+    }
+
     public static function getPages(): array
     {
-        return [
-            'index' => Pages\ListReviewImportSources::route('/'),
-            'create' => Pages\CreateReviewImportSource::route('/create'),
-            'edit' => Pages\EditReviewImportSource::route('/{record}/edit'),
-        ];
+        return [];
     }
 
     /**

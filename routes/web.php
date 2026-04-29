@@ -123,6 +123,7 @@ Route::middleware([EnsureTenantContext::class, RememberTenantCatalogLocation::cl
     Route::get('/contacts', [PageController::class, 'show'])
         ->defaults('slug', 'contacts')
         ->name('contacts');
+    Route::permanentRedirect('/contact', '/contacts');
     Route::permanentRedirect('/kontakty', '/contacts');
     Route::get('/usloviya-arenda', [PageController::class, 'show'])
         ->defaults('slug', 'usloviya-arenda')
@@ -169,6 +170,7 @@ Route::middleware([EnsureTenantContext::class, RememberTenantCatalogLocation::cl
     Route::post('/api/bookings', [BookingController::class, 'store'])->name('api.bookings.store');
     Route::post('/api/leads', [LeadController::class, 'store'])->name('api.leads.store');
     Route::post('/api/tenant/expert-inquiry', [ExpertInquiryController::class, 'store'])
+        ->middleware('throttle:30,1')
         ->name('api.tenant.expert-inquiry.store');
     Route::post('/api/tenant/contact-inquiry', [ContactInquiryController::class, 'store'])
         ->middleware('throttle:30,1')
@@ -186,5 +188,8 @@ Route::middleware([EnsureTenantContext::class, RememberTenantCatalogLocation::cl
     Route::post('/api/tenant/scheduling/submit', [TenantPublicSchedulingController::class, 'submit'])
         ->middleware('throttle:30,1')
         ->name('api.tenant.scheduling.submit');
+    Route::get('/services/{nested_slug}', [PageController::class, 'showServiceNested'])
+        ->where('nested_slug', '[a-z0-9\-]+')
+        ->name('page.show.services');
     Route::get('/{slug}', [PageController::class, 'show'])->where('slug', '[a-z0-9\-]+')->name('page.show');
 });

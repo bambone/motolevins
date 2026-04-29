@@ -30,7 +30,7 @@
         use App\Themes\ThemeRegistry;
         $tenantFavicon = trim($branding['favicon'] ?? '');
         // expert-brand-favicon.svg — ассет автошколы; advocate без своего favicon. black_duck: не подмешиваем чужой бренд — только загруженный пакет / пусто.
-        if ($tenantFavicon === '' && in_array(tenant()?->themeKey(), ['expert_auto', 'advocate_editorial'], true)) {
+                    if ($tenantFavicon === '' && in_array(tenant()?->themeKey(), ['expert_auto', 'expert_pr', 'advocate_editorial'], true)) {
             $tenantFavicon = app(ThemeRegistry::class)->assetUrl('expert_auto', 'expert-brand-favicon.svg', tenant());
         }
         $tenantFaviconMime = 'image/png';
@@ -118,7 +118,7 @@
         @vite(['resources/css/app.css', 'resources/js/app.js'])
         @php
             $__tk = tenant()?->themeKey();
-            $__tenantExpertFamily = in_array($__tk, ['expert_auto', 'advocate_editorial', 'black_duck'], true);
+            $__tenantExpertFamily = in_array($__tk, ['expert_auto', 'advocate_editorial', 'black_duck', 'expert_pr'], true);
         @endphp
         @if ($__tenantExpertFamily)
             @php
@@ -130,6 +130,10 @@
                         $__hasExpertCss = isset($__manifest['resources/css/tenant-expert-auto.css']);
                         $__hasInquiryJs = isset($__manifest['resources/js/tenant-expert-inquiry-form.js']);
                         $__okExpertAuto = ($__tk === 'expert_auto' && $__hasExpertCss && $__hasInquiryJs);
+                        $__okExpertPr = ($__tk === 'expert_pr')
+                            && $__hasExpertCss
+                            && isset($__manifest['resources/css/tenant-expert-pr.css'])
+                            && $__hasInquiryJs;
                         $__okAdvocate = ($__tk === 'advocate_editorial')
                             && $__hasExpertCss
                             && isset($__manifest['resources/css/tenant-advocate-editorial.css'])
@@ -138,7 +142,7 @@
                             && $__hasExpertCss
                             && isset($__manifest['resources/css/tenant-black-duck.css'])
                             && $__hasInquiryJs;
-                        $__expertFamilyViteOk = $__okExpertAuto || $__okAdvocate || $__okBlackDuck;
+                        $__expertFamilyViteOk = $__okExpertAuto || $__okExpertPr || $__okAdvocate || $__okBlackDuck;
                     } else {
                         $__expertFamilyViteOk = false;
                     }
@@ -147,6 +151,7 @@
             @if ($__expertFamilyViteOk)
                 @vite(array_values(array_filter([
                     'resources/css/tenant-expert-auto.css',
+                    $__tk === 'expert_pr' ? 'resources/css/tenant-expert-pr.css' : null,
                     $__tk === 'advocate_editorial' ? 'resources/css/tenant-advocate-editorial.css' : null,
                     $__tk === 'black_duck' ? 'resources/css/tenant-black-duck.css' : null,
                     'resources/js/tenant-expert-inquiry-form.js',
@@ -685,7 +690,7 @@
     $__tenantExpertAuto = $__tkBody === 'expert_auto';
     $__tenantAdvocateEditorial = $__tkBody === 'advocate_editorial';
     $__tenantBlackDuck = $__tkBody === 'black_duck';
-    $__tenantExpertFamilyBody = $__tenantExpertAuto || $__tenantAdvocateEditorial || $__tenantBlackDuck;
+    $__tenantExpertFamilyBody = $__tenantExpertAuto || $__tenantAdvocateEditorial || $__tenantBlackDuck || (($__tkBody ?? '') === 'expert_pr');
 @endphp
 <body @class([
     'antialiased premium-bg overflow-x-clip pb-32 sm:pb-0',
@@ -693,6 +698,7 @@
     'text-stone-800' => $__tenantAdvocateEditorial,
     {{-- expert_auto + advocate + black_duck: expert-auto-theme для общих partials; black_duck + tenant-black-duck.css. --}}
     'expert-auto-theme' => $__tenantExpertFamilyBody,
+    'expert-pr-theme' => $__tkBody === 'expert_pr',
     'black-duck-theme' => $__tenantBlackDuck,
     'advocate-editorial-theme' => $__tenantAdvocateEditorial,
     'selection:bg-moto-amber selection:text-[#0c0c0c]' => true,

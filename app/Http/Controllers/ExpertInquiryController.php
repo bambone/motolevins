@@ -28,6 +28,7 @@ final class ExpertInquiryController extends Controller
         abort_if($tenant === null, 404);
 
         $honeypot = trim((string) $request->input('website', ''));
+        $enUi = ($tenant->themeKey() ?? '') === 'expert_pr';
         if ($honeypot !== '') {
             Log::warning('expert_inquiry_honeypot_triggered', [
                 'tenant_id' => $tenant->id,
@@ -37,7 +38,9 @@ final class ExpertInquiryController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Спасибо! Заявка отправлена. Мы свяжемся с вами.',
+                'message' => $enUi
+                    ? 'Thank you. If this matches your inquiry, we will follow up shortly.'
+                    : 'Спасибо! Заявка отправлена. Мы свяжемся с вами.',
             ]);
         }
 
@@ -49,7 +52,9 @@ final class ExpertInquiryController extends Controller
             ]);
 
             return response()->json([
-                'message' => 'Слишком много отправок. Подождите минуту и попробуйте снова.',
+                'message' => $enUi
+                    ? 'Too many submissions from this browser. Wait a minute and try again.'
+                    : 'Слишком много отправок. Подождите минуту и попробуйте снова.',
             ], 429);
         }
         RateLimiter::hit($rateKey, 60);
@@ -65,22 +70,55 @@ final class ExpertInquiryController extends Controller
         $goal = $validated['goal_text'];
         $comment = trim((string) ($validated['comment'] ?? ''));
         $message = $comment !== '' ? $goal."\n\n".$comment : $goal;
+        if ($tenant->themeKey() === 'expert_pr') {
+            $lines = [];
+            foreach ([
+                'company' => 'Company',
+                'briefing_website' => 'Website',
+                'industry' => 'Industry',
+                'budget_band' => 'Budget',
+                'timeline_horizon' => 'Timeline',
+            ] as $key => $label) {
+                $v = isset($validated[$key]) ? trim((string) $validated[$key]) : '';
+                if ($v !== '') {
+                    $lines[] = $label.': '.$v;
+                }
+            }
+            if ($lines !== []) {
+                $message .= "\n\n".implode("\n", $lines);
+            }
+        }
 
         $programSlug = isset($validated['program_slug']) ? trim((string) $validated['program_slug']) : '';
         $programSlug = $programSlug !== '' ? $programSlug : null;
 
         $expertDomain = trim((string) ($validated['expert_domain'] ?? ''));
         if ($expertDomain === '') {
-            $expertDomain = $tenant->themeKey() === 'black_duck' ? 'vehicle_detailing' : 'driving_instruction';
+            $expertDomain = match ($tenant->themeKey()) {
+                'black_duck' => 'vehicle_detailing',
+                'expert_pr' => 'pr_consulting',
+                default => 'driving_instruction',
+            };
         }
 
         $intentTags = $intentResolver->resolve($programSlug, $goal);
 
+        /** @var array<string, mixed> */
         $payloadJson = [
             'expert_domain' => $expertDomain,
             'intent_tags' => $intentTags,
             'goal_text' => $goal,
         ];
+        if ($tenant->themeKey() === 'expert_pr') {
+            foreach ([
+                'company', 'briefing_website', 'industry', 'budget_band', 'timeline_horizon',
+            ] as $pk) {
+                $v = $validated[$pk] ?? null;
+                if (is_string($v) && trim($v) !== '') {
+                    $payloadJson[$pk] = trim($v);
+                }
+            }
+        }
         if ($tenant->themeKey() === 'black_duck') {
             foreach ([
                 'service_slug', 'service_group', 'vehicle_class', 'vehicle_make', 'vehicle_model', 'customer_goal',
@@ -183,7 +221,9 @@ final class ExpertInquiryController extends Controller
 
         $leadWord = app(TenantTerminologyService::class)->label($tenant, DomainTermKeys::LEAD);
 
-        $responseMessage = 'Спасибо! Заявка отправлена. Мы свяжемся с вами.';
+        $responseMessage = $enUi
+            ? 'Thank you — we received your brief and will reply shortly.'
+            : 'Спасибо! Заявка отправлена. Мы свяжемся с вами.';
         if ($isInboundEnrollment) {
             $responseMessage = TenantEnrollmentCtaConfig::forCurrent()?->modalSuccessMessage() ?? $responseMessage;
         }

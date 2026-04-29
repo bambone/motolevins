@@ -12,7 +12,7 @@ final class FaqBlueprint extends AbstractPageSectionBlueprint
 {
     public function supportsTheme(string $themeKey): bool
     {
-        return in_array($themeKey, ['default', 'moto', 'expert_auto', 'advocate_editorial', 'black_duck'], true);
+        return in_array($themeKey, ['default', 'moto', 'expert_auto', 'expert_pr', 'advocate_editorial', 'black_duck'], true);
     }
 
     public function id(): string

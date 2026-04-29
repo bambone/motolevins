@@ -41,6 +41,9 @@ final class SectionViewResolver
         if ($themeKey !== '') {
             $candidates[] = "tenant.themes.{$themeKey}.{$logical}";
         }
+        if ($themeKey === 'expert_pr') {
+            $candidates[] = "tenant.themes.expert_auto.{$logical}";
+        }
         if ($themeKey === 'black_duck') {
             $candidates[] = "tenant.themes.expert_auto.{$logical}";
         }

@@ -6,7 +6,9 @@ use App\Filament\Forms\Components\TenantSpatieMediaLibraryFileUpload;
 use App\Filament\Support\AdminEmptyState;
 use App\Filament\Support\HintIconTooltip;
 use App\Filament\Tenant\Resources\ReviewResource\Pages;
+use App\Models\Page;
 use App\Models\Review;
+use App\Models\TenantServiceProgram;
 use Filament\Actions\Action;
 use Filament\Actions\CreateAction;
 use Filament\Actions\EditAction;
@@ -32,6 +34,8 @@ use UnitEnum;
 
 class ReviewResource extends Resource
 {
+    private const REVIEW_CATEGORY_KEY_MAX_LENGTH = 64;
+
     protected static ?string $model = Review::class;
 
     protected static ?string $navigationLabel = 'Отзывы';
@@ -98,18 +102,16 @@ class ReviewResource extends Resource
                                         'Одна строка над текстом: тема или эмоция («Контраварийка и зима»).',
                                         'На сайте может идти бейджем или подзаголовком.',
                                     )),
-                                TextInput::make('category_key')
-                                    ->label('Ключ темы (программа)')
-                                    ->maxLength(64)
-                                    ->placeholder('counter-emergency')
+                                Select::make('category_key')
+                                    ->label('Ключ темы')
+                                    ->placeholder('Без привязки к теме')
+                                    ->options(fn (): array => static::reviewCategoryKeySelectOptions())
+                                    ->searchable()
+                                    ->nullable()
+                                    ->native(false)
+                                    ->rules(['nullable', 'string', 'max:'.self::REVIEW_CATEGORY_KEY_MAX_LENGTH])
                                     ->hintIcon('heroicon-o-information-circle')
-                                    ->hintIconTooltip(fn () => HintIconTooltip::lines(
-                                        'Связь с программой или темой для фильтра/бейджа на сайте.',
-                                        'Обычно slug из «Каталог → Программы» (например single-session, city-driving, counter-emergency).',
-                                        'Короткие ключи для бейджа: parking, city, winter-driving, confidence, motorsport.',
-                                        'Тема black_duck: для отзыва на посадочной услуге укажите slug страницы (ppf, predprodazhnaya, …); для блока на главной часто используют service.',
-                                        'Пусто — отзыв без привязки к теме.',
-                                    )),
+                                    ->hintIconTooltip(fn () => HintIconTooltip::lines(...static::reviewCategoryKeyTooltipLines())),
                                 Textarea::make('body')
                                     ->label('Текст отзыва')
                                     ->rows(8)
@@ -124,6 +126,7 @@ class ReviewResource extends Resource
                                     ->label('Тип контента')
                                     ->options(['text' => 'Только текст', 'video' => 'С видео'])
                                     ->default('text')
+                                    ->live()
                                     ->hintIcon('heroicon-o-information-circle')
                                     ->hintIconTooltip(fn () => HintIconTooltip::lines(
                                         '«С видео» — укажите ниже ссылку.',
@@ -135,6 +138,7 @@ class ReviewResource extends Resource
                                     ->required(fn (Get $get): bool => ($get('media_type') ?? 'text') === 'video')
                                     ->maxLength(2048)
                                     ->visible(fn (Get $get): bool => ($get('media_type') ?? 'text') === 'video')
+                                    ->columnSpanFull()
                                     ->hintIcon('heroicon-o-information-circle')
                                     ->hintIconTooltip(fn () => HintIconTooltip::lines(
                                         'Обязательно, если выбран тип «С видео».',
@@ -377,11 +381,127 @@ class ReviewResource extends Resource
         );
     }
 
+    /**
+     * Slug темы: записи {@see TenantServiceProgram} (в UI каталога — «Программы» или «Услуги» по теме),
+     * для black_duck ещё страницы, плюс ключи из отзывов тенанта.
+     *
+     * @return array<string, string> value => label
+     */
+    private static function reviewCategoryKeySelectOptions(): array
+    {
+        $tenant = currentTenant();
+        if ($tenant === null) {
+            return [];
+        }
+
+        $tenantId = (int) $tenant->id;
+        $theme = $tenant->themeKey();
+        $options = [];
+
+        $programs = TenantServiceProgram::query()
+            ->where('tenant_id', $tenantId)
+            ->where('is_visible', true)
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get(['slug', 'title']);
+
+        foreach ($programs as $program) {
+            $slug = trim((string) $program->slug);
+            if (! self::canUseReviewCategoryKey($slug)) {
+                continue;
+            }
+            $options[$slug] = "{$program->title} · {$slug}";
+        }
+
+        if ($theme === 'black_duck') {
+            $pages = Page::query()
+                ->where('tenant_id', $tenantId)
+                ->where('status', 'published')
+                ->orderBy('name')
+                ->get(['slug', 'name']);
+
+            foreach ($pages as $page) {
+                $slug = trim((string) $page->slug);
+                if (! self::canUseReviewCategoryKey($slug) || array_key_exists($slug, $options)) {
+                    continue;
+                }
+                $options[$slug] = "{$page->name} · {$slug} (страница)";
+            }
+        }
+
+        $fromReviews = Review::query()
+            ->where('tenant_id', $tenantId)
+            ->whereNotNull('category_key')
+            ->where('category_key', '!=', '')
+            ->distinct()
+            ->orderBy('category_key')
+            ->pluck('category_key');
+
+        foreach ($fromReviews as $key) {
+            $k = trim((string) $key);
+            if (! self::canUseReviewCategoryKey($k) || array_key_exists($k, $options)) {
+                continue;
+            }
+            $options[$k] = "{$k} (из отзывов)";
+        }
+
+        return $options;
+    }
+
+    private static function canUseReviewCategoryKey(string $key): bool
+    {
+        return $key !== '' && mb_strlen($key) <= self::REVIEW_CATEGORY_KEY_MAX_LENGTH;
+    }
+
+    /**
+     * Тексты подсказки: для black_duck в меню «Услуги», для expert_auto — «Программы» (как в {@see TenantServiceProgramResource}).
+     *
+     * @return list<string>
+     */
+    private static function reviewCategoryKeyTooltipLines(): array
+    {
+        $theme = (string) (currentTenant()?->themeKey() ?? '');
+        $lines = [
+            'Связь с темой или карточкой каталога для фильтра и бейджа в блоке отзывов.',
+        ];
+
+        if (in_array($theme, ['expert_auto', 'expert_pr', 'black_duck'], true)) {
+            $catalogNav = self::tenantCatalogUsesServicesLabel() ? 'Услуги' : 'Программы';
+            $lines[] = "В списке — видимые позиции из «Каталог → {$catalogNav}» (поле slug), затем ключи из других отзывов этого клиента.";
+        } else {
+            $lines[] = 'В списке — ключи из отзывов этого клиента; если в базе есть карточки каталога (программы/услуги), их slug тоже появятся здесь.';
+        }
+
+        if ($theme === 'black_duck') {
+            $lines[] = 'Дополнительно — slug опубликованных страниц, если он ещё не занят карточкой услуги.';
+        }
+
+        $lines[] = 'Пусто — отзыв без темы. Новый slug обычно задаётся при создании карточки в каталоге.';
+
+        return $lines;
+    }
+
+    /** Согласовано с подписью раздела в {@see TenantServiceProgramResource} (Услуги vs Программы). */
+    private static function tenantCatalogUsesServicesLabel(): bool
+    {
+        $t = currentTenant();
+
+        return $t !== null && $t->themeKey() === 'black_duck';
+    }
+
+    /**
+     * Вложенные маршруты импорта зарегистрированы на этом ресурсе; сами страницы задают {@see ReviewImportSource} /
+     * {@see ReviewImportCandidate} и делегируют формы/таблицы в {@see ReviewImportSourceResource}.
+     */
     public static function getPages(): array
     {
         return [
             'index' => Pages\ListReviews::route('/'),
             'create' => Pages\CreateReview::route('/create'),
+            'import_sources' => Pages\ListReviewImportSources::route('/sources'),
+            'import_sources_create' => Pages\CreateReviewImportSource::route('/sources/create'),
+            'import_sources_edit' => Pages\EditReviewImportSource::route('/sources/{record}/edit'),
+            'import_candidates' => Pages\ListReviewImportCandidates::route('/candidates'),
             'edit' => Pages\EditReview::route('/{record}/edit'),
         ];
     }

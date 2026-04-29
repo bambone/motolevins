@@ -17,6 +17,7 @@ export default defineConfig({
                 'resources/css/booking-calendar.css',
                 'resources/js/booking-calendar.js',
                 'resources/css/tenant-expert-auto.css',
+                'resources/css/tenant-expert-pr.css',
                 'resources/css/tenant-advocate-editorial.css',
                 'resources/css/tenant-black-duck.css',
                 'resources/js/tenant-expert-inquiry-form.js',

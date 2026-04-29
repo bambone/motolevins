@@ -4,6 +4,7 @@
         return;
     }
     $formKey = trim((string) ($data['form_key'] ?? 'expert_lead'));
+    $enPr = $tenant->themeKey() === 'expert_pr';
     $config = \App\Models\FormConfig::findEnabledForTenant((int) $tenant->id, $formKey);
     $heading = trim((string) ($data['heading'] ?? ''));
     $sub = trim((string) ($data['subheading'] ?? ''));
@@ -18,13 +19,13 @@
         }
     }
     $sectionId = trim((string) ($data['section_id'] ?? 'expert-inquiry')) ?: 'expert-inquiry';
-    $stickyLabel = trim((string) ($data['sticky_cta_label'] ?? '')) ?: 'Записаться';
+    $stickyLabel = trim((string) ($data['sticky_cta_label'] ?? '')) ?: ($enPr ? 'Brief' : 'Записаться');
     $programs = \App\Models\TenantServiceProgram::query()
         ->where('is_visible', true)
         ->orderBy('sort_order')
         ->orderBy('id')
         ->get(['slug', 'title']);
-    $successMessage = $config?->success_message ?? 'Спасибо! Заявка отправлена.';
+    $successMessage = $config?->success_message ?? ($enPr ? 'Thank you. We will get back to you shortly.' : 'Спасибо! Заявка отправлена.');
     $endpoint = route('api.tenant.expert-inquiry.store');
     $contactChannelOptions = app(\App\ContactChannels\TenantContactChannelsStore::class)->publicFormPreferredOptions((int) $tenant->id);
     $contactChannelCount = count($contactChannelOptions);
@@ -75,7 +76,7 @@
               data-expert-inquiry-default-success="{{ e($successMessage) }}">
             @csrf
             <script type="application/json" id="expert-inquiry-channel-meta" data-rb-expert-channel-meta>@json($contactChannelOptions)</script>
-            <input type="hidden" name="expert_domain" value="{{ $tenant->themeKey() === 'black_duck' ? 'vehicle_detailing' : 'driving_instruction' }}">
+            <input type="hidden" name="expert_domain" value="{{ $tenant->themeKey() === 'black_duck' ? 'vehicle_detailing' : ($enPr ? 'pr_consulting' : 'driving_instruction') }}">
             <input type="hidden" name="page_url" value="{{ url()->current() }}">
             @if ($tenant->themeKey() === 'black_duck')
                 @php
@@ -99,30 +100,30 @@
 
             <div class="grid min-w-0 gap-4 sm:gap-5 md:grid-cols-2">
                 <div data-rb-public-field="name" class="expert-public-field-wrap min-w-0">
-                    <label for="expert-name" class="mb-2 block text-sm font-semibold tracking-wide text-white/90">Имя <span class="text-moto-amber">*</span></label>
+                    <label for="expert-name" class="mb-2 block text-sm font-semibold tracking-wide text-white/90">@if($enPr) Name @else Имя @endif <span class="text-moto-amber">*</span></label>
                     <input id="expert-name" name="name" type="text" required autocomplete="name" maxlength="255"
                            class="expert-form-input w-full min-h-[3.25rem] rounded-xl border border-white/[0.08] bg-white/[0.02] px-4 py-3 text-[15px] text-white outline-none transition-colors focus:border-moto-amber/50 focus:bg-white/[0.04]">
                 </div>
                 <div data-rb-public-field="phone" class="expert-public-field-wrap min-w-0">
-                    <label for="expert-phone" class="mb-2 block text-sm font-semibold tracking-wide text-white/90">Телефон <span class="text-moto-amber expert-phone-required-star">*</span></label>
+                    <label for="expert-phone" class="mb-2 block text-sm font-semibold tracking-wide text-white/90">@if($enPr) Phone @else Телефон @endif <span class="text-moto-amber expert-phone-required-star">*</span></label>
                     {{-- data-rb-intl-phone: автоподключение маски из tenant-intl-phone.js (как booking-modal: handleInput + hint) --}}
                     <input id="expert-phone" name="phone" type="tel" required autocomplete="tel" inputmode="tel"
                            data-rb-expert-phone
                            data-rb-intl-phone="1"
                            aria-describedby="expert-phone-hint"
                            maxlength="28"
-                           placeholder="+7 (999) 123-45-67"
+                           placeholder="{{ $enPr ? '+1 415 555 0100' : '+7 (999) 123-45-67' }}"
                            class="expert-form-input w-full min-h-[3.25rem] rounded-xl border border-white/[0.08] bg-white/[0.02] px-4 py-3 text-[15px] text-white outline-none transition-colors focus:border-moto-amber/50 focus:bg-white/[0.04]">
                     <p id="expert-phone-hint" data-rb-expert-phone-hint class="mt-2 text-[12px] leading-snug text-silver/80 sm:text-[13px]"></p>
                 </div>
             </div>
 
             <div data-rb-public-field="preferred_contact_channel" class="expert-public-field-wrap min-w-0">
-                <span class="mb-2 block text-sm font-semibold tracking-wide text-white/90">Как с вами связаться?</span>
+                <span class="mb-2 block text-sm font-semibold tracking-wide text-white/90">@if($enPr) Preferred contact @else Как с вами связаться? @endif</span>
                 @if ($contactChannelCount <= 1)
                     @php $onlyId = $contactChannelOptions[0]['id'] ?? 'phone'; @endphp
                     <input type="hidden" name="preferred_contact_channel" value="{{ e($onlyId) }}">
-                    <p class="text-[13px] leading-relaxed text-silver/70">Ответим по контактам, указанным в заявке (телефон обязателен).</p>
+                    <p class="text-[13px] leading-relaxed text-silver/70">@if($enPr) We will reply using the contacts in this form (phone is required). @else Ответим по контактам, указанным в заявке (телефон обязателен). @endif</p>
                 @else
                     <div class="expert-channel-grid flex flex-col gap-2.5 sm:gap-3">
                         @foreach ($contactChannelOptions as $idx => $opt)
@@ -148,10 +149,40 @@
             </div>
 
             <div data-rb-public-field="goal_text" class="expert-public-field-wrap min-w-0">
-                <label for="expert-goal" class="mb-2 block text-sm font-semibold tracking-wide text-white/90">Что хотите улучшить <span class="text-moto-amber">*</span></label>
+                <label for="expert-goal" class="mb-2 block text-sm font-semibold tracking-wide text-white/90">@if($enPr) What do you need help with? @else Что хотите улучшить @endif <span class="text-moto-amber">*</span></label>
                 <textarea id="expert-goal" name="goal_text" required rows="3" maxlength="2000"
                           class="expert-form-input w-full min-h-[6.5rem] rounded-xl border border-white/[0.08] bg-white/[0.02] px-4 py-3 text-[15px] text-white outline-none transition-colors focus:border-moto-amber/50 focus:bg-white/[0.04]"></textarea>
             </div>
+
+            @if($enPr)
+            <div class="grid min-w-0 gap-4 sm:grid-cols-2 sm:gap-5">
+                <div data-rb-public-field="company" class="expert-public-field-wrap min-w-0">
+                    <label for="expert-company" class="mb-2 block text-sm font-semibold tracking-wide text-white/90">Company / project</label>
+                    <input id="expert-company" name="company" type="text" maxlength="255" autocomplete="organization"
+                           class="expert-form-input w-full min-h-[3.25rem] rounded-xl border border-white/[0.08] bg-white/[0.02] px-4 py-3 text-[15px] text-white outline-none transition-colors focus:border-moto-amber/50 focus:bg-white/[0.04]">
+                </div>
+                <div data-rb-public-field="briefing_website" class="expert-public-field-wrap min-w-0">
+                    <label for="expert-briefing-website" class="mb-2 block text-sm font-semibold tracking-wide text-white/90">Website (optional)</label>
+                    <input id="expert-briefing-website" name="briefing_website" type="url" maxlength="500" inputmode="url" placeholder="https://"
+                           class="expert-form-input w-full min-h-[3.25rem] rounded-xl border border-white/[0.08] bg-white/[0.02] px-4 py-3 text-[15px] text-white outline-none transition-colors focus:border-moto-amber/50 focus:bg-white/[0.04]">
+                </div>
+                <div data-rb-public-field="industry" class="expert-public-field-wrap min-w-0 sm:col-span-2">
+                    <label for="expert-industry" class="mb-2 block text-sm font-semibold tracking-wide text-white/90">Industry / segment</label>
+                    <input id="expert-industry" name="industry" type="text" maxlength="255"
+                           class="expert-form-input w-full min-h-[3.25rem] rounded-xl border border-white/[0.08] bg-white/[0.02] px-4 py-3 text-[15px] text-white outline-none transition-colors focus:border-moto-amber/50 focus:bg-white/[0.04]">
+                </div>
+                <div data-rb-public-field="budget_band" class="expert-public-field-wrap min-w-0">
+                    <label for="expert-budget" class="mb-2 block text-sm font-semibold tracking-wide text-white/90">Budget range</label>
+                    <input id="expert-budget" name="budget_band" type="text" maxlength="120"
+                           class="expert-form-input w-full min-h-[3.25rem] rounded-xl border border-white/[0.08] bg-white/[0.02] px-4 py-3 text-[15px] text-white outline-none transition-colors focus:border-moto-amber/50 focus:bg-white/[0.04]">
+                </div>
+                <div data-rb-public-field="timeline_horizon" class="expert-public-field-wrap min-w-0">
+                    <label for="expert-timeline" class="mb-2 block text-sm font-semibold tracking-wide text-white/90">Timeline</label>
+                    <input id="expert-timeline" name="timeline_horizon" type="text" maxlength="160"
+                           class="expert-form-input w-full min-h-[3.25rem] rounded-xl border border-white/[0.08] bg-white/[0.02] px-4 py-3 text-[15px] text-white outline-none transition-colors focus:border-moto-amber/50 focus:bg-white/[0.04]">
+                </div>
+            </div>
+            @endif
 
             @if($programs->isNotEmpty())
                 <div data-rb-public-field="program_slug" class="expert-public-field-wrap min-w-0">
@@ -166,6 +197,7 @@
                 </div>
             @endif
 
+            @if(!$enPr)
             <div class="grid min-w-0 grid-cols-1 gap-4 sm:gap-5 md:grid-cols-2 md:grid-rows-[auto_auto_auto] md:items-start md:gap-x-5 md:gap-y-3">
                 <div data-rb-public-field="preferred_schedule" class="expert-public-field-wrap min-w-0 md:contents">
                     <span id="expert-schedule-legend" data-expert-schedule-activator tabindex="0" role="button" class="order-1 mb-2 block cursor-pointer select-none rounded-md text-sm font-semibold tracking-wide text-white/90 underline-offset-2 transition hover:text-moto-amber hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-moto-amber/45 md:order-none md:col-start-1 md:row-start-1 md:mb-0">Удобное время</span>
@@ -191,7 +223,9 @@
                 </div>
             </div>
             <input type="hidden" name="preferred_schedule" id="expert-schedule-value" data-rb-expert-schedule-value value="">
+            @endif
 
+            @if(!$enPr)
             <div class="grid min-w-0 gap-4 sm:grid-cols-2 md:grid-cols-3 sm:gap-5">
                 <div data-rb-public-field="has_own_car" class="expert-public-field-wrap min-w-0">
                     <label for="expert-car" class="mb-2 block text-[13px] font-semibold tracking-wide text-white/90">Свой авто</label>
@@ -219,9 +253,10 @@
                     </select>
                 </div>
             </div>
-            
+            @endif
+
             <div data-rb-public-field="comment" class="expert-public-field-wrap min-w-0">
-                <label for="expert-comment" class="mb-2 block text-sm font-semibold tracking-wide text-white/90">Комментарий</label>
+                <label for="expert-comment" class="mb-2 block text-sm font-semibold tracking-wide text-white/90">@if($enPr) Extra context @else Комментарий @endif</label>
                 <textarea id="expert-comment" name="comment" rows="2" maxlength="2000"
                           class="expert-form-input w-full min-h-[4.5rem] rounded-xl border border-white/[0.08] bg-white/[0.02] px-4 py-3 text-[15px] text-white outline-none transition-colors focus:border-moto-amber/50 focus:bg-white/[0.04]"></textarea>
             </div>
@@ -237,11 +272,22 @@
                         </span>
                     </label>
                 </div>
+            @elseif($enPr)
+                <div data-rb-public-field="privacy_accepted" class="expert-public-field-wrap min-w-0 rounded-xl border border-white/[0.08] bg-white/[0.02] p-4">
+                    <label class="flex cursor-pointer items-start gap-3 text-left">
+                        <input type="checkbox" name="privacy_accepted" value="1" required
+                               class="mt-0.5 h-4 w-4 shrink-0 rounded border-white/20 text-moto-amber focus:ring-2 focus:ring-moto-amber/40">
+                        <span class="text-[13px] leading-snug text-silver/85 sm:text-[14px]">
+                            I agree to the processing of my contact details as described in the
+                            <a href="{{ url('/privacy') }}" class="text-moto-amber underline-offset-2 hover:underline" target="_blank" rel="noopener">privacy policy</a>.
+                        </span>
+                    </label>
+                </div>
             @endif
 
             <div class="mt-8 text-center sm:mt-10">
                 <button type="submit" id="expert-inquiry-submit" data-rb-expert-inquiry-submit class="tenant-btn-primary inline-flex min-h-[4rem] w-full items-center justify-center rounded-xl px-12 text-[17px] font-bold shadow-2xl transition-transform hover:scale-[1.02] sm:w-auto">
-                    Отправить заявку
+                    @if($enPr) Send brief @else Отправить заявку @endif
                 </button>
             </div>
         </form>

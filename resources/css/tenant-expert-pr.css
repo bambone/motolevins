@@ -1,0 +1,36 @@
+@import './tenant-expert-auto.css';
+
+/*
+ * expert_pr — B2B PR / strategic comms (Sergei Magas and similar tenants).
+ * Layers tokens on body.expert-auto-theme.expert-pr-theme; base layout still from tenant-expert-auto.css.
+ */
+
+body.expert-auto-theme.expert-pr-theme {
+    --ex-accent: #c9a068;
+    --ex-accent-soft: rgba(201, 160, 104, 0.14);
+    --ex-hero-overlay: rgba(6, 10, 20, 0.78);
+    --ex-surface: rgba(14, 20, 32, 0.92);
+    --ex-border: rgba(255, 255, 255, 0.09);
+    --ex-ink: #eef2f7;
+    --color-moto-amber: var(--ex-accent);
+    --rb-focus-ring: #6ec8ff;
+}
+
+body.expert-auto-theme.expert-pr-theme.premium-bg {
+    background:
+        radial-gradient(ellipse 60% 45% at 100% 0%, rgba(110, 200, 255, 0.06), transparent 55%),
+        linear-gradient(168deg, #070b14 0%, #0b1220 45%, #04060c 100%);
+    min-height: 100vh;
+}
+
+body.expert-auto-theme.expert-pr-theme .tenant-btn-primary {
+    background: linear-gradient(145deg, #e8cfa3 0%, #c9a068 42%, #8f6f3f 100%);
+    color: #0a0e16;
+    box-shadow: 0 4px 18px -2px rgba(201, 160, 104, 0.22),
+        inset 0 1px 0 rgba(255, 255, 255, 0.42);
+}
+
+body.expert-auto-theme.expert-pr-theme .tenant-btn-primary:focus-visible {
+    outline: 2px solid var(--rb-focus-ring);
+    outline-offset: 2px;
+}
