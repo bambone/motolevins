@@ -101,12 +101,14 @@
                     ])
 
                     <div class="mt-6 flex flex-col gap-4 border-t border-white/[0.06] pt-6 sm:mt-8 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3">
-                        <div class="expert-review__stars flex gap-1 text-moto-amber" aria-hidden="true">
-                            @for($i = 0; $i < min(5, (int) $review->rating); $i++)
-                                <svg class="h-5 w-5 drop-shadow-[0_1px_2px_rgba(0,0,0,0.35)]" viewBox="0 0 20 20" fill="currentColor"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>
-                            @endfor
-                        </div>
-                        <span class="sr-only">Оценка {{ (int) $review->rating }} из 5</span>
+                        @if(filled($review->rating))
+                            <div class="expert-review__stars flex gap-1 text-moto-amber" aria-hidden="true">
+                                @for($i = 0; $i < min(5, (int) $review->rating); $i++)
+                                    <svg class="h-5 w-5 drop-shadow-[0_1px_2px_rgba(0,0,0,0.35)]" viewBox="0 0 20 20" fill="currentColor"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>
+                                @endfor
+                            </div>
+                            <span class="sr-only">Оценка {{ (int) $review->rating }} из 5</span>
+                        @endif
                         
                         @if($isVideo)
                             @if($useModal)
@@ -168,11 +170,15 @@
                             ])
 
                             <div class="mt-6 flex items-center justify-between border-t border-white/[0.04] pt-4">
-                                <div class="expert-review__stars flex gap-0.5 text-moto-amber/60" aria-hidden="true">
-                                    @for($i = 0; $i < min(5, (int) $review->rating); $i++)
-                                        <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>
-                                    @endfor
-                                </div>
+                                @if(filled($review->rating))
+                                    <div class="expert-review__stars flex gap-0.5 text-moto-amber/60" aria-hidden="true">
+                                        @for($i = 0; $i < min(5, (int) $review->rating); $i++)
+                                            <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>
+                                        @endfor
+                                    </div>
+                                @else
+                                    <div></div>
+                                @endif
                                 @if($isVideo)
                                     @if($useModal)
                                         <button type="button" class="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-moto-amber/80 transition hover:text-moto-amber" data-expert-video-open="{{ e($dlgId) }}">
@@ -250,11 +256,15 @@
                 ])
 
                 <div class="mt-auto flex items-center justify-between border-t border-white/[0.03] pt-4">
-                    <div class="expert-review__stars flex gap-0.5 text-moto-amber/40" aria-hidden="true">
-                        @for($i = 0; $i < min(5, (int) $review->rating); $i++)
-                            <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>
-                        @endfor
-                    </div>
+                    @if(filled($review->rating))
+                        <div class="expert-review__stars flex gap-0.5 text-moto-amber/40" aria-hidden="true">
+                            @for($i = 0; $i < min(5, (int) $review->rating); $i++)
+                                <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>
+                            @endfor
+                        </div>
+                    @else
+                        <div></div>
+                    @endif
                     @if($isVideo)
                         @if($useModal)
                             <button type="button" class="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-moto-amber/70 transition hover:text-moto-amber" data-expert-video-open="{{ e($dlgId) }}">
@@ -301,4 +311,5 @@
     @endif
 </section>
 
+@include('tenant.partials.tenant-review-expand-script')
 @include('tenant.partials.expert-video-dialog-script')

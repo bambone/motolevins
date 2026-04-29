@@ -22,7 +22,7 @@ class ReviewSeeder extends Seeder
             [
                 'name' => 'Алексей М.',
                 'city' => 'Геленджик',
-                'text' => 'Огонь! Выдали за 10 минут, шлемы новые. Закат на побережье — разрыв.',
+                'body' => 'Огонь! Выдали за 10 минут, шлемы новые. Закат на побережье — разрыв.',
                 'rating' => 5,
                 'status' => 'published',
                 'is_featured' => true,
@@ -32,7 +32,7 @@ class ReviewSeeder extends Seeder
             [
                 'name' => 'Игорь С.',
                 'city' => 'Анапа',
-                'text' => 'Никаких доплат по факту. Мот бодрый, тормоза цепкие. Следующий раз — на неделю.',
+                'body' => 'Никаких доплат по факту. Мот бодрый, тормоза цепкие. Следующий раз — на неделю.',
                 'rating' => 5,
                 'status' => 'published',
                 'is_featured' => true,
@@ -42,7 +42,7 @@ class ReviewSeeder extends Seeder
             [
                 'name' => 'Анна В.',
                 'city' => 'Новороссийск',
-                'text' => 'Пригнали к отелю, сдали там же. Мотик ухоженный. Абрау-Дюрсо на закате — нечто.',
+                'body' => 'Пригнали к отелю, сдали там же. Мотик ухоженный. Абрау-Дюрсо на закате — нечто.',
                 'rating' => 5,
                 'status' => 'published',
                 'is_featured' => true,
@@ -56,7 +56,7 @@ class ReviewSeeder extends Seeder
                 [
                     'tenant_id' => $tenant->id,
                     'name' => $item['name'],
-                    'text' => $item['text'],
+                    'body' => $item['body'],
                 ],
                 array_merge($item, ['tenant_id' => $tenant->id])
             );

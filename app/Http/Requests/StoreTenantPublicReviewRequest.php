@@ -9,6 +9,18 @@ use Illuminate\Foundation\Http\FormRequest;
 
 final class StoreTenantPublicReviewRequest extends FormRequest
 {
+    protected function prepareForValidation(): void
+    {
+        if (! $this->has('rating')) {
+            return;
+        }
+
+        $raw = $this->input('rating');
+        if ($raw === '' || $raw === null || (is_string($raw) && trim($raw) === '')) {
+            $this->merge(['rating' => null]);
+        }
+    }
+
     public function authorize(): bool
     {
         $tenant = tenant();
@@ -22,18 +34,12 @@ final class StoreTenantPublicReviewRequest extends FormRequest
      */
     public function rules(): array
     {
-        $tenant = tenant();
-        $cfg = $tenant !== null ? TenantReviewSubmitConfig::forTenant((int) $tenant->id) : null;
-        $ratingRules = $cfg?->showRatingField
-            ? ['required', 'integer', 'min:1', 'max:5']
-            : ['nullable', 'integer', 'min:1', 'max:5'];
-
         return [
             'name' => ['required', 'string', 'min:2', 'max:120'],
             'body' => ['required', 'string', 'min:20', 'max:8000'],
             'city' => ['nullable', 'string', 'max:120'],
             'contact_email' => ['nullable', 'string', 'email', 'max:255'],
-            'rating' => $ratingRules,
+            'rating' => ['nullable', 'integer', 'min:1', 'max:5'],
             'consent' => ['required', 'accepted'],
             'page_url' => ['nullable', 'string', 'max:2048'],
             'website' => ['nullable', 'string', 'max:255'],
@@ -53,7 +59,6 @@ final class StoreTenantPublicReviewRequest extends FormRequest
             'body.min' => 'Отзыв слишком короткий — нужно не менее :min символов.',
             'body.max' => 'Отзыв слишком длинный.',
             'contact_email.email' => 'Укажите корректный email.',
-            'rating.required' => 'Выберите оценку.',
             'consent.accepted' => 'Нужно согласие на обработку данных.',
         ];
     }

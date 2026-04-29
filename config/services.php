@@ -62,4 +62,11 @@ return [
         'chat_id' => env('TELEGRAM_CHAT_ID'),
     ],
 
+    /*
+    | VK API (импорт комментариев как кандидатов отзывов). Токен с правами группы при необходимости.
+    */
+    'vk' => [
+        'access_token' => env('VK_SERVICE_ACCESS_TOKEN'),
+    ],
+
 ];

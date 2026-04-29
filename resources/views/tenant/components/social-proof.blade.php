@@ -22,11 +22,13 @@
                 @foreach($reviewList as $index => $review)
                     <div class="flex flex-col justify-between rounded-2xl border border-white/5 bg-obsidian/40 p-5 shadow-inner transition-colors hover:border-white/10 sm:p-6 md:p-8 {{ $index === 1 ? 'hidden md:flex' : '' }}">
                         <div>
-                            <div class="flex items-center gap-1 mb-6 text-moto-amber opacity-90">
-                                @for($i = 0; $i < min(5, (int)($review->rating ?? 5)); $i++)
-                                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z"/></svg>
-                                @endfor
-                            </div>
+                            @if(filled($review->rating))
+                                <div class="flex items-center gap-1 mb-6 text-moto-amber opacity-90">
+                                    @for($i = 0; $i < min(5, (int) $review->rating); $i++)
+                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z"/></svg>
+                                    @endfor
+                                </div>
+                            @endif
                             <div class="mb-8">
                                 @include('tenant.components.review-quote-and-expand', [
                                     'review' => $review,
@@ -139,6 +141,7 @@
         </div>
     </div>
     @if($useReviews)
+        @include('tenant.partials.tenant-review-expand-script')
         @include('tenant.partials.expert-video-dialog-script')
     @endif
 </section>

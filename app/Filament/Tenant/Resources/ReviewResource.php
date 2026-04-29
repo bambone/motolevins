@@ -110,23 +110,14 @@ class ReviewResource extends Resource
                                         'Тема black_duck: для отзыва на посадочной услуге укажите slug страницы (ppf, predprodazhnaya, …); для блока на главной часто используют service.',
                                         'Пусто — отзыв без привязки к теме.',
                                     )),
-                                Textarea::make('text_short')
-                                    ->label('Краткий текст для карточки на сайте')
-                                    ->rows(2)
-                                    ->helperText('Показывается в карточке и сетке отзывов. Если поле пустое, при сохранении задаётся выдержкой из полного текста (до '.Review::PUBLIC_CARD_EXCERPT_MAX_CHARS.' символов с «…» при необходимости).')
+                                Textarea::make('body')
+                                    ->label('Текст отзыва')
+                                    ->rows(8)
+                                    ->required()
+                                    ->helperText('Краткая выдержка в карточке на сайте строится автоматически; полный текст в HTML — для SEO и кнопки «Читать полностью».')
                                     ->hintIcon('heroicon-o-information-circle')
                                     ->hintIconTooltip(fn () => HintIconTooltip::lines(
-                                        'Можете задать вручную короткий тезис; иначе подставится выдержка.',
-                                    ))
-                                    ->columnSpanFull(),
-                                Textarea::make('text_long')
-                                    ->label('Полный текст отзыва')
-                                    ->rows(6)
-                                    ->helperText('Публичная полная формулировка: её открывает кнопка «Читать полностью», если текст не помещается в карточку. Для короткого отзыва достаточно только этого поля.')
-                                    ->hintIcon('heroicon-o-information-circle')
-                                    ->hintIconTooltip(fn () => HintIconTooltip::lines(
-                                        'HTML не обязателен — достаточно обычного текста; переносы строк сохраняются.',
-                                        'Без этого поля краткий текст берёт из старого канала `text`.',
+                                        'Обычный текст, переносы строк сохраняются; HTML из поля на сайт не передаётся как разметка.',
                                     ))
                                     ->columnSpanFull(),
                                 Select::make('media_type')
@@ -200,16 +191,22 @@ class ReviewResource extends Resource
                                                 'Включите для 1–3 главных отзывов: крупный блок и бейдж на лендинге.',
                                                 'Остальные — без этой отметки.',
                                             )),
-                                        TextInput::make('rating')
+                                        Select::make('rating')
                                             ->label('Оценка')
-                                            ->numeric()
-                                            ->minValue(1)
-                                            ->maxValue(5)
-                                            ->default(5)
+                                            ->options([
+                                                '' => 'Не указана',
+                                                '1' => '1',
+                                                '2' => '2',
+                                                '3' => '3',
+                                                '4' => '4',
+                                                '5' => '5',
+                                            ])
+                                            ->default('')
+                                            ->native(true)
                                             ->hintIcon('heroicon-o-information-circle')
                                             ->hintIconTooltip(fn () => HintIconTooltip::lines(
-                                                'Число от 1 до 5.',
-                                                'На сайте может отображаться звёздами, если блок это поддерживает.',
+                                                'Для импортов без звёзд оставьте «Не указана».',
+                                                'На сайте звёзды не показываются, если оценка не задана.',
                                             )),
                                         DatePicker::make('date')
                                             ->label('Дата отзыва')
@@ -257,18 +254,28 @@ class ReviewResource extends Resource
                             ]),
                     ]),
 
-                Section::make('Совместимость (legacy)')
-                    ->description('Единое поле `text` из старых проектов. Обычно не заполняют: при сохранении подставится из полного или краткого текста. Редактируйте «Полный текст» выше.')
+                Section::make('Импорт (только чтение)')
+                    ->description('Заполняется при переносе из кандидатов внешнего импорта.')
                     ->collapsed()
+                    ->visible(fn (?Review $record): bool => $record !== null
+                        && (filled($record->source_provider) || $record->review_import_source_id !== null || $record->imported_at !== null))
                     ->schema([
-                        Textarea::make('text')
-                            ->label('Объединённый текст (legacy)')
-                            ->rows(2)
-                            ->hintIcon('heroicon-o-information-circle')
-                            ->hintIconTooltip(fn () => HintIconTooltip::lines(
-                                'Для миграции и редких случаев вручную.',
-                            )),
-                    ]),
+                        TextInput::make('source_provider')
+                            ->label('Провайдер')
+                            ->disabled()
+                            ->dehydrated(false),
+                        TextInput::make('source_url')
+                            ->label('Ссылка на оригинал')
+                            ->disabled()
+                            ->dehydrated(false)
+                            ->columnSpanFull(),
+                        DateTimePicker::make('imported_at')
+                            ->label('Импортировано')
+                            ->disabled()
+                            ->dehydrated(false)
+                            ->seconds(false),
+                    ])
+                    ->columns(2),
 
                 Section::make('Модерация')
                     ->description('Для отзывов с сайта: дата отправки и заметки. Статус публикации — в колонке справа или кнопками в списке.')

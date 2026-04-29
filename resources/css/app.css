@@ -154,4 +154,36 @@
         box-sizing: border-box;
         transform: translateZ(0);
     }
+
+    /** Отзывы: без JS текст не обрезается; с html.js — сжатие до клика */
+    [data-review-body] {
+        max-height: none;
+        overflow: visible;
+    }
+
+    /** Кнопка раскрытия только при JS (иначе в DOM есть нерабочий контрол) */
+    [data-review-toggle] {
+        display: none;
+    }
+
+    html.js [data-review-toggle] {
+        display: inline-flex;
+    }
+
+    html.js [data-review-body][data-collapsed='true'] {
+        max-height: 8.5rem;
+        overflow: hidden;
+        position: relative;
+    }
+
+    html.js [data-review-body][data-collapsed='true']::after {
+        content: '';
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 2.5rem;
+        background: linear-gradient(to bottom, transparent, var(--review-card-fade-bg, rgba(15, 15, 18, 0.95)));
+        pointer-events: none;
+    }
 }

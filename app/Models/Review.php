@@ -28,6 +28,7 @@ class Review extends Model implements HasMedia
         'tenant_id',
         'name',
         'city',
+        'body',
         'text',
         'rating',
         'avatar',
@@ -50,54 +51,73 @@ class Review extends Model implements HasMedia
         'moderated_at',
         'moderated_by',
         'moderation_note',
+        'source_provider',
+        'source_external_id',
+        'source_url',
+        'review_import_source_id',
+        'review_import_candidate_id',
+        'source_original_body',
+        'source_payload_json',
+        'imported_at',
     ];
 
     protected $casts = [
         'photos_json' => 'array',
         'meta_json' => 'array',
+        'source_payload_json' => 'array',
         'date' => 'date',
         'is_featured' => 'boolean',
         'submitted_at' => 'datetime',
         'moderated_at' => 'datetime',
+        'imported_at' => 'datetime',
     ];
 
-    protected static function booted(): void
+    /**
+     * Для backfill и read-fallback: первая непустая колонка text_long → text_short → text.
+     */
+    public static function resolveLegacyBodySourceColumn(self $review): ?string
     {
-        static::saving(function (Review $review): void {
-            $long = trim((string) ($review->text_long ?? ''));
-            $legacy = trim((string) ($review->text ?? ''));
-            $short = trim((string) ($review->text_short ?? ''));
+        if (filled(trim((string) ($review->text_long ?? '')))) {
+            return 'text_long';
+        }
+        if (filled(trim((string) ($review->text_short ?? '')))) {
+            return 'text_short';
+        }
+        if (filled(trim((string) ($review->text ?? '')))) {
+            return 'text';
+        }
 
-            // Полный текст: актуальный long → legacy `text` → только потом краткий.
-            $full = $long !== '' ? $long : $legacy;
-
-            if ($short === '' && $full !== '') {
-                $plain = trim(preg_replace('/\s+/u', ' ', strip_tags($full)) ?? '');
-                $review->text_short = Str::limit($plain, self::PUBLIC_CARD_EXCERPT_MAX_CHARS, '…');
-                $short = trim((string) $review->text_short);
-            }
-
-            // Legacy `text` храним как полную формулировку, чтобы не терять контент после миграций.
-            $review->text = $full !== '' ? $full : $short;
-        });
+        return null;
     }
 
     /**
-     * Полнота текста без приоритета «краткого»: {@see text_long} → legacy {@see text} → {@see text_short}.
+     * Текст из legacy-колонок (без body). Только для миграции / fallback-чтения.
+     */
+    public function legacyFullTextRawForRead(): string
+    {
+        $col = self::resolveLegacyBodySourceColumn($this);
+        if ($col === null) {
+            return '';
+        }
+
+        return trim((string) $this->getAttribute($col));
+    }
+
+    /**
+     * Канонический полный текст для сайта и API: body, при пустом — legacy если включён fallback.
      */
     public function publicFullTextRaw(): string
     {
-        $long = trim((string) ($this->text_long ?? ''));
-        if ($long !== '') {
-            return $long;
+        $body = trim((string) ($this->body ?? ''));
+        if ($body !== '') {
+            return $body;
         }
 
-        $legacy = trim((string) ($this->text ?? ''));
-        if ($legacy !== '') {
-            return $legacy;
+        if (config('reviews.body_read_fallback', true)) {
+            return $this->legacyFullTextRawForRead();
         }
 
-        return trim((string) ($this->text_short ?? ''));
+        return '';
     }
 
     public function getDisplayBodyAttribute(): string
@@ -116,49 +136,25 @@ class Review extends Model implements HasMedia
     }
 
     /**
-     * Текст в карточке: явный {@see text_short} или выдержка из полного текста.
+     * Выдержка для карточки: всегда из канонического текста (computed).
      */
     public function publicCardExcerpt(int $maxChars = self::PUBLIC_CARD_EXCERPT_MAX_CHARS): string
     {
         $maxChars = max(32, $maxChars);
-        $explicit = trim((string) ($this->text_short ?? ''));
-
-        if ($explicit !== '') {
-            $plain = trim(preg_replace('/\s+/u', ' ', strip_tags($explicit)) ?? '');
-
-            return $plain !== '' ? Str::limit($plain, $maxChars, '…') : '';
-        }
-
         $full = $this->publicBodyPlain();
 
         return $full !== '' ? Str::limit($full, $maxChars, '…') : '';
     }
 
     /**
-     * Нужна ли кнопка «Читать полностью»: полный текст длиннее хранимого краткого или лимита карточки.
+     * Нужна ли кнопка «Читать полностью» (inline / progressive enhancement).
      */
     public function publicWantsReadMore(int $maxChars = self::PUBLIC_CARD_EXCERPT_MAX_CHARS): bool
     {
         $maxChars = max(32, $maxChars);
         $full = $this->publicBodyPlain();
-        if ($full === '') {
-            return false;
-        }
 
-        $shortAttr = trim((string) ($this->text_short ?? ''));
-        if ($shortAttr !== '') {
-            $plainShort = trim(preg_replace('/\s+/u', ' ', strip_tags($shortAttr)) ?? '');
-            if ($plainShort === '') {
-                return mb_strlen($full) > $maxChars;
-            }
-            if (mb_strlen($full) > mb_strlen($plainShort)) {
-                return true;
-            }
-
-            return mb_strlen($plainShort) > $maxChars;
-        }
-
-        return mb_strlen($full) > $maxChars;
+        return $full !== '' && mb_strlen($full) > $maxChars;
     }
 
     /**
@@ -185,6 +181,16 @@ class Review extends Model implements HasMedia
     public function moderatedByUser(): BelongsTo
     {
         return $this->belongsTo(User::class, 'moderated_by');
+    }
+
+    public function reviewImportSource(): BelongsTo
+    {
+        return $this->belongsTo(ReviewImportSource::class, 'review_import_source_id');
+    }
+
+    public function reviewImportCandidate(): BelongsTo
+    {
+        return $this->belongsTo(ReviewImportCandidate::class, 'review_import_candidate_id');
     }
 
     public function registerMediaCollections(): void

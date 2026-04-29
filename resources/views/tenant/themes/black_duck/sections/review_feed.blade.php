@@ -103,6 +103,7 @@
         </ul>
     @endif
 
+    @includeWhen($reviews->isNotEmpty(), 'tenant.partials.tenant-review-expand-script')
     @includeWhen($reviews->isNotEmpty(), 'tenant.partials.expert-video-dialog-script')
 
     @if($showMapsCta)

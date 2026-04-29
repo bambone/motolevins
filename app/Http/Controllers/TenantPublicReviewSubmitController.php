@@ -57,9 +57,10 @@ final class TenantPublicReviewSubmitController extends Controller
         $contactEmail = isset($validated['contact_email']) ? trim((string) $validated['contact_email']) : '';
         $contactEmail = $contactEmail === '' ? null : $contactEmail;
 
-        $rating = 5;
-        if ($cfg->showRatingField && isset($validated['rating'])) {
-            $rating = max(1, min(5, (int) $validated['rating']));
+        $rating = null;
+        $rawRating = $validated['rating'] ?? null;
+        if ($cfg->showRatingField && $rawRating !== null && $rawRating !== '') {
+            $rating = max(1, min(5, (int) $rawRating));
         }
 
         $status = $cfg->moderationEnabled ? 'pending' : 'published';
@@ -77,9 +78,7 @@ final class TenantPublicReviewSubmitController extends Controller
         $review->name = $name;
         $review->city = $city;
         $review->contact_email = $contactEmail;
-        $review->text = $body;
-        $review->text_long = $body;
-        $review->text_short = null;
+        $review->body = $body;
         $review->rating = $rating;
         $review->status = $status;
         $review->is_featured = false;

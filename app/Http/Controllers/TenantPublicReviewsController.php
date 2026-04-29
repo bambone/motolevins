@@ -55,11 +55,14 @@ final class TenantPublicReviewsController extends Controller
      */
     private function reviewToApiArray(Review $r): array
     {
+        $canonical = $r->publicFullTextRaw();
+
         return [
             'id' => $r->id,
             'name' => $r->name,
             'city' => $r->city,
-            'text' => $r->text,
+            'text' => $canonical,
+            'body' => $canonical,
             'rating' => $r->rating,
             'date' => $r->date?->toDateString(),
             'source' => $r->source,

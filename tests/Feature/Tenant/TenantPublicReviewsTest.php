@@ -22,7 +22,7 @@ final class TenantPublicReviewsTest extends TestCase
         Review::query()->withoutGlobalScopes()->create([
             'tenant_id' => $tenant->id,
             'name' => 'Visible',
-            'text' => 'Good',
+            'body' => 'Good',
             'rating' => 5,
             'status' => 'published',
             'sort_order' => 0,
@@ -30,7 +30,7 @@ final class TenantPublicReviewsTest extends TestCase
         Review::query()->withoutGlobalScopes()->create([
             'tenant_id' => $tenant->id,
             'name' => 'Draft',
-            'text' => 'Hidden',
+            'body' => 'Hidden',
             'rating' => 5,
             'status' => 'draft',
             'sort_order' => 1,
@@ -44,6 +44,8 @@ final class TenantPublicReviewsTest extends TestCase
         $json = $this->call('GET', 'http://'.$host.'/api/tenant/reviews');
         $json->assertOk();
         $json->assertJsonPath('data.0.name', 'Visible');
+        $json->assertJsonPath('data.0.text', 'Good');
+        $json->assertJsonPath('data.0.body', 'Good');
         $json->assertJsonCount(1, 'data');
     }
 
@@ -57,8 +59,7 @@ final class TenantPublicReviewsTest extends TestCase
         Review::query()->withoutGlobalScopes()->create([
             'tenant_id' => $tenant->id,
             'name' => 'Long Author',
-            'text_long' => str_repeat('слово ', 80).$tail,
-            'text_short' => null,
+            'body' => str_repeat('слово ', 80).$tail,
             'rating' => 5,
             'status' => 'published',
             'sort_order' => 0,
@@ -75,7 +76,11 @@ final class TenantPublicReviewsTest extends TestCase
         $response = $this->call('GET', 'http://'.$host.'/reviews');
         $response->assertOk();
         $response->assertSee('Читать полностью', false);
-        // Полный текст рендерится в <dialog> (off-screen до открытия), поэтому хвост ищется в HTML.
+        $content = $response->getContent();
+        $this->assertStringContainsString('data-review-body', (string) $content);
+        $this->assertStringContainsString('data-review-toggle', (string) $content);
+        $this->assertStringContainsString('aria-controls="review-body-'.$saved->id.'-0"', (string) $content);
+        $this->assertStringContainsString('aria-expanded="false"', (string) $content);
         $response->assertSee($tail, false);
     }
 }

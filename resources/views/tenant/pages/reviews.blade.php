@@ -69,5 +69,5 @@
             {{-- JSON для виджетов: GET /api/tenant/reviews?limit=20 --}}
         </div>
     </section>
-    @include('tenant.partials.expert-video-dialog-script')
+    @include('tenant.partials.tenant-review-expand-script')
 @endsection
