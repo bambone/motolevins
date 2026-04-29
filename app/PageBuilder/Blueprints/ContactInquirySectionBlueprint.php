@@ -22,7 +22,7 @@ final class ContactInquirySectionBlueprint extends AbstractPageSectionBlueprint
 
     public function supportsTheme(string $themeKey): bool
     {
-        return in_array($themeKey, ['default', 'moto', 'advocate_editorial', 'expert_auto', 'black_duck'], true);
+        return in_array($themeKey, ['default', 'moto', 'expert_auto', 'expert_pr', 'advocate_editorial', 'black_duck'], true);
     }
 
     public function label(): string
@@ -112,7 +112,7 @@ final class ContactInquirySectionBlueprint extends AbstractPageSectionBlueprint
                 ->label('Обязательный выбор услуги (направление в заявке)')
                 ->helperText('Для Black Duck: заявка не принимается без выбора направления. Для других витрин оставьте выключенным, чтобы в футере и доп. формах не требовать поле.')
                 ->default(false)
-                ->visible(fn () => (string) (Filament::getTenant()?->theme_key ?? '') === 'black_duck')
+                ->visible(fn () => Filament::getTenant()?->themeKey() === 'black_duck')
                 ->columnSpanFull(),
             Textarea::make('data_json.consent_label')
                 ->label('Текст согласия')

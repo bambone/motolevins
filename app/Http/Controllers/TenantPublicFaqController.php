@@ -19,10 +19,14 @@ class TenantPublicFaqController extends Controller
             ->orderBy('id')
             ->get();
 
-        $isBlackDuck = ((string) $t->theme_key) === 'black_duck';
+        $theme = $t->themeKey();
+        $isBlackDuck = $theme === 'black_duck';
+        $isExpertPr = $theme === 'expert_pr';
         $faqPageIntroLine1 = $isBlackDuck
             ? 'Кратко о записи, сроках и порядке работ. Точный план и смета по вашему авто — после осмотра или согласованной заявки.'
-            : 'Краткие ответы на частые вопросы по срокам, гарантии и записи.';
+            : ($isExpertPr
+                ? 'Straight answers about collaboration, timelines, and what to expect — before you send a brief.'
+                : 'Краткие ответы на частые вопросы по срокам, гарантии и записи.');
 
         return tenant_view('pages.faq', [
             'faqs' => $faqs,

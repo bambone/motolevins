@@ -2,21 +2,74 @@
 
 declare(strict_types=1);
 
-namespace App\Filament\Tenant\Resources\ReviewImportSourceResource\Pages;
+namespace App\Filament\Tenant\Resources\ReviewResource\Pages;
 
 use App\Filament\Tenant\Resources\ReviewImportSourceResource;
+use App\Filament\Tenant\Resources\ReviewResource;
+use App\Filament\Tenant\Resources\ReviewResource\Support\InteractsWithReviewSectionTabs;
 use App\Jobs\Reviews\FetchReviewImportPreview;
+use App\Models\ReviewImportSource;
+use App\Models\User;
 use App\Services\Reviews\Imports\ReviewImportPreviewService;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
 use Filament\Forms\Components\Textarea;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
+use Filament\Schemas\Schema;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 
-class EditReviewImportSource extends EditRecord
+/** Страница зарегистрирована на {@see ReviewResource} (nested URL); модель записи — {@see ReviewImportSource}. */
+final class EditReviewImportSource extends EditRecord
 {
-    protected static string $resource = ReviewImportSourceResource::class;
+    use InteractsWithReviewSectionTabs;
+
+    protected static string $resource = ReviewResource::class;
+
+    protected static ?string $title = 'Источник импорта';
+
+    protected function reviewSectionActiveTab(): string
+    {
+        return 'sources';
+    }
+
+    public function getModel(): string
+    {
+        return ReviewImportSource::class;
+    }
+
+    protected function resolveRecord(int | string $key): Model
+    {
+        $record = ReviewImportSource::query()
+            ->where('tenant_id', (int) (currentTenant()->id ?? 0))
+            ->whereKey($key)
+            ->first();
+
+        if ($record === null) {
+            throw (new ModelNotFoundException)->setModel(ReviewImportSource::class, [(string) $key]);
+        }
+
+        return $record;
+    }
+
+    protected function authorizeAccess(): void
+    {
+        $user = Auth::user();
+        abort_unless($user instanceof User && $user->can('update', $this->getRecord()), 403);
+    }
+
+    protected function getAllRelationManagers(): array
+    {
+        return ReviewImportSourceResource::getRelations();
+    }
+
+    public function form(Schema $schema): Schema
+    {
+        return ReviewImportSourceResource::form($schema);
+    }
 
     protected function getHeaderActions(): array
     {
@@ -58,7 +111,8 @@ class EditReviewImportSource extends EditRecord
                         ->success()
                         ->send();
                 }),
-            DeleteAction::make(),
+            DeleteAction::make()
+                ->successRedirectUrl(fn (): string => ListReviewImportSources::getUrl()),
         ];
     }
 
